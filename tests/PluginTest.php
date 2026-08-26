@@ -110,7 +110,8 @@ describe('Native Renderers', function () {
             ->toContain('object LineChartRenderer')
             ->toContain('@Composable')
             ->toContain('fun Render(')
-            ->toContain('NativePHP Line Chart');
+            ->toContain('series_json')
+            ->toContain('Canvas(');
     });
 
     it('contains the iOS LineChart renderer', function () {
@@ -123,7 +124,9 @@ describe('Native Renderers', function () {
 
         expect($content)
             ->toContain('struct LineChartRenderer: View')
-            ->toContain('NativePHP Line Chart');
+            ->toContain('import Charts')
+            ->toContain('LineMark(')
+            ->toContain('series_json');
     });
 });
 
