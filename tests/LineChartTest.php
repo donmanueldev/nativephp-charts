@@ -23,6 +23,17 @@ it('serializes normalized chart data and scalar configuration props', function (
         ->animated(false)
         ->emptyLabel('Nothing to chart')
         ->a11yLabel('Monthly sales chart')
+        ->locale('es-NI')
+        ->valueFormat('currency')
+        ->currencyCode('NIO')
+        ->minimumFractionDigits(0)
+        ->maximumFractionDigits(2)
+        ->style([
+            'line' => ['color' => '#14B8A6', 'width' => 4, 'interpolation' => 'smooth'],
+            'points' => ['visible' => true, 'size' => 6],
+            'grid' => ['visible' => false, 'color' => '#E2E8F0'],
+            'axis' => ['font' => 'accent', 'labelColor' => '#334155', 'labelCount' => 5],
+        ])
         ->toArray(new CallbackRegistry);
 
     expect($node['type'])->toBe('line_chart')
@@ -33,6 +44,12 @@ it('serializes normalized chart data and scalar configuration props', function (
             'animated' => false,
             'empty_label' => 'Nothing to chart',
             'a11y_label' => 'Monthly sales chart',
+            'locale' => 'es-NI',
+            'value_format' => 'currency',
+            'currency_code' => 'NIO',
+            'minimum_fraction_digits' => 0,
+            'maximum_fraction_digits' => 2,
+            'style_json' => '{"line":{"color":"#14B8A6","width":4,"interpolation":"smooth"},"points":{"visible":true,"size":6},"grid":{"visible":false,"color":"#E2E8F0"},"axis":{"label_color":"#334155","font":"accent","label_count":5}}',
             'series_json' => '[{"id":"monthly-sales","name":"Monthly sales","color":"#6366F1","points":[{"label":"January","value":120},{"label":"February","value":-12.5},{"label":"March","value":0}]}]',
         ]);
 });
@@ -47,6 +64,12 @@ it('renders deterministic defaults and accepts empty series', function () {
         'animated' => true,
         'empty_label' => 'No data',
         'a11y_label' => 'Chart',
+        'locale' => '',
+        'value_format' => 'number',
+        'currency_code' => '',
+        'minimum_fraction_digits' => -1,
+        'maximum_fraction_digits' => -1,
+        'style_json' => '{}',
         'series_json' => '[]',
     ]);
 });
@@ -58,7 +81,7 @@ it('maps Blade-style attributes to the scalar wire contract', function () {
         'series' => [[
             'id' => 'revenue',
             'name' => 'Revenue',
-            'color' => 'indigo-500/80',
+            'color' => '#6366F1',
             'points' => [['label' => 'Apr', 'value' => 18.25]],
         ]],
         'show-grid' => 'false',
@@ -67,6 +90,15 @@ it('maps Blade-style attributes to the scalar wire contract', function () {
         'animated' => '1',
         'empty-label' => 'No revenue yet',
         'a11y-label' => 'Revenue chart',
+        'locale' => 'en-US',
+        'value-format' => 'currency',
+        'currency-code' => 'USD',
+        'minimum-fraction-digits' => 0,
+        'maximum-fraction-digits' => 2,
+        'style' => [
+            'points' => ['visible' => true, 'color' => '#FFFFFF', 'size' => 5],
+            'axis' => ['fontSize' => 11, 'labelCount' => 4],
+        ],
     ]);
 
     $node = $chart->toArray(new CallbackRegistry);
@@ -78,7 +110,13 @@ it('maps Blade-style attributes to the scalar wire contract', function () {
         'animated' => true,
         'empty_label' => 'No revenue yet',
         'a11y_label' => 'Revenue chart',
-        'series_json' => '[{"id":"revenue","name":"Revenue","color":"indigo-500/80","points":[{"label":"Apr","value":18.25}]}]',
+        'locale' => 'en-US',
+        'value_format' => 'currency',
+        'currency_code' => 'USD',
+        'minimum_fraction_digits' => 0,
+        'maximum_fraction_digits' => 2,
+        'style_json' => '{"points":{"visible":true,"color":"#FFFFFF","size":5},"axis":{"font_size":11,"label_count":4}}',
+        'series_json' => '[{"id":"revenue","name":"Revenue","color":"#6366F1","points":[{"label":"Apr","value":18.25}]}]',
     ]);
 });
 
@@ -88,6 +126,39 @@ it('rejects more than one series', function () {
         ['id' => 'second', 'name' => 'Second', 'color' => '#222222', 'points' => []],
     ]))->toThrow(InvalidArgumentException::class, 'at most one series');
 });
+
+it('normalizes CSS alpha colors to the native ARGB wire format', function () {
+    $node = LineChart::make()
+        ->series([[
+            'id' => 'sales',
+            'name' => 'Sales',
+            'color' => '#14B8A680',
+            'points' => [],
+        ]])
+        ->style(['grid' => ['color' => 'transparent']])
+        ->toArray(new CallbackRegistry);
+
+    expect($node['props']['series_json'])->toContain('"color":"#8014B8A6"')
+        ->and($node['props']['style_json'])->toBe('{"grid":{"color":"#00000000"}}');
+});
+
+it('requires a currency code only for currency values', function () {
+    expect(fn () => LineChart::make()->valueFormat('currency')->toArray(new CallbackRegistry))
+        ->toThrow(InvalidArgumentException::class, 'currency code is required');
+
+    expect(fn () => LineChart::make()->valueFormat('percent')->toArray(new CallbackRegistry))
+        ->not->toThrow(InvalidArgumentException::class);
+});
+
+it('rejects incompatible locale, precision, and style options', function (Closure $configure, string $message) {
+    expect(fn () => $configure(LineChart::make())->toArray(new CallbackRegistry))
+        ->toThrow(InvalidArgumentException::class, $message);
+})->with([
+    'invalid locale' => [fn (LineChart $chart): LineChart => $chart->locale('spanish'), 'valid BCP-47'],
+    'reversed precision' => [fn (LineChart $chart): LineChart => $chart->minimumFractionDigits(3)->maximumFractionDigits(2), 'cannot exceed'],
+    'unknown style option' => [fn (LineChart $chart): LineChart => $chart->style(['line' => ['dash' => 4]]), 'not supported'],
+    'unsupported style color' => [fn (LineChart $chart): LineChart => $chart->style(['axis' => ['color' => 'indigo-500']]), 'must be a CSS hex color'],
+]);
 
 it('rejects malformed chart data', function (array $series, string $message) {
     expect(fn () => LineChart::make()->series($series))

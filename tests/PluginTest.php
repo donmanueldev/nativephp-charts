@@ -111,6 +111,8 @@ describe('Native Renderers', function () {
             ->toContain('@Composable')
             ->toContain('fun Render(')
             ->toContain('series_json')
+            ->toContain('style_json')
+            ->toContain('NumberFormat')
             ->toContain('Canvas(');
     });
 
@@ -126,7 +128,9 @@ describe('Native Renderers', function () {
             ->toContain('struct LineChartRenderer: View')
             ->toContain('import Charts')
             ->toContain('LineMark(')
-            ->toContain('series_json');
+            ->toContain('series_json')
+            ->toContain('style_json')
+            ->toContain('NumberFormatter');
     });
 });
 

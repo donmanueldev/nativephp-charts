@@ -11,7 +11,7 @@ class LineChart extends Element
 {
     protected string $type = 'line_chart';
 
-    /** @var array<string, bool|string> */
+    /** @var array<string, bool|int|string> */
     protected array $chartProps = [
         'show_grid' => true,
         'show_points' => true,
@@ -19,7 +19,15 @@ class LineChart extends Element
         'animated' => true,
         'empty_label' => 'No data',
         'a11y_label' => 'Chart',
+        'locale' => '',
+        'value_format' => 'number',
+        'currency_code' => '',
+        'minimum_fraction_digits' => -1,
+        'maximum_fraction_digits' => -1,
     ];
+
+    /** @var array<string, array<string, bool|float|int|string>> */
+    protected array $style = [];
 
     /** @var list<array{id: string, name: string, color: string, points: list<array{label: string, value: int|float}>}> */
     protected array $series = [];
@@ -29,6 +37,7 @@ class LineChart extends Element
         return new static;
     }
 
+    /** @param array<string, mixed> $attrs */
     public function applyAttributes(array $attrs): void
     {
         if (array_key_exists('series', $attrs)) {
@@ -51,12 +60,37 @@ class LineChart extends Element
         $this->applyStringAttribute($attrs, 'emptyLabel', 'emptyLabel');
         $this->applyStringAttribute($attrs, 'a11y-label', 'a11yLabel');
         $this->applyStringAttribute($attrs, 'a11yLabel', 'a11yLabel');
+        $this->applyStringAttribute($attrs, 'locale', 'locale');
+        $this->applyStringAttribute($attrs, 'value-format', 'valueFormat');
+        $this->applyStringAttribute($attrs, 'valueFormat', 'valueFormat');
+        $this->applyStringAttribute($attrs, 'currency-code', 'currencyCode');
+        $this->applyStringAttribute($attrs, 'currencyCode', 'currencyCode');
+        $this->applyIntegerAttribute($attrs, 'minimum-fraction-digits', 'minimumFractionDigits');
+        $this->applyIntegerAttribute($attrs, 'minimumFractionDigits', 'minimumFractionDigits');
+        $this->applyIntegerAttribute($attrs, 'maximum-fraction-digits', 'maximumFractionDigits');
+        $this->applyIntegerAttribute($attrs, 'maximumFractionDigits', 'maximumFractionDigits');
+
+        if (array_key_exists('style', $attrs)) {
+            if (! is_array($attrs['style'])) {
+                throw new InvalidArgumentException('The line chart style must be an array.');
+            }
+
+            $this->style($attrs['style']);
+        }
     }
 
     /** @param array<int, mixed> $series */
     public function series(array $series): static
     {
         $this->series = $this->normalizeSeries($series);
+
+        return $this;
+    }
+
+    /** @param array<string, mixed> $style */
+    public function style(array $style): static
+    {
+        $this->style = $this->normalizeStyle($style);
 
         return $this;
     }
@@ -91,27 +125,97 @@ class LineChart extends Element
 
     public function emptyLabel(string $emptyLabel): static
     {
-        $this->chartProps['empty_label'] = $emptyLabel;
+        $this->chartProps['empty_label'] = $this->requiredText($emptyLabel, 'empty label');
 
         return $this;
     }
 
     public function a11yLabel(string $a11yLabel): static
     {
-        $this->chartProps['a11y_label'] = $a11yLabel;
+        $this->chartProps['a11y_label'] = $this->requiredText($a11yLabel, 'accessibility label');
+
+        return $this;
+    }
+
+    public function locale(string $locale): static
+    {
+        $locale = str_replace('_', '-', trim($locale));
+
+        if ($locale !== '' && preg_match('/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/', $locale) !== 1) {
+            throw new InvalidArgumentException('The line chart locale must be a valid BCP-47 locale tag.');
+        }
+
+        $this->chartProps['locale'] = $locale;
+
+        return $this;
+    }
+
+    public function valueFormat(string $valueFormat): static
+    {
+        if (! in_array($valueFormat, ['number', 'currency', 'percent'], true)) {
+            throw new InvalidArgumentException('The line chart value format must be number, currency, or percent.');
+        }
+
+        $this->chartProps['value_format'] = $valueFormat;
+
+        return $this;
+    }
+
+    public function currencyCode(string $currencyCode): static
+    {
+        $currencyCode = strtoupper(trim($currencyCode));
+
+        if ($currencyCode === '') {
+            $this->chartProps['currency_code'] = '';
+
+            return $this;
+        }
+
+        if (preg_match('/^[A-Z]{3}$/', $currencyCode) !== 1) {
+            throw new InvalidArgumentException('The line chart currency code must be a three-letter ISO 4217 code.');
+        }
+
+        $this->chartProps['currency_code'] = $currencyCode;
+
+        return $this;
+    }
+
+    public function minimumFractionDigits(int $digits): static
+    {
+        $this->chartProps['minimum_fraction_digits'] = $this->normalizeFractionDigits($digits, 'minimum fraction digits');
+
+        return $this;
+    }
+
+    public function maximumFractionDigits(int $digits): static
+    {
+        $this->chartProps['maximum_fraction_digits'] = $this->normalizeFractionDigits($digits, 'maximum fraction digits');
 
         return $this;
     }
 
     protected function resolveProps(CallbackRegistry $registry): array
     {
+        if ($this->chartProps['value_format'] === 'currency' && $this->chartProps['currency_code'] === '') {
+            throw new InvalidArgumentException('The line chart currency code is required when value format is currency.');
+        }
+
+        if (
+            $this->chartProps['minimum_fraction_digits'] !== -1
+            && $this->chartProps['maximum_fraction_digits'] !== -1
+            && $this->chartProps['minimum_fraction_digits'] > $this->chartProps['maximum_fraction_digits']
+        ) {
+            throw new InvalidArgumentException('The line chart minimum fraction digits cannot exceed maximum fraction digits.');
+        }
+
         try {
             return [
                 ...$this->chartProps,
+                'style_json' => json_encode($this->style === [] ? (object) [] : $this->style, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
                 'series_json' => json_encode($this->series, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
             ];
         } catch (JsonException $exception) {
-            throw new InvalidArgumentException('The line chart series could not be encoded safely.', 0, $exception);
+            throw new InvalidArgumentException('The line chart configuration could not be encoded safely.', 0, $exception);
         }
     }
 
@@ -126,7 +230,7 @@ class LineChart extends Element
         }
 
         if (count($series) > 1) {
-            throw new InvalidArgumentException('The line chart supports at most one series in version 0.1.0.');
+            throw new InvalidArgumentException('The line chart supports at most one series.');
         }
 
         return array_map(
@@ -147,11 +251,7 @@ class LineChart extends Element
 
         $id = $this->requiredString($series, 'id', "series at index {$index}");
         $name = $this->requiredString($series, 'name', "series '{$id}'");
-        $color = $this->requiredString($series, 'color', "series '{$id}'");
-
-        if (! $this->isSupportedColor($color)) {
-            throw new InvalidArgumentException("The line chart color for series '{$id}' is not supported.");
-        }
+        $color = $this->normalizeColor($this->requiredString($series, 'color', "series '{$id}'"), "series '{$id}'");
 
         if (! array_key_exists('points', $series) || ! is_array($series['points'])) {
             throw new InvalidArgumentException("The line chart points for series '{$id}' must be an array.");
@@ -193,6 +293,134 @@ class LineChart extends Element
         return ['label' => $label, 'value' => $point['value']];
     }
 
+    /**
+     * @param  array<string, mixed>  $style
+     * @return array<string, array<string, bool|float|int|string>>
+     */
+    private function normalizeStyle(array $style): array
+    {
+        $allowed = [
+            'line' => ['color', 'width', 'interpolation'],
+            'points' => ['visible', 'color', 'size'],
+            'grid' => ['visible', 'color', 'width'],
+            'axis' => ['visible', 'color', 'label_color', 'labelColor', 'font', 'font_size', 'fontSize', 'label_count', 'labelCount'],
+        ];
+        $normalized = [];
+
+        foreach ($style as $section => $values) {
+            if (! is_string($section) || ! array_key_exists($section, $allowed) || ! is_array($values)) {
+                throw new InvalidArgumentException('The line chart style must contain line, points, grid, or axis arrays.');
+            }
+
+            foreach ($values as $key => $value) {
+                if (! is_string($key) || ! in_array($key, $allowed[$section], true)) {
+                    throw new InvalidArgumentException("The line chart style option '{$section}.{$key}' is not supported.");
+                }
+            }
+
+            $normalized[$section] = match ($section) {
+                'line' => $this->normalizeLineStyle($values),
+                'points' => $this->normalizePointStyle($values),
+                'grid' => $this->normalizeGridStyle($values),
+                'axis' => $this->normalizeAxisStyle($values),
+            };
+        }
+
+        return $normalized;
+    }
+
+    /** @param array<string, mixed> $style */
+    private function normalizeLineStyle(array $style): array
+    {
+        $normalized = [];
+
+        if (array_key_exists('color', $style)) {
+            $normalized['color'] = $this->normalizeStyleColor($style['color'], 'line.color');
+        }
+        if (array_key_exists('width', $style)) {
+            $normalized['width'] = $this->normalizePositiveNumber($style['width'], 'line.width', 16.0);
+        }
+        if (array_key_exists('interpolation', $style)) {
+            if (! is_string($style['interpolation']) || ! in_array($style['interpolation'], ['linear', 'smooth'], true)) {
+                throw new InvalidArgumentException('The line chart style line.interpolation must be linear or smooth.');
+            }
+
+            $normalized['interpolation'] = $style['interpolation'];
+        }
+
+        return $normalized;
+    }
+
+    /** @param array<string, mixed> $style */
+    private function normalizePointStyle(array $style): array
+    {
+        $normalized = [];
+
+        if (array_key_exists('visible', $style)) {
+            $normalized['visible'] = $this->normalizeBoolean($style['visible'], 'style points.visible');
+        }
+        if (array_key_exists('color', $style)) {
+            $normalized['color'] = $this->normalizeStyleColor($style['color'], 'points.color');
+        }
+        if (array_key_exists('size', $style)) {
+            $normalized['size'] = $this->normalizePositiveNumber($style['size'], 'points.size', 24.0);
+        }
+
+        return $normalized;
+    }
+
+    /** @param array<string, mixed> $style */
+    private function normalizeGridStyle(array $style): array
+    {
+        $normalized = [];
+
+        if (array_key_exists('visible', $style)) {
+            $normalized['visible'] = $this->normalizeBoolean($style['visible'], 'style grid.visible');
+        }
+        if (array_key_exists('color', $style)) {
+            $normalized['color'] = $this->normalizeStyleColor($style['color'], 'grid.color');
+        }
+        if (array_key_exists('width', $style)) {
+            $normalized['width'] = $this->normalizePositiveNumber($style['width'], 'grid.width', 8.0);
+        }
+
+        return $normalized;
+    }
+
+    /** @param array<string, mixed> $style */
+    private function normalizeAxisStyle(array $style): array
+    {
+        $normalized = [];
+
+        if (array_key_exists('visible', $style)) {
+            $normalized['visible'] = $this->normalizeBoolean($style['visible'], 'style axis.visible');
+        }
+        if (array_key_exists('color', $style)) {
+            $normalized['color'] = $this->normalizeStyleColor($style['color'], 'axis.color');
+        }
+        $labelColor = $style['label_color'] ?? $style['labelColor'] ?? null;
+        if ($labelColor !== null) {
+            $normalized['label_color'] = $this->normalizeStyleColor($labelColor, 'axis.labelColor');
+        }
+        if (array_key_exists('font', $style)) {
+            $normalized['font'] = $this->requiredText($style['font'], 'axis font');
+        }
+        $fontSize = $style['font_size'] ?? $style['fontSize'] ?? null;
+        if ($fontSize !== null) {
+            $normalized['font_size'] = $this->normalizePositiveNumber($fontSize, 'axis.fontSize', 32.0);
+        }
+        $labelCount = $style['label_count'] ?? $style['labelCount'] ?? null;
+        if ($labelCount !== null) {
+            if (! is_int($labelCount) || $labelCount < 2 || $labelCount > 8) {
+                throw new InvalidArgumentException('The line chart style axis.labelCount must be an integer between 2 and 8.');
+            }
+
+            $normalized['label_count'] = $labelCount;
+        }
+
+        return $normalized;
+    }
+
     /** @param array<string, mixed> $attrs */
     private function applyBooleanAttribute(array $attrs, string $attribute, string $method): void
     {
@@ -215,6 +443,20 @@ class LineChart extends Element
         $this->{$method}($attrs[$attribute]);
     }
 
+    /** @param array<string, mixed> $attrs */
+    private function applyIntegerAttribute(array $attrs, string $attribute, string $method): void
+    {
+        if (! array_key_exists($attribute, $attrs)) {
+            return;
+        }
+
+        if (! is_int($attrs[$attribute])) {
+            throw new InvalidArgumentException("The line chart {$attribute} attribute must be an integer.");
+        }
+
+        $this->{$method}($attrs[$attribute]);
+    }
+
     private function normalizeBoolean(mixed $value, string $attribute): bool
     {
         return match ($value) {
@@ -224,18 +466,73 @@ class LineChart extends Element
         };
     }
 
+    private function normalizeStyleColor(mixed $color, string $property): string
+    {
+        if (! is_string($color)) {
+            throw new InvalidArgumentException("The line chart style {$property} must be a color string.");
+        }
+
+        return $this->normalizeColor($color, "style {$property}");
+    }
+
+    private function normalizeColor(string $color, string $context): string
+    {
+        $color = strtolower(trim($color));
+        $named = ['black' => '#000000', 'white' => '#FFFFFF', 'transparent' => '#00000000'];
+
+        if (array_key_exists($color, $named)) {
+            return $named[$color];
+        }
+
+        if (preg_match('/^#[\dA-Fa-f]{3}$/', $color) === 1) {
+            return sprintf('#%1$s%1$s%2$s%2$s%3$s%3$s', $color[1], $color[2], $color[3]);
+        }
+
+        if (preg_match('/^#[\dA-Fa-f]{6}$/', $color) === 1) {
+            return strtoupper($color);
+        }
+
+        if (preg_match('/^#[\dA-Fa-f]{8}$/', $color) === 1) {
+            return sprintf('#%s%s', strtoupper(substr($color, 7, 2)), strtoupper(substr($color, 1, 6)));
+        }
+
+        throw new InvalidArgumentException("The line chart color for {$context} must be a CSS hex color, black, white, or transparent.");
+    }
+
+    private function normalizePositiveNumber(mixed $value, string $property, float $maximum): float
+    {
+        if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value) || $value <= 0 || $value > $maximum) {
+            throw new InvalidArgumentException("The line chart style {$property} must be a number greater than zero and no more than {$maximum}.");
+        }
+
+        return (float) $value;
+    }
+
+    private function normalizeFractionDigits(int $digits, string $property): int
+    {
+        if ($digits < 0 || $digits > 8) {
+            throw new InvalidArgumentException("The line chart {$property} must be between 0 and 8.");
+        }
+
+        return $digits;
+    }
+
     /** @param array<string, mixed> $values */
     private function requiredString(array $values, string $key, string $context): string
     {
-        if (! array_key_exists($key, $values) || ! is_string($values[$key]) || trim($values[$key]) === '') {
+        if (! array_key_exists($key, $values) || ! is_string($values[$key])) {
             throw new InvalidArgumentException("The line chart {$key} for {$context} must be a non-empty string.");
         }
 
-        return trim($values[$key]);
+        return $this->requiredText($values[$key], "{$key} for {$context}");
     }
 
-    private function isSupportedColor(string $color): bool
+    private function requiredText(mixed $value, string $context): string
     {
-        return preg_match('/^(?:#[\dA-Fa-f]{3}|#[\dA-Fa-f]{6}(?:[\dA-Fa-f]{2})?|(?:black|white|transparent)|[a-z]+-\d{1,3})(?:\/\d{1,3})?$/', $color) === 1;
+        if (! is_string($value) || trim($value) === '') {
+            throw new InvalidArgumentException("The line chart {$context} must be a non-empty string.");
+        }
+
+        return trim($value);
     }
 }
