@@ -1,0 +1,33 @@
+{
+    "name": "donmanueldev/nativephp-charts",
+    "version": "1.0.0",
+    "description": "Native chart components for NativePHP Mobile, rendered with SwiftUI and Jetpack Compose.",
+    "namespace": "NativePHPCharts",
+    "platforms": [
+        "android",
+        "ios"
+    ],
+    "components": [
+        {
+            "type": "nativePHPCharts.default",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\NativePHPCharts",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\NativePHPCharts",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsRenderer",
+            "ios_renderer": "NativePHPChartsRenderer",
+            "self_closing": true
+        }
+    ],
+    "android": {
+        "min_version": 26,
+        "dependencies": {
+            "implementation": []
+        }
+    },
+    "ios": {
+        "min_version": "18.2",
+        "dependencies": {
+            "swift_packages": [],
+            "pods": []
+        }
+    }
+}
