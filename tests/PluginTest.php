@@ -2,96 +2,148 @@
 
 beforeEach(function () {
     $this->pluginPath = dirname(__DIR__);
-    $this->manifestPath = $this->pluginPath . '/nativephp.json';
+    $this->manifestPath = $this->pluginPath.'/nativephp.json';
 });
 
 describe('Plugin Manifest', function () {
-    it('has a valid nativephp.json file', function () {
+    it('contains valid JSON', function () {
         expect(file_exists($this->manifestPath))->toBeTrue();
 
-        $content = file_get_contents($this->manifestPath);
-        $manifest = json_decode($content, true);
+        $manifest = json_decode(
+            file_get_contents($this->manifestPath),
+            true
+        );
 
-        expect(json_last_error())->toBe(JSON_ERROR_NONE);
+        expect(json_last_error())->toBe(JSON_ERROR_NONE)
+            ->and($manifest)->toBeArray();
     });
 
-    it('has required fields', function () {
-        $manifest = json_decode(file_get_contents($this->manifestPath), true);
+    it('declares the plugin namespace', function () {
+        $manifest = json_decode(
+            file_get_contents($this->manifestPath),
+            true
+        );
 
-        expect($manifest)->toHaveKeys(['namespace', 'components']);
-        expect($manifest['namespace'])->toBe('NativePHPCharts');
+        expect($manifest)
+            ->toHaveKeys(['namespace', 'components'])
+            ->and($manifest['namespace'])
+            ->toBe('NativePHPCharts');
     });
 
-    it('has valid components', function () {
-        $manifest = json_decode(file_get_contents($this->manifestPath), true);
+    it('declares the line chart component', function () {
+        $manifest = json_decode(
+            file_get_contents($this->manifestPath),
+            true
+        );
 
-        expect($manifest['components'])->toBeArray()->not->toBeEmpty();
+        expect($manifest['components'])
+            ->toBeArray()
+            ->toHaveCount(1);
 
-        foreach ($manifest['components'] as $component) {
-            expect($component)->toHaveKeys(['type', 'element', 'blade']);
-            // Component types must be dot-namespaced
-            expect($component['type'])->toContain('.');
-            // At least one platform renderer
-            expect(
-                !empty($component['android_renderer']) || !empty($component['ios_renderer'])
-            )->toBeTrue();
-        }
+        $component = $manifest['components'][0];
+
+        expect($component)
+            ->toMatchArray([
+                'type' => 'line_chart',
+                'element' => 'Donmanueldev\\NativephpCharts\\Elements\\LineChart',
+                'blade' => 'Donmanueldev\\NativephpCharts\\Components\\LineChart',
+                'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.LineChartRenderer',
+                'ios_renderer' => 'LineChartRenderer',
+                'self_closing' => true,
+            ]);
+    });
+
+    it('declares supported platform versions', function () {
+        $manifest = json_decode(
+            file_get_contents($this->manifestPath),
+            true
+        );
+
+        expect($manifest['android']['min_version'])->toBe(26)
+            ->and($manifest['ios']['min_version'])->toBe('18.2');
     });
 });
 
 describe('PHP Classes', function () {
-    it('has Element class', function () {
-        $file = $this->pluginPath . '/src/Elements/NativePHPCharts.php';
+    it('contains the LineChart Element', function () {
+        $file = $this->pluginPath.'/src/Elements/LineChart.php';
+
         expect(file_exists($file))->toBeTrue();
 
         $content = file_get_contents($file);
-        expect($content)->toContain('extends Element');
-        expect($content)->toContain("'nativePHPCharts.default'");
+
+        expect($content)
+            ->toContain('class LineChart extends Element')
+            ->toContain("protected string \$type = 'line_chart'");
     });
 
-    it('has Blade component class', function () {
-        $file = $this->pluginPath . '/src/Components/NativePHPCharts.php';
+    it('contains the LineChart Blade component', function () {
+        $file = $this->pluginPath.'/src/Components/LineChart.php';
+
         expect(file_exists($file))->toBeTrue();
 
         $content = file_get_contents($file);
-        expect($content)->toContain('extends NativeBladeComponent');
-        expect($content)->toContain("'nativePHPCharts.default'");
+
+        expect($content)
+            ->toContain('class LineChart extends NativeBladeComponent')
+            ->toContain("return 'line_chart'");
     });
 
-    it('has service provider', function () {
-        $file = $this->pluginPath . '/src/NativePHPChartsServiceProvider.php';
+    it('contains the service provider', function () {
+        $file = $this->pluginPath
+            .'/src/NativePHPChartsServiceProvider.php';
+
         expect(file_exists($file))->toBeTrue();
     });
 });
 
 describe('Native Renderers', function () {
-    it('has Android Kotlin renderer', function () {
-        $file = $this->pluginPath . '/resources/android/NativePHPChartsRenderer.kt';
+    it('contains the Android LineChart renderer', function () {
+        $file = $this->pluginPath
+            .'/resources/android/LineChartRenderer.kt';
+
         expect(file_exists($file))->toBeTrue();
 
         $content = file_get_contents($file);
-        expect($content)->toContain('object NativePHPChartsRenderer');
-        expect($content)->toContain('@Composable');
-        expect($content)->toContain('fun Render(');
+
+        expect($content)
+            ->toContain('object LineChartRenderer')
+            ->toContain('@Composable')
+            ->toContain('fun Render(')
+            ->toContain('NativePHP Line Chart');
     });
 
-    it('has iOS Swift renderer', function () {
-        $file = $this->pluginPath . '/resources/ios/NativePHPChartsRenderer.swift';
+    it('contains the iOS LineChart renderer', function () {
+        $file = $this->pluginPath
+            .'/resources/ios/LineChartRenderer.swift';
+
         expect(file_exists($file))->toBeTrue();
 
         $content = file_get_contents($file);
-        expect($content)->toContain('NativePHPChartsRenderer');
+
+        expect($content)
+            ->toContain('struct LineChartRenderer: View')
+            ->toContain('NativePHP Line Chart');
     });
 });
 
 describe('Composer Configuration', function () {
-    it('has valid composer.json with UI plugin type', function () {
-        $composerPath = $this->pluginPath . '/composer.json';
+    it('is configured as a NativePHP UI plugin', function () {
+        $composerPath = $this->pluginPath.'/composer.json';
+
         expect(file_exists($composerPath))->toBeTrue();
 
-        $composer = json_decode(file_get_contents($composerPath), true);
+        $composer = json_decode(
+            file_get_contents($composerPath),
+            true
+        );
 
-        expect(json_last_error())->toBe(JSON_ERROR_NONE);
-        expect($composer['type'])->toBe('nativephp-ui-plugin');
+        expect(json_last_error())->toBe(JSON_ERROR_NONE)
+            ->and($composer['name'])
+            ->toBe('donmanueldev/nativephp-charts')
+            ->and($composer['type'])
+            ->toBe('nativephp-ui-plugin')
+            ->and($composer['require']['nativephp/mobile'])
+            ->toBe('^4.0');
     });
 });

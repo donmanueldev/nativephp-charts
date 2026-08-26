@@ -9,11 +9,11 @@
     ],
     "components": [
         {
-            "type": "nativePHPCharts.default",
-            "element": "Donmanueldev\\NativephpCharts\\Elements\\NativePHPCharts",
-            "blade": "Donmanueldev\\NativephpCharts\\Components\\NativePHPCharts",
-            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsRenderer",
-            "ios_renderer": "NativePHPChartsRenderer",
+            "type": "line_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\LineChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\LineChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.LineChartRenderer",
+            "ios_renderer": "LineChartRenderer",
             "self_closing": true
         }
     ],
