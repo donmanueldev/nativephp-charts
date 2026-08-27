@@ -352,7 +352,7 @@ object LineChartRenderer {
             maximum = max(maximum, 0.0)
         }
         if (minimum == maximum) {
-            val padding = max(abs(minimum) * 0.1, 1.0)
+            val padding = if (minimum == 0.0) 1.0 else abs(minimum) * 0.1
             minimum -= padding
             maximum += padding
         }

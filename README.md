@@ -1,6 +1,12 @@
 # NativePHP Charts
 
-Native line charts for [NativePHP Mobile](https://nativephp.com), rendered with Swift Charts on iOS and Jetpack Compose on Android.
+Native line charts for [NativePHP Mobile](https://nativephp.com), rendered with Swift Charts on iOS and Jetpack Compose Canvas on Android.
+
+## v0.1.0 release evidence
+
+The PHP contract and laboratory catalogue are verified by 32 passing tests (137 assertions) on 2026-08-26. Manifest validation also completed; its `No bridge_functions defined in manifest` warning is expected for this UI-only plugin.
+
+An iPhone 17 simulator (iOS 26.5) verified empty, mixed-sign, localized currency/percent, dynamic-update, dark-mode, and accessibility behavior. It also reproduced an excessive absolute padding for a non-zero one-point percentage chart; both renderer sources now use relative padding, but that fix still needs a manual NativePHP rebuild and simulator recheck. The available Android emulator verified empty, one-point, mixed-sign, localized currency/percent, dynamic-update, dark-mode, and TalkBack behavior, including enlarged text. See the acceptance matrix in `NativePHPCharts.md` for the remaining iOS and physical-device limits.
 
 ## Install
 

@@ -138,7 +138,8 @@ struct LineChartRenderer: View {
         let maximum = values.max() ?? 0
         let lower = node.props.getBool("begin_at_zero", default: true) ? min(0, minimum) : minimum
         let upper = node.props.getBool("begin_at_zero", default: true) ? max(0, maximum) : maximum
-        let padding = max((upper - lower) * 0.1, 1)
+        let span = upper - lower
+        let padding = span == 0 ? (upper == 0 ? 1 : abs(upper) * 0.1) : span * 0.1
 
         return (lower - padding)...(upper + padding)
     }

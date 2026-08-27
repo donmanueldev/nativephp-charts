@@ -132,6 +132,16 @@ describe('Native Renderers', function () {
             ->toContain('style_json')
             ->toContain('NumberFormatter');
     });
+
+    it('uses relative padding for non-zero one-point domains on both renderers', function () {
+        $android = file_get_contents($this->pluginPath.'/resources/android/LineChartRenderer.kt');
+        $ios = file_get_contents($this->pluginPath.'/resources/ios/LineChartRenderer.swift');
+
+        expect($android)
+            ->toContain('val padding = if (minimum == 0.0) 1.0 else abs(minimum) * 0.1')
+            ->and($ios)
+            ->toContain('let padding = span == 0 ? (upper == 0 ? 1 : abs(upper) * 0.1) : span * 0.1');
+    });
 });
 
 describe('Composer Configuration', function () {
