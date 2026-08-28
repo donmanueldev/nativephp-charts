@@ -1,0 +1,142 @@
+name: Bug report
+description: Report a reproducible problem with NativePHP Charts
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve NativePHP Charts. Do not report security vulnerabilities here; follow the private reporting instructions in the README instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: Clearly describe the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest sequence or code sample that reproduces the issue.
+      placeholder: |
+        1. Render a <native:line-chart> or <native:bar-chart> with...
+        2. Rebuild and open the affected native target.
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: nativephp-charts-version
+    attributes:
+      label: NativePHP Charts version
+      placeholder: 0.2.0
+    validations:
+      required: true
+
+  - type: input
+    id: nativephp-version
+    attributes:
+      label: NativePHP Mobile version
+      placeholder: 4.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: laravel-version
+    attributes:
+      label: Laravel version
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chart
+    attributes:
+      label: Chart component
+      options:
+        - LineChart
+        - BarChart
+        - Both
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Both platforms
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Android API level or iOS version
+      placeholder: Android API 35 or iOS 18.2
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device, emulator, or simulator
+      placeholder: Pixel 8 physical device, Android emulator, or iPhone 16 simulator
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove authorization headers, tokens, request secrets, personal data, and private paths.
+      render: shell
+
+  - type: input
+    id: minimal-reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Link to a small public repository if one is available.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I tested the latest compatible NativePHP Charts version where practical.
+          required: true
+        - label: I removed secrets, tokens, and private data from logs and examples.
+          required: true
+        - label: This report is not a security vulnerability; security reports must follow the README instructions.
+          required: true
