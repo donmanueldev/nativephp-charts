@@ -25,12 +25,14 @@ describe('Plugin Manifest', function () {
         );
 
         expect($manifest)
-            ->toHaveKeys(['namespace', 'components'])
+            ->toHaveKeys(['version', 'namespace', 'components'])
+            ->and($manifest['version'])
+            ->toBe('0.2.0')
             ->and($manifest['namespace'])
             ->toBe('NativePHPCharts');
     });
 
-    it('declares the line chart component', function () {
+    it('declares the chart components', function () {
         $manifest = json_decode(
             file_get_contents($this->manifestPath),
             true
@@ -38,7 +40,7 @@ describe('Plugin Manifest', function () {
 
         expect($manifest['components'])
             ->toBeArray()
-            ->toHaveCount(1);
+            ->toHaveCount(2);
 
         $component = $manifest['components'][0];
 
@@ -51,6 +53,15 @@ describe('Plugin Manifest', function () {
                 'ios_renderer' => 'LineChartRenderer',
                 'self_closing' => true,
             ]);
+
+        expect($manifest['components'][1])->toMatchArray([
+            'type' => 'bar_chart',
+            'element' => 'Donmanueldev\\NativephpCharts\\Elements\\BarChart',
+            'blade' => 'Donmanueldev\\NativephpCharts\\Components\\BarChart',
+            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.BarChartRenderer',
+            'ios_renderer' => 'BarChartRenderer',
+            'self_closing' => true,
+        ]);
     });
 
     it('declares supported platform versions', function () {
@@ -87,6 +98,16 @@ describe('PHP Classes', function () {
         expect($content)
             ->toContain('class LineChart extends NativeBladeComponent')
             ->toContain("return 'line_chart'");
+    });
+
+    it('contains the BarChart element and Blade component', function () {
+        expect(file_get_contents($this->pluginPath.'/src/Elements/BarChart.php'))
+            ->toContain('class BarChart extends LineChart')
+            ->toContain("protected string \$type = 'bar_chart'");
+
+        expect(file_get_contents($this->pluginPath.'/src/Components/BarChart.php'))
+            ->toContain('class BarChart extends NativeBladeComponent')
+            ->toContain("return 'bar_chart'");
     });
 
     it('contains the service provider', function () {
@@ -131,6 +152,35 @@ describe('Native Renderers', function () {
             ->toContain('series_json')
             ->toContain('style_json')
             ->toContain('NumberFormatter');
+    });
+
+    it('contains native BarChart renderers', function () {
+        expect(file_get_contents($this->pluginPath.'/resources/android/BarChartRenderer.kt'))
+            ->toContain('object BarChartRenderer')
+            ->toContain('drawRoundRect')
+            ->toContain('detectTapGestures')
+            ->toContain('drawTooltip')
+            ->toContain('paint.fontMetrics.descent - paint.fontMetrics.ascent')
+            ->toContain('maximumWidth')
+            ->toContain('series_json');
+
+        expect(file_get_contents($this->pluginPath.'/resources/ios/BarChartRenderer.swift'))
+            ->toContain('struct BarChartRenderer: View')
+            ->toContain('BarMark(')
+            ->toContain('chartOverlay')
+            ->toContain('SpatialTapGesture')
+            ->toContain('proxy.position(forX: selectedPoint.label)')
+            ->toContain('series_json');
+    });
+
+    it('keeps empty bar states accessible and formatter updates reactive', function () {
+        $android = file_get_contents($this->pluginPath.'/resources/android/BarChartRenderer.kt');
+        $ios = file_get_contents($this->pluginPath.'/resources/ios/BarChartRenderer.swift');
+
+        expect($android)
+            ->toContain('remember(locale, valueFormat, currencyCode, minimumFractionDigits, maximumFractionDigits)')
+            ->and($ios)
+            ->toContain('.accessibilityValue(node.props.getString("empty_label", default: "No data"))');
     });
 
     it('uses relative padding for non-zero one-point domains on both renderers', function () {

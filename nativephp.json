@@ -1,6 +1,6 @@
 {
     "name": "donmanueldev/nativephp-charts",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Native chart components for NativePHP Mobile, rendered with SwiftUI and Jetpack Compose.",
     "namespace": "NativePHPCharts",
     "platforms": [
@@ -14,6 +14,14 @@
             "blade": "Donmanueldev\\NativephpCharts\\Components\\LineChart",
             "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.LineChartRenderer",
             "ios_renderer": "LineChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "bar_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\BarChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\BarChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.BarChartRenderer",
+            "ios_renderer": "BarChartRenderer",
             "self_closing": true
         }
     ],
