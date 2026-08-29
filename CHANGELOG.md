@@ -2,7 +2,7 @@
 
 All notable changes to NativePHP Charts are documented here. The project follows Semantic Versioning.
 
-## [1.0.1] - 2026-08-28
+## [Unreleased]
 
 ### Fixed
 
@@ -48,7 +48,6 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 - Initial native line chart component for NativePHP Mobile.
 
-[1.0.1]: https://github.com/donmanueldev/nativephp-charts/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/donmanueldev/nativephp-charts/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/donmanueldev/nativephp-charts/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/donmanueldev/nativephp-charts/releases/tag/v0.1.0
