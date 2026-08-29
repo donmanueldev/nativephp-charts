@@ -1,216 +1,170 @@
 <?php
 
+use Donmanueldev\NativephpCharts\Elements\AreaChart;
+use Donmanueldev\NativephpCharts\Elements\BarChart;
+use Donmanueldev\NativephpCharts\Elements\DonutChart;
+use Donmanueldev\NativephpCharts\Elements\LineChart;
+use Donmanueldev\NativephpCharts\Elements\PieChart;
+use Donmanueldev\NativephpCharts\Elements\ScatterChart;
+use Native\Mobile\Edge\CallbackRegistry;
+
 beforeEach(function () {
     $this->pluginPath = dirname(__DIR__);
-    $this->manifestPath = $this->pluginPath.'/nativephp.json';
+    $this->manifest = json_decode(
+        file_get_contents($this->pluginPath.'/nativephp.json'),
+        true,
+        512,
+        JSON_THROW_ON_ERROR,
+    );
 });
 
-describe('Plugin Manifest', function () {
-    it('contains valid JSON', function () {
-        expect(file_exists($this->manifestPath))->toBeTrue();
+it('declares the stable plugin identity and supported platforms', function () {
+    expect($this->manifest)
+        ->toMatchArray([
+            'name' => 'donmanueldev/nativephp-charts',
+            'version' => '1.0.0',
+            'namespace' => 'NativePHPCharts',
+            'platforms' => ['android', 'ios'],
+        ])
+        ->and($this->manifest['android']['min_version'])->toBe(26)
+        ->and($this->manifest['ios']['min_version'])->toBe('18.2');
+});
 
-        $manifest = json_decode(
-            file_get_contents($this->manifestPath),
-            true
-        );
-
-        expect(json_last_error())->toBe(JSON_ERROR_NONE)
-            ->and($manifest)->toBeArray();
-    });
-
-    it('declares the plugin namespace', function () {
-        $manifest = json_decode(
-            file_get_contents($this->manifestPath),
-            true
-        );
-
-        expect($manifest)
-            ->toHaveKeys(['version', 'namespace', 'components'])
-            ->and($manifest['version'])
-            ->toBe('0.2.0')
-            ->and($manifest['namespace'])
-            ->toBe('NativePHPCharts');
-    });
-
-    it('declares the chart components', function () {
-        $manifest = json_decode(
-            file_get_contents($this->manifestPath),
-            true
-        );
-
-        expect($manifest['components'])
-            ->toBeArray()
-            ->toHaveCount(2);
-
-        $component = $manifest['components'][0];
-
-        expect($component)
-            ->toMatchArray([
-                'type' => 'line_chart',
-                'element' => 'Donmanueldev\\NativephpCharts\\Elements\\LineChart',
-                'blade' => 'Donmanueldev\\NativephpCharts\\Components\\LineChart',
-                'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.LineChartRenderer',
-                'ios_renderer' => 'LineChartRenderer',
-                'self_closing' => true,
-            ]);
-
-        expect($manifest['components'][1])->toMatchArray([
+it('registers all chart components with collision-safe renderers', function () {
+    expect($this->manifest['components'])->toBe([
+        [
+            'type' => 'line_chart',
+            'element' => 'Donmanueldev\\NativephpCharts\\Elements\\LineChart',
+            'blade' => 'Donmanueldev\\NativephpCharts\\Components\\LineChart',
+            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsLineChartRenderer',
+            'ios_renderer' => 'NativePHPChartsLineChartRenderer',
+            'self_closing' => true,
+        ],
+        [
             'type' => 'bar_chart',
             'element' => 'Donmanueldev\\NativephpCharts\\Elements\\BarChart',
             'blade' => 'Donmanueldev\\NativephpCharts\\Components\\BarChart',
-            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.BarChartRenderer',
-            'ios_renderer' => 'BarChartRenderer',
+            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsBarChartRenderer',
+            'ios_renderer' => 'NativePHPChartsBarChartRenderer',
             'self_closing' => true,
-        ]);
-    });
-
-    it('declares supported platform versions', function () {
-        $manifest = json_decode(
-            file_get_contents($this->manifestPath),
-            true
-        );
-
-        expect($manifest['android']['min_version'])->toBe(26)
-            ->and($manifest['ios']['min_version'])->toBe('18.2');
-    });
+        ],
+        [
+            'type' => 'area_chart',
+            'element' => 'Donmanueldev\\NativephpCharts\\Elements\\AreaChart',
+            'blade' => 'Donmanueldev\\NativephpCharts\\Components\\AreaChart',
+            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsAreaChartRenderer',
+            'ios_renderer' => 'NativePHPChartsAreaChartRenderer',
+            'self_closing' => true,
+        ],
+        [
+            'type' => 'scatter_chart',
+            'element' => 'Donmanueldev\\NativephpCharts\\Elements\\ScatterChart',
+            'blade' => 'Donmanueldev\\NativephpCharts\\Components\\ScatterChart',
+            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsScatterChartRenderer',
+            'ios_renderer' => 'NativePHPChartsScatterChartRenderer',
+            'self_closing' => true,
+        ],
+        [
+            'type' => 'pie_chart',
+            'element' => 'Donmanueldev\\NativephpCharts\\Elements\\PieChart',
+            'blade' => 'Donmanueldev\\NativephpCharts\\Components\\PieChart',
+            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsPieChartRenderer',
+            'ios_renderer' => 'NativePHPChartsPieChartRenderer',
+            'self_closing' => true,
+        ],
+        [
+            'type' => 'donut_chart',
+            'element' => 'Donmanueldev\\NativephpCharts\\Elements\\DonutChart',
+            'blade' => 'Donmanueldev\\NativephpCharts\\Components\\DonutChart',
+            'android_renderer' => 'com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsDonutChartRenderer',
+            'ios_renderer' => 'NativePHPChartsDonutChartRenderer',
+            'self_closing' => true,
+        ],
+    ]);
 });
 
-describe('PHP Classes', function () {
-    it('contains the LineChart Element', function () {
-        $file = $this->pluginPath.'/src/Elements/LineChart.php';
+it('publishes the expected wire type from every PHP element', function (string $class, string $type) {
+    $node = $class::make()->toArray(new CallbackRegistry);
 
-        expect(file_exists($file))->toBeTrue();
+    expect($node['type'])->toBe($type)
+        ->and($node['props']['contract_version'])->toBe(1);
+})->with([
+    [LineChart::class, 'line_chart'],
+    [AreaChart::class, 'area_chart'],
+    [BarChart::class, 'bar_chart'],
+    [ScatterChart::class, 'scatter_chart'],
+    [PieChart::class, 'pie_chart'],
+    [DonutChart::class, 'donut_chart'],
+]);
 
-        $content = file_get_contents($file);
+it('ships modular native sources and prefixed renderer entry points', function () {
+    $androidPath = $this->pluginPath.'/resources/android/src';
+    $iosPath = $this->pluginPath.'/resources/ios/Sources';
 
-        expect($content)
-            ->toContain('class LineChart extends Element')
-            ->toContain("protected string \$type = 'line_chart'");
-    });
-
-    it('contains the LineChart Blade component', function () {
-        $file = $this->pluginPath.'/src/Components/LineChart.php';
-
-        expect(file_exists($file))->toBeTrue();
-
-        $content = file_get_contents($file);
-
-        expect($content)
-            ->toContain('class LineChart extends NativeBladeComponent')
-            ->toContain("return 'line_chart'");
-    });
-
-    it('contains the BarChart element and Blade component', function () {
-        expect(file_get_contents($this->pluginPath.'/src/Elements/BarChart.php'))
-            ->toContain('class BarChart extends LineChart')
-            ->toContain("protected string \$type = 'bar_chart'");
-
-        expect(file_get_contents($this->pluginPath.'/src/Components/BarChart.php'))
-            ->toContain('class BarChart extends NativeBladeComponent')
-            ->toContain("return 'bar_chart'");
-    });
-
-    it('contains the service provider', function () {
-        $file = $this->pluginPath
-            .'/src/NativePHPChartsServiceProvider.php';
-
-        expect(file_exists($file))->toBeTrue();
-    });
+    expect($androidPath)->toBeDirectory()
+        ->and($iosPath)->toBeDirectory()
+        ->and($androidPath.'/core/NativePHPChartsModels.kt')->toBeFile()
+        ->and($androidPath.'/core/NativePHPChartsDecoder.kt')->toBeFile()
+        ->and($androidPath.'/core/NativePHPChartsLayout.kt')->toBeFile()
+        ->and($androidPath.'/rendering/NativePHPChartsDrawing.kt')->toBeFile()
+        ->and($androidPath.'/rendering/NativePHPChartsLegend.kt')->toBeFile()
+        ->and($androidPath.'/rendering/NativePHPChartsPlot.kt')->toBeFile()
+        ->and($androidPath.'/interaction/NativePHPChartsSelection.kt')->toBeFile()
+        ->and($androidPath.'/interaction/NativePHPChartsHitTesting.kt')->toBeFile()
+        ->and($androidPath.'/entrypoints/NativePHPChartsLineChartRenderer.kt')->toBeFile()
+        ->and($androidPath.'/entrypoints/NativePHPChartsAreaChartRenderer.kt')->toBeFile()
+        ->and($androidPath.'/entrypoints/NativePHPChartsBarChartRenderer.kt')->toBeFile()
+        ->and($androidPath.'/entrypoints/NativePHPChartsScatterChartRenderer.kt')->toBeFile()
+        ->and($androidPath.'/entrypoints/NativePHPChartsPieChartRenderer.kt')->toBeFile()
+        ->and($androidPath.'/entrypoints/NativePHPChartsDonutChartRenderer.kt')->toBeFile()
+        ->and($iosPath.'/Core/NativePHPChartsModels.swift')->toBeFile()
+        ->and($iosPath.'/Core/NativePHPChartsConfiguration.swift')->toBeFile()
+        ->and($iosPath.'/Core/NativePHPChartsDomain.swift')->toBeFile()
+        ->and($iosPath.'/Interaction/NativePHPChartsSelection.swift')->toBeFile()
+        ->and($iosPath.'/Interaction/NativePHPChartsSelectionOverlay.swift')->toBeFile()
+        ->and($iosPath.'/Rendering/NativePHPChartsPlot.swift')->toBeFile()
+        ->and($iosPath.'/LineChartRenderer.swift')->toBeFile()
+        ->and($iosPath.'/AreaChartRenderer.swift')->toBeFile()
+        ->and($iosPath.'/BarChartRenderer.swift')->toBeFile()
+        ->and($iosPath.'/ScatterChartRenderer.swift')->toBeFile()
+        ->and($iosPath.'/PieChartRenderer.swift')->toBeFile()
+        ->and($iosPath.'/DonutChartRenderer.swift')->toBeFile();
 });
 
-describe('Native Renderers', function () {
-    it('contains the Android LineChart renderer', function () {
-        $file = $this->pluginPath
-            .'/resources/android/LineChartRenderer.kt';
+it('keeps every renderer entry point thin', function (string $path) {
+    $lines = file($this->pluginPath.'/'.$path, FILE_IGNORE_NEW_LINES);
 
-        expect(file_exists($file))->toBeTrue();
+    expect($lines)->not->toBeFalse()
+        ->and(count($lines))->toBeLessThan(40);
+})->with([
+    'resources/android/src/entrypoints/NativePHPChartsLineChartRenderer.kt',
+    'resources/android/src/entrypoints/NativePHPChartsAreaChartRenderer.kt',
+    'resources/android/src/entrypoints/NativePHPChartsBarChartRenderer.kt',
+    'resources/android/src/entrypoints/NativePHPChartsScatterChartRenderer.kt',
+    'resources/android/src/entrypoints/NativePHPChartsPieChartRenderer.kt',
+    'resources/android/src/entrypoints/NativePHPChartsDonutChartRenderer.kt',
+    'resources/ios/Sources/LineChartRenderer.swift',
+    'resources/ios/Sources/AreaChartRenderer.swift',
+    'resources/ios/Sources/BarChartRenderer.swift',
+    'resources/ios/Sources/ScatterChartRenderer.swift',
+    'resources/ios/Sources/PieChartRenderer.swift',
+    'resources/ios/Sources/DonutChartRenderer.swift',
+]);
 
-        $content = file_get_contents($file);
+it('includes marketplace-facing package metadata and policy files', function () {
+    $composer = json_decode(
+        file_get_contents($this->pluginPath.'/composer.json'),
+        true,
+        512,
+        JSON_THROW_ON_ERROR,
+    );
 
-        expect($content)
-            ->toContain('object LineChartRenderer')
-            ->toContain('@Composable')
-            ->toContain('fun Render(')
-            ->toContain('series_json')
-            ->toContain('style_json')
-            ->toContain('NumberFormat')
-            ->toContain('Canvas(');
-    });
-
-    it('contains the iOS LineChart renderer', function () {
-        $file = $this->pluginPath
-            .'/resources/ios/LineChartRenderer.swift';
-
-        expect(file_exists($file))->toBeTrue();
-
-        $content = file_get_contents($file);
-
-        expect($content)
-            ->toContain('struct LineChartRenderer: View')
-            ->toContain('import Charts')
-            ->toContain('LineMark(')
-            ->toContain('series_json')
-            ->toContain('style_json')
-            ->toContain('NumberFormatter');
-    });
-
-    it('contains native BarChart renderers', function () {
-        expect(file_get_contents($this->pluginPath.'/resources/android/BarChartRenderer.kt'))
-            ->toContain('object BarChartRenderer')
-            ->toContain('drawRoundRect')
-            ->toContain('detectTapGestures')
-            ->toContain('drawTooltip')
-            ->toContain('paint.fontMetrics.descent - paint.fontMetrics.ascent')
-            ->toContain('maximumWidth')
-            ->toContain('series_json');
-
-        expect(file_get_contents($this->pluginPath.'/resources/ios/BarChartRenderer.swift'))
-            ->toContain('struct BarChartRenderer: View')
-            ->toContain('BarMark(')
-            ->toContain('chartOverlay')
-            ->toContain('SpatialTapGesture')
-            ->toContain('proxy.position(forX: selectedPoint.label)')
-            ->toContain('series_json');
-    });
-
-    it('keeps empty bar states accessible and formatter updates reactive', function () {
-        $android = file_get_contents($this->pluginPath.'/resources/android/BarChartRenderer.kt');
-        $ios = file_get_contents($this->pluginPath.'/resources/ios/BarChartRenderer.swift');
-
-        expect($android)
-            ->toContain('remember(locale, valueFormat, currencyCode, minimumFractionDigits, maximumFractionDigits)')
-            ->and($ios)
-            ->toContain('.accessibilityValue(node.props.getString("empty_label", default: "No data"))');
-    });
-
-    it('uses relative padding for non-zero one-point domains on both renderers', function () {
-        $android = file_get_contents($this->pluginPath.'/resources/android/LineChartRenderer.kt');
-        $ios = file_get_contents($this->pluginPath.'/resources/ios/LineChartRenderer.swift');
-
-        expect($android)
-            ->toContain('val padding = if (minimum == 0.0) 1.0 else abs(minimum) * 0.1')
-            ->and($ios)
-            ->toContain('let padding = span == 0 ? (upper == 0 ? 1 : abs(upper) * 0.1) : span * 0.1');
-    });
-});
-
-describe('Composer Configuration', function () {
-    it('is configured as a NativePHP UI plugin', function () {
-        $composerPath = $this->pluginPath.'/composer.json';
-
-        expect(file_exists($composerPath))->toBeTrue();
-
-        $composer = json_decode(
-            file_get_contents($composerPath),
-            true
-        );
-
-        expect(json_last_error())->toBe(JSON_ERROR_NONE)
-            ->and($composer['name'])
-            ->toBe('donmanueldev/nativephp-charts')
-            ->and($composer['type'])
-            ->toBe('nativephp-ui-plugin')
-            ->and($composer['require']['nativephp/mobile'])
-            ->toBe('^4.0');
-    });
+    expect($composer['name'])->toBe('donmanueldev/nativephp-charts')
+        ->and($composer['type'])->toBe('nativephp-ui-plugin')
+        ->and($composer['require']['php'])->toBe('^8.4')
+        ->and($composer['require']['nativephp/mobile'])->toBe('^4.0')
+        ->and($composer['support'])->toHaveKeys(['issues', 'source'])
+        ->and($this->pluginPath.'/LICENSE.md')->toBeFile()
+        ->and($this->pluginPath.'/CHANGELOG.md')->toBeFile()
+        ->and($this->pluginPath.'/SECURITY.md')->toBeFile();
 });

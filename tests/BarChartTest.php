@@ -1,50 +1,85 @@
 <?php
 
 use Donmanueldev\NativephpCharts\Elements\BarChart;
+use Donmanueldev\NativephpCharts\Elements\CartesianChart;
+use Donmanueldev\NativephpCharts\Elements\LineChart;
 use Native\Mobile\Edge\CallbackRegistry;
 
-it('serializes the shared chart contract as a bar chart node', function () {
-    $node = BarChart::make()
+it('is an independent grouped cartesian chart with multiple series', function () {
+    $node = BarChart::make()->series([
+        ['id' => 'actual', 'name' => 'Actual', 'color' => '#14B8A6', 'points' => [['id' => 'a', 'label' => 'Mon', 'value' => 12]]],
+        ['id' => 'budget', 'name' => 'Budget', 'color' => '#6366F1', 'points' => [['id' => 'b', 'label' => 'Mon', 'value' => 15]]],
+    ])->toArray(new CallbackRegistry);
+
+    expect($node['type'])->toBe('bar_chart')
+        ->and($node['props']['bar_mode'])->toBe('grouped')
+        ->and(json_decode($node['props']['legend_json'], true, flags: JSON_THROW_ON_ERROR)['visible'])->toBeTrue()
+        ->and(is_subclass_of(BarChart::class, LineChart::class))->toBeFalse()
+        ->and(is_subclass_of(BarChart::class, CartesianChart::class))->toBeTrue();
+});
+
+it('supports bar-specific style without accepting line-only options', function () {
+    $props = BarChart::make()->style([
+        'bar' => ['radius' => 6, 'width' => 18],
+        'grid' => ['visible' => false],
+        'axis' => ['labelCount' => 4],
+    ])->toArray(new CallbackRegistry)['props'];
+
+    expect($props['style_json'])->toBe('{"bar":{"radius":6,"width":18},"grid":{"visible":false},"axis":{"label_count":4}}');
+
+    expect(fn () => BarChart::make()->style(['line' => ['width' => 2]]))
+        ->toThrow(InvalidArgumentException::class, 'bar chart style')
+        ->and(fn () => BarChart::make()->style(['bar' => ['width' => 0]]))
+        ->toThrow(InvalidArgumentException::class, 'bar.width');
+});
+
+it('reports bar-specific validation messages', function () {
+    expect(fn () => BarChart::make()->series([[
+        'id' => 'orders',
+        'name' => 'Orders',
+        'color' => 'violet',
+        'points' => [],
+    ]]))->toThrow(InvalidArgumentException::class, 'The bar chart color');
+});
+
+it('preserves the v0.2 scalar and compatibility-point contract', function () {
+    $props = BarChart::make()
         ->series([[
             'id' => 'orders',
             'name' => 'Orders',
-            'color' => '#14B8A6',
-            'points' => [
-                ['label' => 'Monday', 'value' => 12],
-                ['label' => 'Tuesday', 'value' => -3],
-            ],
+            'color' => '#0F766E',
+            'points' => [['label' => 'Mon', 'value' => 18]],
         ]])
         ->showGrid(false)
         ->showPoints(false)
         ->beginAtZero(false)
         ->animated(false)
-        ->emptyLabel('No orders yet')
-        ->locale('en-US')
+        ->locale('es-NI')
         ->valueFormat('currency')
-        ->currencyCode('USD')
-        ->minimumFractionDigits(0)
-        ->maximumFractionDigits(2)
-        ->style([
-            'grid' => ['visible' => true, 'color' => '#E2E8F0'],
-            'axis' => ['font' => 'accent', 'labelCount' => 4],
-        ])
-        ->a11yLabel('Daily orders')
-        ->toArray(new CallbackRegistry);
+        ->currencyCode('NIO')
+        ->maximumFractionDigits(0)
+        ->toArray(new CallbackRegistry)['props'];
 
-    expect($node['type'])->toBe('bar_chart')
-        ->and($node['props'])->toBe([
-            'show_grid' => false,
-            'show_points' => false,
-            'begin_at_zero' => false,
-            'animated' => false,
-            'empty_label' => 'No orders yet',
-            'a11y_label' => 'Daily orders',
-            'locale' => 'en-US',
-            'value_format' => 'currency',
-            'currency_code' => 'USD',
-            'minimum_fraction_digits' => 0,
-            'maximum_fraction_digits' => 2,
-            'style_json' => '{"grid":{"visible":true,"color":"#E2E8F0"},"axis":{"font":"accent","label_count":4}}',
-            'series_json' => '[{"id":"orders","name":"Orders","color":"#14B8A6","points":[{"label":"Monday","value":12},{"label":"Tuesday","value":-3}]}]',
+    expect($props)->toMatchArray([
+        'show_grid' => false,
+        'show_points' => false,
+        'begin_at_zero' => false,
+        'animated' => false,
+        'locale' => 'es-NI',
+        'value_format' => 'currency',
+        'currency_code' => 'NIO',
+        'maximum_fraction_digits' => 0,
+        'bar_mode' => 'grouped',
+    ])->and(json_decode($props['series_json'], true, flags: JSON_THROW_ON_ERROR)[0]['points'][0])
+        ->toMatchArray([
+            'label' => 'Mon',
+            'value' => 18,
+            'x' => 'Mon',
         ]);
+});
+
+it('remains extensible for consumer-defined bar chart elements', function () {
+    $chart = new class extends BarChart {};
+
+    expect($chart->toArray(new CallbackRegistry)['type'])->toBe('bar_chart');
 });

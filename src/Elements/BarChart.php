@@ -2,11 +2,17 @@
 
 namespace Donmanueldev\NativephpCharts\Elements;
 
-/**
- * A categorical bar chart using the same platform-neutral data, formatting,
- * accessibility, and axis contract as LineChart.
- */
-class BarChart extends LineChart
+class BarChart extends CartesianChart
 {
     protected string $type = 'bar_chart';
+
+    protected function chartType(): string
+    {
+        return 'bar';
+    }
+
+    protected function specificProps(): array
+    {
+        return ['bar_mode' => 'grouped'];
+    }
 }

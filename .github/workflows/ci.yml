@@ -28,8 +28,6 @@ jobs:
       fail-fast: false
       matrix:
         php:
-          - "8.2"
-          - "8.3"
           - "8.4"
           - "8.5"
 
@@ -61,5 +59,22 @@ jobs:
       - name: Validate nativephp.json
         run: php -r 'json_decode(file_get_contents("nativephp.json"), true, 512, JSON_THROW_ON_ERROR);'
 
+      - name: Lint PHP sources and tests
+        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
       - name: Check whitespace errors
         run: git diff --check $(git hash-object -t tree /dev/null) HEAD
+
+  swift-syntax:
+    name: Swift source syntax
+    runs-on: macos-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Parse Swift sources
+        run: find resources/ios/Sources -name '*.swift' -print0 | xargs -0 swiftc -parse

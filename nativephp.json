@@ -1,7 +1,7 @@
 {
     "name": "donmanueldev/nativephp-charts",
-    "version": "0.2.0",
-    "description": "Native chart components for NativePHP Mobile, rendered with SwiftUI and Jetpack Compose.",
+    "version": "1.0.0",
+    "description": "Native line, area, bar, scatter, pie, and donut charts for NativePHP Mobile.",
     "namespace": "NativePHPCharts",
     "platforms": [
         "android",
@@ -12,16 +12,48 @@
             "type": "line_chart",
             "element": "Donmanueldev\\NativephpCharts\\Elements\\LineChart",
             "blade": "Donmanueldev\\NativephpCharts\\Components\\LineChart",
-            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.LineChartRenderer",
-            "ios_renderer": "LineChartRenderer",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsLineChartRenderer",
+            "ios_renderer": "NativePHPChartsLineChartRenderer",
             "self_closing": true
         },
         {
             "type": "bar_chart",
             "element": "Donmanueldev\\NativephpCharts\\Elements\\BarChart",
             "blade": "Donmanueldev\\NativephpCharts\\Components\\BarChart",
-            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.BarChartRenderer",
-            "ios_renderer": "BarChartRenderer",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsBarChartRenderer",
+            "ios_renderer": "NativePHPChartsBarChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "area_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\AreaChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\AreaChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsAreaChartRenderer",
+            "ios_renderer": "NativePHPChartsAreaChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "scatter_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\ScatterChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\ScatterChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsScatterChartRenderer",
+            "ios_renderer": "NativePHPChartsScatterChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "pie_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\PieChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\PieChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsPieChartRenderer",
+            "ios_renderer": "NativePHPChartsPieChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "donut_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\DonutChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\DonutChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsDonutChartRenderer",
+            "ios_renderer": "NativePHPChartsDonutChartRenderer",
             "self_closing": true
         }
     ],

@@ -1,6 +1,6 @@
 {
     "name": "donmanueldev/nativephp-charts",
-    "description": "Native chart components for NativePHP Mobile, rendered with SwiftUI and Jetpack Compose.",
+    "description": "Native line, area, bar, scatter, pie, and donut charts for NativePHP Mobile.",
     "type": "nativephp-ui-plugin",
     "license": "MIT",
     "authors": [
@@ -9,8 +9,20 @@
             "email": "donmanuel@momotombo.dev"
         }
     ],
+    "keywords": [
+        "nativephp",
+        "mobile",
+        "charts",
+        "swiftui",
+        "jetpack-compose"
+    ],
+    "homepage": "https://github.com/donmanueldev/nativephp-charts",
+    "support": {
+        "issues": "https://github.com/donmanueldev/nativephp-charts/issues",
+        "source": "https://github.com/donmanueldev/nativephp-charts"
+    },
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "nativephp/mobile": "^4.0"
     },
     "autoload": {
