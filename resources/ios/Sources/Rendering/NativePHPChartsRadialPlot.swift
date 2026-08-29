@@ -14,10 +14,9 @@ struct NativePHPChartsRadialPlot: View {
         Chart {
             ForEach(snapshot.data.segments) { segment in
                 SectorMark(
-                    angle: .value("Value", segment.value),
+                    angle: .value("Value", angularRange(for: segment)),
                     innerRadius: .ratio(innerRadius),
-                    outerRadius: .ratio(outerRadius(for: segment)),
-                    angularInset: snapshot.configuration.style.gap
+                    outerRadius: .ratio(outerRadius(for: segment))
                 )
                 .foregroundStyle(segment.color)
                 .opacity(opacity(for: segment))
@@ -59,6 +58,14 @@ struct NativePHPChartsRadialPlot: View {
 
     private var innerRadius: CGFloat {
         CGFloat(snapshot.configuration.innerRadiusRatio)
+    }
+
+    private func angularRange(for segment: NativePHPChartsRadialSegment) -> ClosedRange<Double> {
+        let rawDegrees = segment.value / snapshot.data.total * 360
+        let gapDegrees = min(Double(snapshot.configuration.style.gap), rawDegrees * 0.45)
+        let halfGap = snapshot.data.total * gapDegrees / 720
+
+        return (segment.lowerBound + halfGap)...(segment.upperBound - halfGap)
     }
 
     private var accessibilitySummary: String {

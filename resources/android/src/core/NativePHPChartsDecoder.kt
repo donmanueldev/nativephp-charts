@@ -15,7 +15,7 @@ internal object NativePHPChartsDecoder {
         return NativePHPChartsConfiguration(
             kind = kind,
             series = decodeSeries(input.seriesJson),
-            style = decodeStyle(styleRoot),
+            style = decodeStyle(styleRoot, kind),
             xAxis = decodeXAxis(input.xAxisJson.asObject("x_axis_json"), legacyAxis),
             yAxis = decodeYAxis(input.yAxisJson.asObject("y_axis_json"), legacyAxis, input),
             legend = decodeLegend(input.legendJson.asObject("legend_json")),
@@ -80,7 +80,7 @@ internal object NativePHPChartsDecoder {
         emptyList()
     }
 
-    private fun decodeStyle(root: JSONObject): NativePHPChartsStyle {
+    private fun decodeStyle(root: JSONObject, kind: NativePHPChartsKind): NativePHPChartsStyle {
         val line = root.optJSONObject("line")
         val points = root.optJSONObject("points")
         val grid = root.optJSONObject("grid")
@@ -93,7 +93,7 @@ internal object NativePHPChartsDecoder {
             lineWidth = line.float("width", 3f),
             smooth = line?.optString("interpolation") == "smooth",
             pointColor = points?.optString("color")?.takeIf(String::isNotBlank),
-            pointSize = points.float("size", 4f),
+            pointSize = points.float("size", defaultPointSize(kind)),
             pointsVisible = points.booleanOrNull("visible"),
             gridColor = grid?.optString("color")?.takeIf(String::isNotBlank),
             gridVisible = grid.booleanOrNull("visible"),
@@ -109,6 +109,13 @@ internal object NativePHPChartsDecoder {
             axisFontSize = axis.float("font_size", 10f),
             axisLabelColor = axis?.optString("label_color")?.takeIf(String::isNotBlank),
         )
+    }
+
+    private fun defaultPointSize(kind: NativePHPChartsKind): Float = when (kind) {
+        NativePHPChartsKind.Line -> 5f
+        NativePHPChartsKind.Area -> 4.5f
+        NativePHPChartsKind.Scatter -> 7f
+        NativePHPChartsKind.Bar -> 4f
     }
 
     private fun decodeXAxis(value: JSONObject?, fallback: JSONObject?): NativePHPChartsXAxis {

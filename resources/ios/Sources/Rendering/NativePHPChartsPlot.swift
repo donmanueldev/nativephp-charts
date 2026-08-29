@@ -13,7 +13,7 @@ struct NativePHPChartsPlot: View {
 
     var body: some View {
         Chart {
-            if snapshot.domain.y.contains(0) {
+            if yAxisVisible, snapshot.domain.y.contains(0) {
                 RuleMark(y: .value("Baseline", 0))
                     .foregroundStyle(axisColor)
                     .lineStyle(StrokeStyle(lineWidth: snapshot.configuration.style.grid.width ?? 1))
@@ -44,7 +44,7 @@ struct NativePHPChartsPlot: View {
                 withAnimation(nil) { revealProgress = 1 }
             }
         }
-        .accessibilityElement(children: .contain)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(snapshot.configuration.accessibilityLabel)
         .accessibilityValue(accessibilitySummary)
         .accessibilityAdjustableAction(moveAccessibleSelection)

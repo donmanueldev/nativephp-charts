@@ -72,7 +72,14 @@ internal fun DrawScope.drawNativePHPChartsAxes(
         }
         if (yAxisVisible) {
             labelPaint.textAlign = Paint.Align.RIGHT
-            drawContext.canvas.nativeCanvas.drawText(label, layout.plot.left - 8.dp.toPx(), y + labelPaint.textSize / 3f, labelPaint)
+            val availableWidth = (layout.plot.left - 20.dp.toPx()).coerceAtLeast(0f)
+            val baseline = y - ((labelPaint.fontMetrics.ascent + labelPaint.fontMetrics.descent) / 2f)
+            drawContext.canvas.nativeCanvas.drawText(
+                ellipsizeNativePHPCharts(label, labelPaint, availableWidth),
+                layout.plot.left - 8.dp.toPx(),
+                baseline,
+                labelPaint,
+            )
         }
     }
     if (yAxisVisible && layout.baselineY in layout.plot.top..layout.plot.bottom) {
@@ -85,7 +92,7 @@ internal fun DrawScope.drawNativePHPChartsAxes(
             drawContext.canvas.nativeCanvas.drawText(
                 ellipsizeNativePHPCharts(label, labelPaint, width),
                 x,
-                layout.plot.bottom + 20.dp.toPx(),
+                layout.plot.bottom + 8.dp.toPx() - labelPaint.fontMetrics.ascent,
                 labelPaint,
             )
         }
@@ -133,7 +140,7 @@ internal fun DrawScope.drawNativePHPChartsLines(
             data.forEach { datum ->
                 drawCircle(
                     pointColor,
-                    configuration.style.pointSize.dp.toPx(),
+                    configuration.style.pointSize.dp.toPx() / 2f,
                     animatedPoint(datum, progress, layout, useAreaBase = false),
                 )
             }
@@ -170,7 +177,7 @@ internal fun DrawScope.drawNativePHPChartsScatter(
     layout.data.forEach { datum ->
         drawCircle(
             color = resources.pointColors.getValue(datum.series.id),
-            radius = configuration.style.pointSize.dp.toPx(),
+            radius = configuration.style.pointSize.dp.toPx() / 2f,
             center = animatedPoint(datum, progress, layout, useAreaBase = false),
         )
     }
@@ -189,13 +196,15 @@ internal fun DrawScope.drawNativePHPChartsSelection(
     val paint = resources.tooltipPaint
     val availableWidth = layout.plot.width.coerceAtLeast(1f)
     val horizontalPadding = 18.dp.toPx()
+    val verticalPadding = 7.dp.toPx()
     val displayText = ellipsizeNativePHPCharts(text, paint, max(availableWidth - horizontalPadding, 0f))
     val width = min(paint.measureText(displayText) + horizontalPadding, availableWidth)
-    val height = 26.dp.toPx()
+    val fontMetrics = paint.fontMetrics
+    val height = (fontMetrics.descent - fontMetrics.ascent) + (verticalPadding * 2)
     val centerX = datum.center.x.coerceIn(layout.plot.left + width / 2, layout.plot.right - width / 2)
     val bottom = (datum.center.y - 12.dp.toPx()).coerceAtLeast(layout.plot.top + height)
     drawRoundRect(Color.Black.copy(alpha = 0.84f), Offset(centerX - width / 2, bottom - height), androidx.compose.ui.geometry.Size(width, height), CornerRadius(height / 2))
-    drawContext.canvas.nativeCanvas.drawText(displayText, centerX, bottom - 7.dp.toPx(), paint)
+    drawContext.canvas.nativeCanvas.drawText(displayText, centerX, bottom - verticalPadding - fontMetrics.bottom, paint)
 }
 
 private fun nativePHPChartsPath(

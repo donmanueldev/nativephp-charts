@@ -91,8 +91,16 @@ internal fun NativePHPChartsPlot(
         }
     }
     val summary = remember(configuration, formatting) { configuration.accessibilitySummary(formatting) }
-    val layout = remember(configuration, formatting, canvasSize, density) {
-        NativePHPChartsLayoutEngine.build(configuration, formatting, canvasSize, density)
+    val layout = remember(configuration, formatting, canvasSize, density, drawingResources.axisLabelPaint) {
+        val fontMetrics = drawingResources.axisLabelPaint.fontMetrics
+        NativePHPChartsLayoutEngine.build(
+            configuration = configuration,
+            formatting = formatting,
+            size = canvasSize,
+            density = density,
+            measureAxisLabel = drawingResources.axisLabelPaint::measureText,
+            axisLabelHeight = fontMetrics.descent - fontMetrics.ascent,
+        )
     }
     val pathCache = remember(layout, configuration.style.smooth, configuration.kind) {
         if (configuration.kind == NativePHPChartsKind.Line || configuration.kind == NativePHPChartsKind.Area) {
@@ -139,6 +147,7 @@ internal fun NativePHPChartsPlot(
     val next = selectionTarget(1)
 
     fun actionLabel(datum: NativePHPChartsDatum): String = listOf(
+        "${layout.data.indexOf(datum) + 1}/${layout.data.size}",
         datum.series.name,
         formatting.x(datum.point),
         formatting.value(datum.point.value),
@@ -159,7 +168,7 @@ internal fun NativePHPChartsPlot(
                     next?.let { datum ->
                         CustomAccessibilityAction(actionLabel(datum)) { moveSelection(1) }
                     },
-                ).distinctBy { it.label }
+                )
             }
             .pointerInput(configuration, layout) {
                 detectTapGestures { location ->

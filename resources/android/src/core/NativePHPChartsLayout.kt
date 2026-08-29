@@ -47,12 +47,9 @@ internal object NativePHPChartsLayoutEngine {
         formatting: NativePHPChartsFormatting,
         size: IntSize,
         density: Float,
+        measureAxisLabel: (String) -> Float,
+        axisLabelHeight: Float,
     ): NativePHPChartsLayout {
-        val left = 58f * density
-        val right = max(left + density, size.width - (12f * density))
-        val top = 14f * density
-        val bottom = max(top + density, size.height - (34f * density))
-        val plot = Rect(left, top, right, bottom)
         val values = when {
             configuration.kind == NativePHPChartsKind.Area && configuration.areaMode == "stacked" -> {
                 stackedGeometryValues(configuration.series, formatting)
@@ -61,6 +58,32 @@ internal object NativePHPChartsLayoutEngine {
         }
         val geometryRequiresZero = configuration.kind == NativePHPChartsKind.Area
         val domain = domain(values, configuration.beginAtZero || geometryRequiresZero)
+        val legacyAxisVisible = if (configuration.kind == NativePHPChartsKind.Bar) configuration.showPoints else true
+        val xAxisVisible = configuration.xAxis.visible ?: configuration.style.axisVisible ?: legacyAxisVisible
+        val yAxisVisible = configuration.yAxis.visible ?: configuration.style.axisVisible ?: legacyAxisVisible
+        val yLabelCount = (configuration.style.axisLabelCount ?: configuration.yAxis.labelCount).coerceIn(2, 12)
+        val yLabelValues = (0 until yLabelCount).map { index ->
+            val fraction = index.toDouble() / (yLabelCount - 1)
+            domain.maximum - (domain.span * fraction)
+        }
+        val measuredYLabelWidth = if (yAxisVisible) {
+            yLabelValues.maxOfOrNull { measureAxisLabel(formatting.value(it)) } ?: 0f
+        } else {
+            0f
+        }
+        val yLabelWidth = min(measuredYLabelWidth, size.width.coerceAtLeast(0) * 0.45f)
+        val horizontalPadding = 12f * density
+        val labelSpacing = 8f * density
+        val left = horizontalPadding + if (yAxisVisible) yLabelWidth + labelSpacing else 0f
+        val right = max(left + density, size.width - horizontalPadding)
+        val top = (12f * density) + if (yAxisVisible) axisLabelHeight / 2f else 0f
+        val bottomPadding = if (xAxisVisible) {
+            (20f * density) + axisLabelHeight
+        } else {
+            max(12f * density, axisLabelHeight / 2f)
+        }
+        val bottom = max(top + density, size.height - bottomPadding)
+        val plot = Rect(left, top, right, bottom)
         val baselineY = yFor(0.0, domain, plot).coerceIn(plot.top, plot.bottom)
         val categories = configuration.series.flatMap(NativePHPChartsSeries::points)
             .distinctBy { it.x?.toString() ?: it.label }
@@ -129,11 +152,9 @@ internal object NativePHPChartsLayoutEngine {
             val point = xLabelPoints[index]
             xFor(point) to formatting.x(point)
         }
-        val yLabelCount = (configuration.style.axisLabelCount ?: configuration.yAxis.labelCount).coerceIn(2, 12)
-        val yLabels = (0 until yLabelCount).map { index ->
+        val yLabels = yLabelValues.mapIndexed { index, value ->
             val fraction = index.toFloat() / (yLabelCount - 1)
             val y = plot.top + (plot.height * fraction)
-            val value = domain.maximum - (domain.span * fraction)
             y to formatting.value(value)
         }
 

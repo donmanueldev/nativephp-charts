@@ -7,6 +7,9 @@ All notable changes to NativePHP Charts are documented here. The project follows
 ### Fixed
 
 - Kept Laravel view tooling development-only so consuming NativePHP applications install no redundant runtime dependencies.
+- Sized Android axes and selection tooltips from rendered font metrics so localized labels and accessibility font scales retain usable plot space.
+- Aligned Cartesian point sizing, hidden-axis baselines, and pie/donut angular gaps across Android and iOS.
+- Collapsed duplicate VoiceOver and TalkBack chart semantics while preserving both selection directions for repeated visible values.
 
 ## [1.0.0] - 2026-08-28
 
