@@ -56,8 +56,8 @@ jobs:
       - name: Audit Composer dependencies
         run: composer audit --no-interaction
 
-      - name: Validate nativephp.json
-        run: php -r 'json_decode(file_get_contents("nativephp.json"), true, 512, JSON_THROW_ON_ERROR);'
+      - name: Validate NativePHP plugin
+        run: vendor/bin/testbench native:plugin:validate . --no-interaction
 
       - name: Lint PHP sources and tests
         run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
