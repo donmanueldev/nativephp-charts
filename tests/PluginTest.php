@@ -159,13 +159,26 @@ it('includes marketplace-facing package metadata and policy files', function () 
         JSON_THROW_ON_ERROR,
     );
 
-    expect($composer['name'])->toBe('donmanueldev/nativephp-charts')
-        ->and($composer['type'])->toBe('nativephp-ui-plugin')
-        ->and($composer['require']['php'])->toBe('^8.4')
-        ->and($composer['require']['illuminate/view'])->toBe('^10.0|^11.0|^12.0|^13.0')
-        ->and($composer['require']['nativephp/mobile'])->toBe('^4.0')
-        ->and($composer['support'])->toHaveKeys(['issues', 'source'])
-        ->and($this->pluginPath.'/LICENSE.md')->toBeFile()
-        ->and($this->pluginPath.'/CHANGELOG.md')->toBeFile()
-        ->and($this->pluginPath.'/SECURITY.md')->toBeFile();
+    expect($composer)
+        ->name->toBe('donmanueldev/nativephp-charts')
+        ->type->toBe('nativephp-ui-plugin')
+        ->support->toHaveKeys(['issues', 'source']);
+
+    expect($composer['require'])
+        ->toBe([
+            'php' => '^8.4',
+            'nativephp/mobile' => '^4.0',
+        ]);
+
+    expect($composer['require-dev'])
+        ->toBe([
+            'orchestra/testbench' => '^10.0',
+            'pestphp/pest' => '^3.0',
+        ]);
+
+    expect([
+        $this->pluginPath.'/LICENSE.md',
+        $this->pluginPath.'/CHANGELOG.md',
+        $this->pluginPath.'/SECURITY.md',
+    ])->each->toBeFile();
 });
