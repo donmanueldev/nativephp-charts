@@ -170,7 +170,7 @@ These elements belong to Unreleased 1.1 and must not be treated as stable while 
 
 Radar charts define 3–24 ordered axes with independent positive maximums. Every series must provide exactly one value for each axis in the same order. Use `grid-levels` from 2–10 and `fill-opacity` from 0–1 to control the native polygon renderer.
 
-Candlestick charts accept zero or one ordered series. Every point requires finite `open`, `high`, `low`, and `close` values with a valid OHLC range. The close is used as the selection value. LTTB sampling is intentionally rejected because reducing candles could hide financial extremes.
+Candlestick charts accept zero or one ordered series. Every point requires finite `open`, `high`, `low`, and `close` values with a valid OHLC range. The close is used as the selection value. LTTB sampling is intentionally rejected because reducing candles could hide financial extremes. The neutral `style.candlestick` section accepts `risingColor`, `fallingColor`, `neutralColor`, and `wickWidth`; a series may override any of those values without exposing Swift or Compose paint APIs.
 
 ## Selection and PHP callbacks
 
@@ -306,12 +306,15 @@ The neutral style map supports these sections:
 - `line`: `color`, `width`, `interpolation` (`linear|smooth|step_before|step_after`), and `dash`.
 - `area`: `opacity`, `gradient` (native vertical gradient by default; set `false` for a solid fill).
 - `bar`: `radius`, `width` (points on iOS, density-independent pixels on Android; automatic width remains the default).
+- `candlestick`: `risingColor`, `fallingColor`, `neutralColor`, `wickWidth` (points on iOS and density-independent pixels on Android).
 - `points`: `visible`, `color`, `size`.
 - `grid`: `visible`, `color`, `width`.
 - `axis`: `visible`, `color`, `labelColor`, `font`, `fontSize`, `labelCount`.
 - `segment` (pie/donut): `gap`, `cornerRadius`, `opacity`.
 
 Colors accept `#RGB`, `#RRGGBB`, CSS-alpha `#RRGGBBAA`, `black`, `white`, and `transparent`. Axis fonts accept NativePHP font aliases and fall back to the system font when unresolved.
+
+`axis.labelCount` applies to Cartesian axes. Radar rejects it instead of accepting a renderer no-op; its spatial axis labels are derived from the declared radar axes.
 
 ## Accessibility and performance
 
@@ -338,9 +341,10 @@ php artisan native:plugin:validate
 
 ```bash
 composer test
+swift test
 ```
 
-PHP tests prove normalization, serialization, compatibility, and callback registration. They do not prove Swift/Kotlin compilation or rendering. Native renderer changes require generated iOS and Android builds; simulator/emulator and physical-device evidence must be recorded separately.
+PHP tests prove normalization, serialization, compatibility, and callback registration. The package-owned Swift harness compiles the iOS renderers and exercises native geometry, interaction, formatting, and accessibility helpers. There is no equivalent package-owned Android compile harness yet: Kotlin source regressions remain weaker evidence than a generated Android build. Neither harness proves rendered geometry or gestures in a simulator, emulator, or physical device, so those results must be recorded separately.
 
 ## Platform and frontend scope
 
