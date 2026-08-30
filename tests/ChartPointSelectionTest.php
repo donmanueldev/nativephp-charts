@@ -57,7 +57,7 @@ it('rejects malformed or incompatible selection payloads', function (string $jso
     'list instead of object' => ['[]', 'JSON object'],
     'unsupported version' => ['{"version":2,"chart_type":"line"}', "version '2'"],
     'unsupported chart' => [json_encode([
-        'version' => 1, 'chart_type' => 'radar', 'x_type' => 'category', 'x' => 'A',
+        'version' => 1, 'chart_type' => 'gauge', 'x_type' => 'category', 'x' => 'A',
     ]), 'chart type'],
     'negative index' => [json_encode([
         'version' => 1, 'chart_type' => 'bar', 'series_id' => 's', 'series_name' => 'S',
@@ -88,6 +88,40 @@ it('decodes scatter and radial selections with the shared version 1 payload', fu
         ->and($selection->seriesId)->toBe('web')
         ->and($selection->pointId)->toBe('web');
 })->with(['scatter', 'pie', 'donut']);
+
+it('decodes radar and candlestick selections emitted by the native renderers', function (array $payload, string $chartType, string $pointId) {
+    $selection = PointSelection::fromJson(json_encode($payload, JSON_THROW_ON_ERROR));
+
+    expect($selection->chartType)->toBe($chartType)
+        ->and($selection->pointId)->toBe($pointId);
+})->with([
+    'radar' => [[
+        'version' => 1,
+        'chart_type' => 'radar',
+        'series_id' => 'nativephp-charts',
+        'series_name' => 'NativePHP Charts',
+        'point_id' => 'rendering',
+        'point_index' => 0,
+        'x_type' => 'category',
+        'x' => 'rendering',
+        'label' => 'Rendering',
+        'value' => 94,
+        'localized_value' => '94',
+    ], 'radar', 'rendering'],
+    'candlestick' => [[
+        'version' => 1,
+        'chart_type' => 'candlestick',
+        'series_id' => 'nphp-market',
+        'series_name' => 'NPHP',
+        'point_id' => 'aug-29',
+        'point_index' => 5,
+        'x_type' => 'date',
+        'x' => '2026-08-29',
+        'label' => '29 Aug',
+        'value' => 191.4,
+        'localized_value' => '$191',
+    ], 'candlestick', 'aug-29'],
+]);
 
 it('rejects radial payloads that violate segment identity invariants', function (array $changes, string $message) {
     $payload = [

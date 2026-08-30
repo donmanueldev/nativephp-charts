@@ -31,7 +31,8 @@ it('keeps Android point sizing and accessibility behavior platform neutral', fun
     $cartesianPlot = nativeRendererSource('resources/android/src/rendering/NativePHPChartsPlot.kt');
     $radialPlot = nativeRendererSource('resources/android/src/rendering/NativePHPChartsRadialPlot.kt');
 
-    expect(substr_count($drawing, 'configuration.style.pointSize.dp.toPx() / 2f'))->toBe(2)
+    expect(substr_count($drawing, 'series.style?.pointSize ?: configuration.style.pointSize'))->toBe(2)
+        ->and($drawing)->toContain('datum.series.style?.pointSize ?: configuration.style.pointSize')
         ->and($decoder)->toContain('pointSize = points.float("size", defaultPointSize(kind))')
         ->toContain('NativePHPChartsKind.Scatter -> 7f')
         ->and($cartesianRenderer)->toContain('.clearAndSetSemantics {')
@@ -40,15 +41,131 @@ it('keeps Android point sizing and accessibility behavior platform neutral', fun
         ->and($radialPlot)->not->toContain('.distinctBy { it.label }');
 });
 
-it('keeps iOS axes radial gaps and VoiceOver semantics aligned with the public contract', function () {
+it('keeps iOS axes and radial gaps aligned with the public contract', function () {
     $cartesianPlot = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsPlot.swift');
     $radialPlot = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsRadialPlot.swift');
 
     expect($cartesianPlot)
-        ->toContain('if yAxisVisible, snapshot.domain.y.contains(0)')
-        ->toContain('.accessibilityElement(children: .ignore)')
+        ->toContain('if yAxisVisible, snapshot.domain.y.contains(snapshot.domain.baseline)')
         ->and($radialPlot)
         ->toContain('angle: .value("Value", angularRange(for: segment))')
+        ->toContain('-> Range<Double>')
+        ->toContain(')..<(')
+        ->not->toContain('-> ClosedRange<Double>')
         ->toContain('let gapDegrees = min(Double(snapshot.configuration.style.gap), rawDegrees * 0.45)')
         ->not->toContain('angularInset: snapshot.configuration.style.gap');
+});
+
+it('applies explicit cartesian axis contracts in both native renderers', function () {
+    $androidDecoder = nativeRendererSource('resources/android/src/core/NativePHPChartsDecoder.kt');
+    $androidLayout = nativeRendererSource('resources/android/src/core/NativePHPChartsLayout.kt');
+    $androidDrawing = nativeRendererSource('resources/android/src/rendering/NativePHPChartsDrawing.kt');
+    $iosConfiguration = nativeRendererSource('resources/ios/Sources/Core/NativePHPChartsConfiguration.swift');
+    $iosDomain = nativeRendererSource('resources/ios/Sources/Core/NativePHPChartsDomain.swift');
+    $iosPlot = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsPlot.swift');
+
+    expect($androidDecoder)
+        ->toContain('minimum = axis?.optionalValue("minimum")')
+        ->toContain('baseline = axis.doubleOrNull("baseline")')
+        ->and($androidLayout)
+        ->toContain('configuration.yAxis.minimum')
+        ->toContain('configuration.xAxis.interval * 86_400.0')
+        ->toContain('configuration.yAxis.labelCount.coerceIn(2, 12)')
+        ->and($androidDrawing)
+        ->toContain('if (isHorizontalBar) configuration.yAxis.title else configuration.xAxis.title')
+        ->toContain('if (isHorizontalBar) configuration.xAxis.title else configuration.yAxis.title')
+        ->and($iosConfiguration)
+        ->toContain('let minimum: NativePHPChartsWireValue?')
+        ->toContain('return type == .date ? interval * 86_400 : interval')
+        ->and($iosDomain)
+        ->toContain('minimum: configuration.xAxis.plotValue(configuration.xAxis.minimum, formatter: formatter)')
+        ->toContain('minimum: configuration.yAxis.minimum?.numberValue')
+        ->and($iosPlot)
+        ->toContain('.chartXAxisLabel(position: .bottom, alignment: .center)')
+        ->toContain('AxisMarks(values: .stride(by: interval))');
+});
+
+it('keeps v1.1 depth features wired through both native renderers', function () {
+    $androidDecoder = nativeRendererSource('resources/android/src/core/NativePHPChartsDecoder.kt');
+    $androidLayout = nativeRendererSource('resources/android/src/core/NativePHPChartsLayout.kt');
+    $androidDrawing = nativeRendererSource('resources/android/src/rendering/NativePHPChartsDrawing.kt');
+    $iosConfiguration = nativeRendererSource('resources/ios/Sources/Core/NativePHPChartsConfiguration.swift');
+    $iosModels = nativeRendererSource('resources/ios/Sources/Core/NativePHPChartsModels.swift');
+    $iosMarks = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsMarks.swift');
+    $iosPlot = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsPlot.swift');
+
+    expect($androidDecoder)
+        ->toContain('style = item.optJSONObject("style")?.let(::decodeSeriesStyle)')
+        ->toContain('annotations = decodeAnnotations(input.annotationsJson)')
+        ->and($androidLayout)
+        ->toContain('stackedHorizontalBars(')
+        ->toContain('groupedHorizontalBars(')
+        ->and($androidDrawing)
+        ->toContain('PathEffect::dashPathEffect')
+        ->toContain('nativePHPChartsBetweenPath')
+        ->toContain('drawNativePHPChartsErrorRange')
+        ->toContain('drawNativePHPChartsAnnotations')
+        ->and($iosConfiguration)
+        ->toContain('barOrientation: NativePHPChartsBarOrientation')
+        ->toContain('annotations: NativePHPChartsAnnotation.decode(input.annotationsJSON)')
+        ->and($iosModels)
+        ->toContain('func fillTarget(for series: NativePHPChartsSeries')
+        ->and($iosMarks)
+        ->toContain('case "step_before": .stepStart')
+        ->toContain('dash: lineStyle(for: series).dash ?? []')
+        ->and($iosPlot)
+        ->toContain('NativePHPChartsAnnotations(snapshot: snapshot)');
+});
+
+it('keeps unreleased interaction viewport and sampling identity wired through both native renderers', function () {
+    $androidWire = nativeRendererSource('resources/android/src/core/NativePHPChartsWireInput.kt');
+    $androidPlot = nativeRendererSource('resources/android/src/rendering/NativePHPChartsPlot.kt');
+    $androidDrawing = nativeRendererSource('resources/android/src/rendering/NativePHPChartsDrawing.kt');
+    $iosConfiguration = nativeRendererSource('resources/ios/Sources/Core/NativePHPChartsConfiguration.swift');
+    $iosPlot = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsPlot.swift');
+
+    expect($androidWire)
+        ->toContain('interactionJson = props.getString("interaction_json", "{}")')
+        ->toContain('onViewportChange = props.getCallbackId("on_viewport_change")')
+        ->and($androidPlot)
+        ->toContain('rememberUpdatedState(layout)')
+        ->toContain('detectNativePHPChartsViewportGestures')
+        ->toContain('awaitEachGesture')
+        ->toContain('NativePHPChartsViewportSelection.dispatch')
+        ->and($androidDrawing)
+        ->toContain('interaction.tooltip == "shared"')
+        ->and($iosConfiguration)
+        ->toContain('selection: NativePHPChartsSelectionConfiguration.decode(input.interactionJSON)')
+        ->toContain('viewport: NativePHPChartsViewportConfiguration.decode(input.viewportJSON)')
+        ->and($iosPlot)
+        ->toContain('NativePHPChartsViewportPayload');
+});
+
+it('keeps candlestick and radar contracts wired through both native platforms', function () {
+    $manifest = nativeRendererSource('nativephp.json');
+    $androidCandlestick = nativeRendererSource('resources/android/src/entrypoints/NativePHPChartsCandlestickChartRenderer.kt');
+    $androidDrawing = nativeRendererSource('resources/android/src/rendering/NativePHPChartsDrawing.kt');
+    $androidRadar = nativeRendererSource('resources/android/src/rendering/NativePHPChartsRadarRenderer.kt');
+    $iosCandlestick = nativeRendererSource('resources/ios/Sources/CandlestickChartRenderer.swift');
+    $iosMarks = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsMarks.swift');
+    $iosRadar = nativeRendererSource('resources/ios/Sources/RadarChartRenderer.swift');
+
+    expect($manifest)
+        ->toContain('"type": "candlestick_chart"')
+        ->toContain('"type": "radar_chart"')
+        ->and($androidCandlestick)
+        ->toContain('NativePHPChartsKind.Candlestick')
+        ->and($androidDrawing)
+        ->toContain('drawNativePHPChartsCandlesticks')
+        ->and($androidRadar)
+        ->toContain('NativePHPChartsRadarSelection')
+        ->toContain('"chart_type", "radar"')
+        ->and($iosCandlestick)
+        ->toContain('kind: .candlestick')
+        ->and($iosMarks)
+        ->toContain('func candlestick(point: NativePHPChartsPoint)')
+        ->toContain('BarMark(')
+        ->and($iosRadar)
+        ->toContain('NativePHPChartsRadarSelection')
+        ->toContain('chartType: "radar"');
 });
