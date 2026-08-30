@@ -127,11 +127,17 @@ struct NativePHPChartsSeries: Identifiable {
 }
 
 struct NativePHPChartsDataSet {
+    struct XGap: Equatable {
+        let lower: Double
+        let upper: Double
+    }
+
     let series: [NativePHPChartsSeries]
     let xType: NativePHPChartsXAxisType
     let categoryLabels: [Int: String]
     let points: [NativePHPChartsPoint]
     let xValues: [Double]
+    let minimumXGap: XGap?
     let animationID: Int
     private let pointsBySelectionID: [String: NativePHPChartsPoint]
     private let seriesByID: [String: NativePHPChartsSeries]
@@ -150,7 +156,12 @@ struct NativePHPChartsDataSet {
 
         let points = series.flatMap(\.points)
         self.points = points
-        xValues = Array(Set(points.map(\.plotX))).sorted()
+        let xValues = Array(Set(points.map(\.plotX))).sorted()
+        self.xValues = xValues
+        minimumXGap = zip(xValues, xValues.dropFirst())
+            .filter { pair in pair.1 > pair.0 }
+            .min { lhs, rhs in (lhs.1 - lhs.0) < (rhs.1 - rhs.0) }
+            .map { pair in XGap(lower: pair.0, upper: pair.1) }
         pointsBySelectionID = Dictionary(
             points.map { ($0.selectionID, $0) },
             uniquingKeysWith: { existing, _ in existing }

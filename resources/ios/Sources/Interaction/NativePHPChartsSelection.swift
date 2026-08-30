@@ -80,6 +80,7 @@ enum NativePHPChartsSelection {
         plotFrame: CGRect,
         data: NativePHPChartsDataSet,
         candidateAxis: CandidateAxis,
+        candidateRadius: CGFloat = 44,
         distance: (NativePHPChartsPoint, CGPoint, ChartProxy) -> CGFloat
     ) -> NativePHPChartsPoint? {
         guard plotFrame.contains(location) else {
@@ -92,8 +93,8 @@ enum NativePHPChartsSelection {
         let candidateRange: ClosedRange<Double>?
         switch candidateAxis {
         case .x:
-            let lowerLocation = max(0, plotLocation.x - radius)
-            let upperLocation = min(plotFrame.width, plotLocation.x + radius)
+            let lowerLocation = max(0, plotLocation.x - candidateRadius)
+            let upperLocation = min(plotFrame.width, plotLocation.x + candidateRadius)
             if let lower: Double = proxy.value(atX: lowerLocation),
                let upper: Double = proxy.value(atX: upperLocation)
             {
@@ -102,8 +103,8 @@ enum NativePHPChartsSelection {
                 candidateRange = nil
             }
         case .y:
-            let lowerLocation = max(0, plotLocation.y - radius)
-            let upperLocation = min(plotFrame.height, plotLocation.y + radius)
+            let lowerLocation = max(0, plotLocation.y - candidateRadius)
+            let upperLocation = min(plotFrame.height, plotLocation.y + candidateRadius)
             if let lower: Double = proxy.value(atY: lowerLocation),
                let upper: Double = proxy.value(atY: upperLocation)
             {
@@ -125,6 +126,10 @@ enum NativePHPChartsSelection {
         }
 
         return distance(point, plotLocation, proxy) <= radius ? point : nil
+    }
+
+    static func candlestickCandidateRadius(bodyWidth: CGFloat) -> CGFloat {
+        44 + (bodyWidth / 2)
     }
 
     static func position(
@@ -188,6 +193,43 @@ enum NativePHPChartsSelection {
         return segmentDistance(from: location, start: start, end: end)
     }
 
+    static func candlestickDistance(
+        geometry: NativePHPChartsCandlestickGeometry,
+        bodyWidth: CGFloat,
+        to location: CGPoint,
+        proxy: ChartProxy
+    ) -> CGFloat {
+        guard let x = proxy.position(forX: geometry.x),
+              let open = proxy.position(forY: geometry.open),
+              let high = proxy.position(forY: geometry.high),
+              let low = proxy.position(forY: geometry.low),
+              let close = proxy.position(forY: geometry.close)
+        else {
+            return .greatestFiniteMagnitude
+        }
+
+        let body = CGRect(
+            x: x - (bodyWidth / 2),
+            y: min(open, close),
+            width: bodyWidth,
+            height: max(abs(close - open), 1)
+        )
+        return min(
+            rectangleDistance(from: location, to: body),
+            segmentDistance(
+                from: location,
+                start: CGPoint(x: x, y: high),
+                end: CGPoint(x: x, y: low)
+            )
+        )
+    }
+
+    static func rectangleDistance(from location: CGPoint, to rectangle: CGRect) -> CGFloat {
+        let deltaX = max(rectangle.minX - location.x, 0, location.x - rectangle.maxX)
+        let deltaY = max(rectangle.minY - location.y, 0, location.y - rectangle.maxY)
+        return hypot(deltaX, deltaY)
+    }
+
     static func segmentDistance(
         from location: CGPoint,
         start: CGPoint,
@@ -209,6 +251,30 @@ enum NativePHPChartsSelection {
     }
 }
 
+enum NativePHPChartsCandlestickPresentation {
+    static func values(
+        for point: NativePHPChartsPoint,
+        formatter: NativePHPChartsFormatter
+    ) -> String? {
+        guard let open = point.open,
+              let high = point.high,
+              let low = point.low,
+              let close = point.close
+        else {
+            return nil
+        }
+
+        return "O \(formatter.y(open)), H \(formatter.y(high)), L \(formatter.y(low)), C \(formatter.y(close))"
+    }
+
+    static func value(
+        for point: NativePHPChartsPoint,
+        formatter: NativePHPChartsFormatter
+    ) -> String {
+        values(for: point, formatter: formatter) ?? formatter.y(point.value)
+    }
+}
+
 enum NativePHPChartsAccessibility {
     static func summary(
         data: NativePHPChartsDataSet,
@@ -218,7 +284,7 @@ enum NativePHPChartsAccessibility {
         let pointLimit = 12
         let descriptions = data.series.prefix(6).map { series in
             let points = series.points.prefix(pointLimit).map { point in
-                "\(formatter.x(point: point, data: data)): \(formatter.y(point.value))"
+                "\(formatter.x(point: point, data: data)): \(NativePHPChartsCandlestickPresentation.value(for: point, formatter: formatter))"
             }
             let remainder = max(0, series.points.count - pointLimit)
             let suffix = remainder == 0 ? "" : " (+\(remainder))"
@@ -231,7 +297,7 @@ enum NativePHPChartsAccessibility {
             value += ". (+\(data.series.count - 6))"
         }
         if let selectedPoint, let series = data.series(id: selectedPoint.seriesID) {
-            value += ". \(series.name), \(selectedPoint.label), \(formatter.y(selectedPoint.value))"
+            value += ". \(series.name), \(selectedPoint.label), \(NativePHPChartsCandlestickPresentation.value(for: selectedPoint, formatter: formatter))"
         }
 
         return value
@@ -249,7 +315,7 @@ struct NativePHPChartsTooltip: View {
             Circle()
                 .fill(color)
                 .frame(width: 7, height: 7)
-            Text("\(point.label) · \(formatter.y(point.value))")
+            Text("\(point.label) · \(NativePHPChartsCandlestickPresentation.value(for: point, formatter: formatter))")
                 .lineLimit(1)
                 .truncationMode(.tail)
         }

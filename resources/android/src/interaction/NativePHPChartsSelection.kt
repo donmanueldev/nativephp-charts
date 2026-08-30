@@ -30,10 +30,27 @@ internal object NativePHPChartsSelection {
     }
 }
 
+internal fun NativePHPChartsPoint.nativePHPChartsAccessibleValue(
+    formatting: NativePHPChartsFormatting,
+): String = nativePHPChartsOHLCValue(this, formatting::value) ?: formatting.value(value)
+
+internal fun nativePHPChartsOHLCValue(
+    point: NativePHPChartsPoint,
+    format: (Double) -> String,
+): String? {
+    val open = point.open ?: return null
+    val high = point.high ?: return null
+    val low = point.low ?: return null
+    val close = point.close ?: return null
+    return "O ${format(open)}, H ${format(high)}, L ${format(low)}, C ${format(close)}"
+}
+
 internal fun NativePHPChartsConfiguration.accessibilitySummary(formatting: NativePHPChartsFormatting): String {
     val totalPoints = series.sumOf { it.points.size }
     val preview = series.take(3).joinToString(". ") { item ->
-        val points = item.points.take(5).joinToString { point -> "${formatting.x(point)}: ${formatting.value(point.value)}" }
+        val points = item.points.take(5).joinToString { point ->
+            "${formatting.x(point)}: ${point.nativePHPChartsAccessibleValue(formatting)}"
+        }
         "${item.name}. $points"
     }
     val remainder = (totalPoints - series.take(3).sumOf { minOf(it.points.size, 5) }).coerceAtLeast(0)

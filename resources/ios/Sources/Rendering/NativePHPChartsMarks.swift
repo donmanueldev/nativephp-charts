@@ -1,6 +1,54 @@
 import Charts
 import SwiftUI
 
+enum NativePHPChartsCandlestickBodyWidth: Equatable {
+    case fixed(CGFloat)
+    case ratio(CGFloat)
+
+    var markDimension: MarkDimension {
+        switch self {
+        case let .fixed(width): .fixed(width)
+        case let .ratio(ratio): .ratio(ratio)
+        }
+    }
+}
+
+struct NativePHPChartsCandlestickGeometry: Equatable {
+    let x: Double
+    let open: Double
+    let high: Double
+    let low: Double
+    let close: Double
+    let bodyWidth: NativePHPChartsCandlestickBodyWidth
+    let cornerRadius: CGFloat
+
+    var wickBounds: ClosedRange<Double> { low...high }
+    var bodyBounds: ClosedRange<Double> { min(open, close)...max(open, close) }
+    var anchor: NativePHPChartsPlottedPosition { NativePHPChartsPlottedPosition(x: x, y: close) }
+
+    init?(
+        point: NativePHPChartsPoint,
+        x: Double,
+        style: NativePHPChartsStyle.Bar
+    ) {
+        guard let open = point.open,
+              let high = point.high,
+              let low = point.low,
+              let close = point.close
+        else {
+            return nil
+        }
+
+        self.x = x
+        self.open = open
+        self.high = high
+        self.low = low
+        self.close = close
+        bodyWidth = style.width.map(NativePHPChartsCandlestickBodyWidth.fixed) ?? .ratio(0.62)
+        cornerRadius = style.radius ?? 5
+    }
+}
+
 struct NativePHPChartsAnnotations: ChartContent {
     let snapshot: NativePHPChartsSnapshot
 
@@ -90,7 +138,7 @@ struct NativePHPChartsMarks: ChartContent {
                 case .scatter:
                     scatter(series: series, point: point)
                 case .candlestick:
-                    candlestick(point: point)
+                    candlestick(series: series, point: point)
                 }
 
                 if kind != .candlestick, let errorMin = point.errorMin, let errorMax = point.errorMax {
@@ -109,24 +157,31 @@ struct NativePHPChartsMarks: ChartContent {
     }
 
     @ChartContentBuilder
-    private func candlestick(point: NativePHPChartsPoint) -> some ChartContent {
-        if let open = point.open, let high = point.high, let low = point.low, let close = point.close {
-            let color: Color = close >= open ? Color(red: 0.09, green: 0.64, blue: 0.36) : Color(red: 0.86, green: 0.18, blue: 0.22)
+    private func candlestick(series: NativePHPChartsSeries, point: NativePHPChartsPoint) -> some ChartContent {
+        if let geometry = NativePHPChartsCandlestickGeometry(
+            point: point,
+            x: renderX(for: point),
+            style: barStyle(for: series)
+        ) {
+            let color: Color = geometry.close >= geometry.open
+                ? Color(red: 0.09, green: 0.64, blue: 0.36)
+                : Color(red: 0.86, green: 0.18, blue: 0.22)
             RuleMark(
-                x: .value("X", renderX(for: point)),
-                yStart: .value("Low", animated(low)),
-                yEnd: .value("High", animated(high))
+                x: .value("X", geometry.x),
+                yStart: .value("Low", animated(geometry.wickBounds.lowerBound)),
+                yEnd: .value("High", animated(geometry.wickBounds.upperBound))
             )
             .foregroundStyle(color)
             .lineStyle(StrokeStyle(lineWidth: 1.5))
 
             BarMark(
-                x: .value("X", renderX(for: point)),
-                yStart: .value("Open", animated(open)),
-                yEnd: .value("Close", animated(close)),
-                width: .ratio(0.62)
+                x: .value("X", geometry.x),
+                yStart: .value("Open", animated(geometry.open)),
+                yEnd: .value("Close", animated(geometry.close)),
+                width: geometry.bodyWidth.markDimension
             )
             .foregroundStyle(color)
+            .cornerRadius(geometry.cornerRadius)
         }
     }
 

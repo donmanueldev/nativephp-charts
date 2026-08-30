@@ -23,11 +23,56 @@ internal data class NativePHPChartsAnnotationGeometry(
     val end: Float,
 )
 
+internal data class NativePHPChartsCandlestickGeometry(
+    val x: Float,
+    val openY: Float,
+    val highY: Float,
+    val lowY: Float,
+    val closeY: Float,
+    val body: Rect,
+) {
+    val wickStart: Offset get() = Offset(x, highY)
+    val wickEnd: Offset get() = Offset(x, lowY)
+    val anchor: Offset get() = Offset(x, closeY)
+}
+
+internal fun nativePHPChartsCandlestickBodyWidth(
+    configuredWidth: Float?,
+    density: Float,
+    slot: Float,
+): Float = configuredWidth?.times(density) ?: (slot * 0.62f)
+
+internal fun nativePHPChartsCandlestickGeometry(
+    x: Float,
+    openY: Float,
+    highY: Float,
+    lowY: Float,
+    closeY: Float,
+    bodyWidth: Float,
+    density: Float,
+): NativePHPChartsCandlestickGeometry {
+    val bodyTop = min(openY, closeY)
+    return NativePHPChartsCandlestickGeometry(
+        x = x,
+        openY = openY,
+        highY = highY,
+        lowY = lowY,
+        closeY = closeY,
+        body = Rect(
+            left = x - bodyWidth / 2f,
+            top = bodyTop,
+            right = x + bodyWidth / 2f,
+            bottom = max(openY, closeY).coerceAtLeast(bodyTop + (1.5f * density)),
+        ),
+    )
+}
+
 internal data class NativePHPChartsDatum(
     val series: NativePHPChartsSeries,
     val point: NativePHPChartsPoint,
     val center: Offset,
     val bar: Rect? = null,
+    val candlestick: NativePHPChartsCandlestickGeometry? = null,
     val areaBaseY: Float? = null,
     val errorMinY: Float? = null,
     val errorMaxY: Float? = null,
@@ -202,7 +247,14 @@ internal object NativePHPChartsLayoutEngine {
                 )
             }
             NativePHPChartsKind.Area -> areaData(configuration, formatting, domain, plot, ::xFor)
-            NativePHPChartsKind.Line, NativePHPChartsKind.Scatter, NativePHPChartsKind.Candlestick -> configuration.series.flatMap { series ->
+            NativePHPChartsKind.Candlestick -> candlestickData(
+                configuration = configuration,
+                plot = plot,
+                domain = domain,
+                density = density,
+                xFor = ::xFor,
+            )
+            NativePHPChartsKind.Line, NativePHPChartsKind.Scatter -> configuration.series.flatMap { series ->
                 series.points.map { point ->
                     NativePHPChartsDatum(series, point, Offset(xFor(point), yFor(point.value, domain, plot)))
                 }
@@ -325,6 +377,54 @@ internal object NativePHPChartsLayoutEngine {
             annotations = annotationGeometry,
             hitIndex = NativePHPChartsHitIndex.build(data),
         )
+    }
+
+    private fun candlestickData(
+        configuration: NativePHPChartsConfiguration,
+        plot: Rect,
+        domain: NativePHPChartsDomain,
+        density: Float,
+        xFor: (NativePHPChartsPoint) -> Float,
+    ): List<NativePHPChartsDatum> {
+        val centers = configuration.series.flatMap(NativePHPChartsSeries::points)
+            .map(xFor)
+            .distinct()
+            .sorted()
+        val slot = centers.zipWithNext { first, second -> second - first }.minOrNull() ?: plot.width
+
+        return configuration.series.flatMap { series ->
+            val bodyWidth = nativePHPChartsCandlestickBodyWidth(
+                configuredWidth = series.style?.barWidth ?: configuration.style.barWidth,
+                density = density,
+                slot = slot,
+            )
+            series.points.mapNotNull { point ->
+                val open = point.open ?: return@mapNotNull null
+                val high = point.high ?: return@mapNotNull null
+                val low = point.low ?: return@mapNotNull null
+                val close = point.close ?: return@mapNotNull null
+                val x = xFor(point)
+                val openY = yFor(open, domain, plot)
+                val highY = yFor(high, domain, plot)
+                val lowY = yFor(low, domain, plot)
+                val closeY = yFor(close, domain, plot)
+                val geometry = nativePHPChartsCandlestickGeometry(
+                    x = x,
+                    openY = openY,
+                    highY = highY,
+                    lowY = lowY,
+                    closeY = closeY,
+                    bodyWidth = bodyWidth,
+                    density = density,
+                )
+                NativePHPChartsDatum(
+                    series = series,
+                    point = point,
+                    center = geometry.anchor,
+                    candlestick = geometry,
+                )
+            }
+        }
     }
 
     private fun areaData(

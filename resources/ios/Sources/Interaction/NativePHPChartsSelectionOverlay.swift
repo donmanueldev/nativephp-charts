@@ -107,7 +107,8 @@ struct NativePHPChartsSelectionOverlay: View {
     }
 
     private func closestPoint(to location: CGPoint, in plotFrame: CGRect) -> NativePHPChartsPoint? {
-        NativePHPChartsSelection.closestPoint(
+        let bodyWidth = resolvedCandlestickBodyWidth(proxy: proxy, plotWidth: plotFrame.width)
+        return NativePHPChartsSelection.closestPoint(
             to: location,
             proxy: proxy,
             plotFrame: plotFrame,
@@ -116,14 +117,25 @@ struct NativePHPChartsSelectionOverlay: View {
                 kind: kind,
                 barOrientation: snapshot.configuration.barOrientation
             ),
-            distance: selectionDistance
+            candidateRadius: bodyWidth.map(NativePHPChartsSelection.candlestickCandidateRadius) ?? 44,
+            distance: { point, location, proxy in
+                selectionDistance(for: point, to: location, proxy: proxy, candlestickBodyWidth: bodyWidth)
+            }
         )
+    }
+
+    private func resolvedCandlestickBodyWidth(proxy: ChartProxy, plotWidth: CGFloat) -> CGFloat? {
+        guard kind == .candlestick, let series = snapshot.data.series.first else { return nil }
+        let style = candlestickStyle(for: series)
+        let width = style.width.map(NativePHPChartsCandlestickBodyWidth.fixed) ?? .ratio(0.62)
+        return candlestickBodyWidth(width, proxy: proxy, plotWidth: plotWidth)
     }
 
     private func selectionDistance(
         for point: NativePHPChartsPoint,
         to location: CGPoint,
-        proxy: ChartProxy
+        proxy: ChartProxy,
+        candlestickBodyWidth: CGFloat?
     ) -> CGFloat {
         if kind == .bar {
             return NativePHPChartsSelection.barDistance(
@@ -138,10 +150,56 @@ struct NativePHPChartsSelectionOverlay: View {
             )
         }
 
+        if kind == .candlestick,
+           let candlestickBodyWidth,
+           let series = snapshot.data.series(id: point.seriesID),
+           let geometry = NativePHPChartsCandlestickGeometry(
+               point: point,
+               x: snapshot.data.renderX(for: point, kind: kind),
+               style: candlestickStyle(for: series)
+           )
+        {
+            return NativePHPChartsSelection.candlestickDistance(
+                geometry: geometry,
+                bodyWidth: candlestickBodyWidth,
+                to: location,
+                proxy: proxy
+            )
+        }
+
         return NativePHPChartsSelection.pointDistance(
             at: plottedPosition(for: point),
             to: location,
             proxy: proxy
+        )
+    }
+
+    private func candlestickBodyWidth(
+        _ width: NativePHPChartsCandlestickBodyWidth,
+        proxy: ChartProxy,
+        plotWidth: CGFloat
+    ) -> CGFloat {
+        switch width {
+        case let .fixed(value):
+            return value
+        case let .ratio(ratio):
+            let spacing: CGFloat
+            if let gap = snapshot.data.minimumXGap,
+               let lower = proxy.position(forX: gap.lower),
+               let upper = proxy.position(forX: gap.upper)
+            {
+                spacing = abs(upper - lower)
+            } else {
+                spacing = plotWidth
+            }
+            return max(spacing * ratio, 1)
+        }
+    }
+
+    private func candlestickStyle(for series: NativePHPChartsSeries) -> NativePHPChartsStyle.Bar {
+        NativePHPChartsStyle.Bar(
+            radius: series.style?.bar.radius ?? snapshot.configuration.style.bar.radius,
+            width: series.style?.bar.width ?? snapshot.configuration.style.bar.width
         )
     }
 
@@ -275,6 +333,17 @@ struct NativePHPChartsSelectionOverlay: View {
             ).anchor
         }
 
+        if kind == .candlestick,
+           let series = snapshot.data.series(id: point.seriesID),
+           let geometry = NativePHPChartsCandlestickGeometry(
+               point: point,
+               x: snapshot.data.renderX(for: point, kind: kind),
+               style: candlestickStyle(for: series)
+           )
+        {
+            return geometry.anchor
+        }
+
         let x = snapshot.data.renderX(
             for: point,
             kind: kind,
@@ -365,7 +434,8 @@ private struct NativePHPChartsSharedTooltip: View {
                 if let series = snapshot.data.series(id: point.seriesID) {
                     HStack(spacing: 6) {
                         Circle().fill(series.color).frame(width: 7, height: 7)
-                        Text("\(series.name) · \(snapshot.formatter.y(point.value))").lineLimit(1)
+                        Text("\(series.name) · \(NativePHPChartsCandlestickPresentation.value(for: point, formatter: snapshot.formatter))")
+                            .lineLimit(1)
                     }
                 }
             }

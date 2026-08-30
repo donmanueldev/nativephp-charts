@@ -211,7 +211,7 @@ internal fun NativePHPChartsPlot(
         "${layout.data.indexOf(datum) + 1}/${layout.data.size}",
         datum.series.name,
         formatting.x(datum.point),
-        formatting.value(datum.point.value),
+        datum.point.nativePHPChartsAccessibleValue(formatting),
     ).joinToString(", ")
 
     Canvas(
@@ -220,7 +220,7 @@ internal fun NativePHPChartsPlot(
             .semantics {
                 contentDescription = summary
                 selected?.let { datum ->
-                    stateDescription = "${datum.series.name}, ${datum.point.label}, ${formatting.value(datum.point.value)}"
+                    stateDescription = "${datum.series.name}, ${datum.point.label}, ${datum.point.nativePHPChartsAccessibleValue(formatting)}"
                 }
                 customActions = listOfNotNull(
                     previous?.let { datum ->

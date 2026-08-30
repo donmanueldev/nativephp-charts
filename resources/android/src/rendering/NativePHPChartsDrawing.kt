@@ -365,31 +365,26 @@ internal fun DrawScope.drawNativePHPChartsCandlesticks(
     layout: NativePHPChartsLayout,
     progress: Float,
 ) {
-    val centers = layout.data.map { it.center.x }.distinct().sorted()
-    val slot = centers.zipWithNext { first, second -> second - first }.minOrNull() ?: layout.plot.width
-    val bodyWidth = configuration.style.barWidth?.dp?.toPx()?.coerceAtMost(slot * 0.72f) ?: slot * 0.62f
-
-    fun y(value: Double): Float = layout.plot.bottom -
-        (((value - layout.domain.minimum) / layout.domain.span).toFloat() * layout.plot.height)
-
     layout.data.forEach { datum ->
+        val geometry = datum.candlestick ?: return@forEach
         val open = datum.point.open ?: return@forEach
-        val high = datum.point.high ?: return@forEach
-        val low = datum.point.low ?: return@forEach
         val close = datum.point.close ?: return@forEach
         val color = if (close >= open) Color(0xFF16A35B) else Color(0xFFDB2E38)
-        val animatedOpen = layout.domain.minimum + ((open - layout.domain.minimum) * progress)
-        val animatedClose = layout.domain.minimum + ((close - layout.domain.minimum) * progress)
-        val animatedHigh = layout.domain.minimum + ((high - layout.domain.minimum) * progress)
-        val animatedLow = layout.domain.minimum + ((low - layout.domain.minimum) * progress)
-        drawLine(color, Offset(datum.center.x, y(animatedHigh)), Offset(datum.center.x, y(animatedLow)), 1.5.dp.toPx())
-        val top = min(y(animatedOpen), y(animatedClose))
-        val bottom = max(y(animatedOpen), y(animatedClose))
+        fun animatedY(value: Float): Float = layout.plot.bottom + ((value - layout.plot.bottom) * progress)
+        val animatedHigh = animatedY(geometry.highY)
+        val animatedLow = animatedY(geometry.lowY)
+        val animatedOpen = animatedY(geometry.openY)
+        val animatedClose = animatedY(geometry.closeY)
+        drawLine(color, Offset(geometry.x, animatedHigh), Offset(geometry.x, animatedLow), 1.5.dp.toPx())
+        val top = min(animatedOpen, animatedClose)
+        val bottom = max(animatedOpen, animatedClose)
         drawRoundRect(
             color,
-            topLeft = Offset(datum.center.x - bodyWidth / 2f, top),
-            size = androidx.compose.ui.geometry.Size(bodyWidth, max(bottom - top, 1.5.dp.toPx())),
-            cornerRadius = CornerRadius(configuration.style.barRadius.dp.toPx()),
+            topLeft = Offset(geometry.body.left, top),
+            size = androidx.compose.ui.geometry.Size(geometry.body.width, max(bottom - top, 1.5.dp.toPx())),
+            cornerRadius = CornerRadius(
+                (datum.series.style?.barRadius ?: configuration.style.barRadius).dp.toPx(),
+            ),
         )
     }
 }
@@ -457,10 +452,10 @@ internal fun DrawScope.drawNativePHPChartsTooltip(
 ) {
     val lines = if (interaction.tooltip == "shared") {
         listOf(formatting.x(datum.point)) + selectedData.map { selected ->
-            "${selected.series.name} · ${formatting.value(selected.point.value)}"
+            "${selected.series.name} · ${selected.point.nativePHPChartsAccessibleValue(formatting)}"
         }
     } else {
-        listOf("${datum.point.label} · ${formatting.value(datum.point.value)}")
+        listOf("${datum.point.label} · ${datum.point.nativePHPChartsAccessibleValue(formatting)}")
     }
     val paint = resources.tooltipPaint
     val availableWidth = layout.plot.width.coerceAtLeast(1f)
