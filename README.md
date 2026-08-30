@@ -4,19 +4,23 @@
 [![Tests](https://github.com/donmanueldev/nativephp-charts/actions/workflows/ci.yml/badge.svg)](https://github.com/donmanueldev/nativephp-charts/actions/workflows/ci.yml)
 [![License](https://img.shields.io/packagist/l/donmanueldev/nativephp-charts.svg?style=flat-square)](LICENSE.md)
 
-Beautiful native line, area, bar, scatter, pie, and donut charts for [NativePHP Mobile](https://nativephp.com). iOS uses Swift Charts and Android uses Jetpack Compose Canvas. Data stays on the device; there is no WebView, JavaScript chart library, network service, telemetry, or third-party native chart dependency.
+Native line, area, bar, scatter, pie, and donut charts for [NativePHP Mobile](https://nativephp.com). iOS uses Swift Charts and SwiftUI Canvas; Android uses Jetpack Compose Canvas. Data stays on the device; there is no WebView, JavaScript chart library, network service, telemetry, or third-party native chart dependency.
 
 > NativePHP Charts is an independent community plugin. It is not an official NativePHP package.
 
+> The current branch is the Unreleased 1.1 development line. Radar, candlestick, stacked layouts, annotations, sampling, and viewport interaction are not part of the stable 1.0 contract until the chart-by-chart native acceptance matrix is complete. The published manifest remains at `1.0.0` until that final gate passes.
+
 ## Features
 
-- Native `<native:line-chart>`, `<native:area-chart>`, `<native:bar-chart>`, `<native:scatter-chart>`, `<native:pie-chart>`, and `<native:donut-chart>` EDGE elements.
-- Multiple ordered series with stable series and point identities.
-- Native legends, tooltips, point selection, and PHP callbacks.
-- Category, number, date, and datetime x-axes.
-- Locale-aware number, currency, percentage, and date formatting.
+- Stable 1.0 `<native:line-chart>`, `<native:area-chart>`, `<native:bar-chart>`, `<native:scatter-chart>`, `<native:pie-chart>`, and `<native:donut-chart>` EDGE elements.
+- Unreleased 1.1 radar, candlestick, annotations, stacked layouts, sampling, and viewport interaction, available from source for acceptance testing only.
+- Multiple ordered series, native legends and tooltips, stable selection, and PHP callbacks.
+- Category, number, date, and datetime axes with explicit domains, intervals, baselines, titles, and locale-aware formatting.
 - Positive, negative, mixed-sign, decimal, constant, and single-point domains.
-- Overlay/stacked area fills, grouped multi-series bars, independent scatter observations, and radial composition.
+- Reference lines and bands, uncertainty ranges, per-series styles, stepped/dashed lines, and fill-between areas.
+- Overlay/stacked area fills, grouped/stacked bars in both orientations, independent scatter observations, and radial composition.
+- Tap or scrub selection, logical crosshairs, shared tooltips, and versioned PHP callbacks.
+- Numeric/date viewport pan and pinch zoom, plus explicit LTTB sampling for dense series.
 - Native reveal/update animations with platform motion settings.
 - Dark appearance, semantic styling, font aliases, VoiceOver, and TalkBack summaries.
 - No permissions, secrets, bridge functions, background tasks, or JavaScript API.
@@ -160,6 +164,14 @@ Radial charts use ordered `segments`. Segment IDs must be unique, values must be
 
 Pie fixes the inner radius at `0`. Donut defaults to `0.6` and accepts `0.2` through `0.85`. `style.segment.gap` is an angular gap from 0–12 degrees, `cornerRadius` accepts 0–20 points, and `opacity` accepts 0–1. Radial selections use the same `PointSelection` version 1 payload: the segment ID is exposed as both `series_id` and `point_id`, while its label is the series name, x value, and visible label.
 
+## Radar and candlestick charts
+
+These elements belong to Unreleased 1.1 and must not be treated as stable while their native acceptance gates remain open.
+
+Radar charts define 3–24 ordered axes with independent positive maximums. Every series must provide exactly one value for each axis in the same order. Use `grid-levels` from 2–10 and `fill-opacity` from 0–1 to control the native polygon renderer.
+
+Candlestick charts accept zero or one ordered series. Every point requires finite `open`, `high`, `low`, and `close` values with a valid OHLC range. The close is used as the selection value. LTTB sampling is intentionally rejected because reducing candles could hide financial extremes.
+
 ## Selection and PHP callbacks
 
 Use the `_select` callback attribute from NativePHP's UI component contract. Selection and the tooltip update immediately on the native side; the PHP callback is a separate effect.
@@ -246,7 +258,7 @@ X-axis types:
 | `date` | Strict `YYYY-MM-DD` |
 | `datetime` | RFC 3339 with `Z` or an explicit offset |
 
-Line, area, and bar charts default to a category x-axis. Scatter defaults to a number x-axis. The `x-axis` map accepts `type`, `dateFormat`, `timezone`, `visible`, and `labelCount`; the `y-axis` map accepts `valueFormat`, `currencyCode`, `minimumFractionDigits`, `maximumFractionDigits`, `visible`, `labelCount`, and `beginAtZero`. Snake-case aliases are also accepted. Axis `labelCount` must be between 2 and 12. Axis visibility controls the corresponding axis, while `style.axis.visible` remains the shared visual fallback.
+Line, area, bar, and candlestick charts default to a category x-axis. Scatter defaults to a number x-axis. The `x-axis` map accepts `type`, `title`, `minimum`, `maximum`, `baseline`, `interval`, `dateFormat`, `timezone`, `visible`, and `labelCount`; the `y-axis` map accepts `title`, `minimum`, `maximum`, `baseline`, `interval`, `valueFormat`, `currencyCode`, `minimumFractionDigits`, `maximumFractionDigits`, `visible`, `labelCount`, and `beginAtZero`. Snake-case aliases are also accepted. Axis `labelCount` must be between 2 and 12. Axis visibility controls the corresponding axis, while `style.axis.visible` remains the shared visual fallback.
 
 Integer chart values use the same exact cross-platform range as numeric x values, so PHP, JSON, Swift, and Kotlin preserve them without precision loss. Date formats are `short`, `medium`, `long`, and `full`; datetime axes also support `time` for compact, locale-aware time-only labels. Valid datetime fractional seconds are preserved. Timezones use IANA identifiers such as `America/Managua`. Currency accepts normalized three-letter codes such as `USD` and `NIO`; platform formatters determine display support. Percentage values are fractions: `0.92` renders as `92%`.
 
@@ -266,22 +278,32 @@ Integer chart values use the same exact cross-platform range as numeric x values
 | `currency-code` | None | Required normalized three-letter code for currency formatting. |
 | `minimum-fraction-digits` | Formatter default | Integer from 0 to 8. |
 | `maximum-fraction-digits` | Formatter default | Integer from 0 to 8. |
-| `x-axis` | Category; number for scatter | Structured x-axis configuration. |
-| `y-axis` | Scalar formatter props | Structured y formatter configuration. |
+| `x-axis` | Category; number for scatter | Type, title, visibility, label count, explicit domain, baseline, interval, date format, and timezone. |
+| `y-axis` | Scalar formatter props | Title, visibility, label count, explicit domain, baseline, interval, and value formatting. |
+| `annotations` | `[]` | Ordered semantic `line` and `band` annotations on the x or y axis. |
+| `interaction` | Tap, x crosshair, single tooltip | Selection mode, logical crosshair, and tooltip aggregation. |
+| `viewport` | Disabled | Explicit numeric/date x range with independently enabled pan and zoom. |
+| `sampling` | `none` | Opt-in `lttb` sampling with an explicit point threshold. |
 | `legend` | Visible for multiple series | Position, alignment, and semantic style. |
 | `_select` | None | PHP method receiving selection JSON. |
+| `_viewport_change` | None | PHP method receiving a versioned viewport JSON payload after a gesture settles. |
 | `style` | `[]` | Platform-neutral visual configuration. |
 | `area-mode` | `overlay` | Area only: `overlay` or `stacked`. |
+| `mode` | `grouped` | Bar only: `grouped` or `stacked`. |
+| `orientation` | `vertical` | Bar only: `vertical` or `horizontal`. |
 | `segments` | `[]` | Pie/donut only: ordered, uniquely identified radial segments. |
 | `inner-radius-ratio` | `0` pie / `0.6` donut | Donut cutout ratio from `0.2` through `0.85`. |
+| `axes` | `[]` | Radar only: 3–24 ordered axes with unique IDs, labels, and positive maximums. |
+| `grid-levels` | `5` | Radar only: polygon grid levels from 2 through 10. |
+| `fill-opacity` | `0.22` | Radar only: series fill opacity from 0 through 1. |
 
-Blade uses kebab case. The fluent PHP API uses camelCase methods such as `showGrid()`, `xAxis()`, `yAxis()`, `legend()`, `onSelect()`, `areaMode()`, `segments()`, and `innerRadiusRatio()`.
+Each Cartesian series may define its own `style`. Line and area series also accept `fill_to`; points may provide both `error_min` and `error_max`. Scrub and one-finger pan are mutually exclusive so gesture ownership stays deterministic; pinch zoom remains available. Sampling never runs unless `mode` is explicitly `lttb`. Blade uses kebab case. The fluent PHP API uses camelCase methods such as `showGrid()`, `xAxis()`, `yAxis()`, `annotations()`, `interaction()`, `viewport()`, `sampling()`, `onSelect()`, `onViewportChange()`, `areaMode()`, `mode()`, `orientation()`, `axes()`, `gridLevels()`, and `fillOpacity()`.
 
 ## Style
 
 The neutral style map supports these sections:
 
-- `line`: `color`, `width`, `interpolation` (`linear|smooth`).
+- `line`: `color`, `width`, `interpolation` (`linear|smooth|step_before|step_after`), and `dash`.
 - `area`: `opacity`, `gradient` (native vertical gradient by default; set `false` for a solid fill).
 - `bar`: `radius`, `width` (points on iOS, density-independent pixels on Android; automatic width remains the default).
 - `points`: `visible`, `color`, `size`.
@@ -297,7 +319,7 @@ Colors accept `#RGB`, `#RRGGBB`, CSS-alpha `#RRGGBBAA`, `black`, `white`, and `t
 - Stable point IDs keep selection and updates deterministic even when labels repeat.
 - Large accessibility descriptions are bounded instead of concatenating an unbounded dataset.
 - Native renderers decode configuration once per update and reuse domains and formatters.
-- The package does not silently remove or sample points. For dense analytical datasets, aggregate deliberately for the device viewport and retain original IDs when mapping a selection back to domain data.
+- The package does not silently remove or sample points. Opt-in LTTB sampling preserves endpoints, stable IDs, and original indexes for line, area, and scatter datasets.
 - Native rendering is not a promise of unlimited data. Validate 10, 100, 1,000, and 10,000-point cases against your target devices and interaction needs.
 
 ## Updating from v0.2
