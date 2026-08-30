@@ -112,8 +112,36 @@ struct NativePHPChartsSelectionOverlay: View {
             proxy: proxy,
             plotFrame: plotFrame,
             data: snapshot.data,
-            x: selectionX(for:),
-            y: selectionY(for:)
+            candidateAxis: NativePHPChartsSelection.candidateAxis(
+                kind: kind,
+                barOrientation: snapshot.configuration.barOrientation
+            ),
+            distance: selectionDistance
+        )
+    }
+
+    private func selectionDistance(
+        for point: NativePHPChartsPoint,
+        to location: CGPoint,
+        proxy: ChartProxy
+    ) -> CGFloat {
+        if kind == .bar {
+            return NativePHPChartsSelection.barDistance(
+                geometry: snapshot.domain.barGeometry(
+                    for: point,
+                    data: snapshot.data,
+                    mode: snapshot.configuration.barMode,
+                    orientation: snapshot.configuration.barOrientation
+                ),
+                to: location,
+                proxy: proxy
+            )
+        }
+
+        return NativePHPChartsSelection.pointDistance(
+            at: plottedPosition(for: point),
+            to: location,
+            proxy: proxy
         )
     }
 
@@ -191,12 +219,8 @@ struct NativePHPChartsSelectionOverlay: View {
     private func selectionIndicator(in plotFrame: CGRect) -> some View {
         if let point = selectedPoint,
            let series = snapshot.data.series(id: point.seriesID),
-           let position = NativePHPChartsSelection.position(
-               x: selectionX(for: point),
-               y: selectionY(for: point),
-               proxy: proxy,
-               plotFrame: plotFrame
-           ), isInsidePlot(position, plotFrame: plotFrame)
+           let position = selectionPosition(for: point, in: plotFrame),
+           isInsidePlot(position, plotFrame: plotFrame)
         {
             NativePHPChartsCrosshairOverlay(
                 position: position,
@@ -228,28 +252,43 @@ struct NativePHPChartsSelectionOverlay: View {
             && position.y >= plotFrame.minY && position.y <= plotFrame.maxY
     }
 
-    private func selectionX(for point: NativePHPChartsPoint) -> Double {
-        if isHorizontalBar { return point.value }
+    private func selectionPosition(
+        for point: NativePHPChartsPoint,
+        in plotFrame: CGRect
+    ) -> CGPoint? {
+        let plottedPosition = plottedPosition(for: point)
+        return NativePHPChartsSelection.position(
+            x: plottedPosition.x,
+            y: plottedPosition.y,
+            proxy: proxy,
+            plotFrame: plotFrame
+        )
+    }
 
-        return snapshot.data.renderX(
+    private func plottedPosition(for point: NativePHPChartsPoint) -> NativePHPChartsPlottedPosition {
+        if kind == .bar {
+            return snapshot.domain.barGeometry(
+                for: point,
+                data: snapshot.data,
+                mode: snapshot.configuration.barMode,
+                orientation: snapshot.configuration.barOrientation
+            ).anchor
+        }
+
+        let x = snapshot.data.renderX(
             for: point,
             kind: kind,
             barMode: snapshot.configuration.barMode
         )
-    }
-
-    private func selectionY(for point: NativePHPChartsPoint) -> Double {
-        if isHorizontalBar {
-            return snapshot.data.renderX(
-                for: point,
-                kind: kind,
-                barMode: snapshot.configuration.barMode
-            )
+        guard kind == .area else {
+            return NativePHPChartsPlottedPosition(x: x, y: point.value)
         }
 
-        guard kind == .area else { return point.value }
         let bounds = snapshot.domain.areaBounds(for: point, mode: snapshot.configuration.areaMode)
-        return snapshot.domain.areaOuterY(for: point, bounds: bounds)
+        return NativePHPChartsPlottedPosition(
+            x: x,
+            y: snapshot.domain.areaOuterY(for: point, bounds: bounds)
+        )
     }
 
     private var isHorizontalBar: Bool {

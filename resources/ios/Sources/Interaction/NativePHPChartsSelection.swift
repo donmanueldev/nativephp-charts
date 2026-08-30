@@ -62,13 +62,25 @@ struct NativePHPChartsViewportPayload: Encodable {
 }
 
 enum NativePHPChartsSelection {
+    enum CandidateAxis: Equatable {
+        case x
+        case y
+    }
+
+    static func candidateAxis(
+        kind: NativePHPChartsKind,
+        barOrientation: NativePHPChartsBarOrientation
+    ) -> CandidateAxis {
+        kind == .bar && barOrientation == .horizontal ? .y : .x
+    }
+
     static func closestPoint(
         to location: CGPoint,
         proxy: ChartProxy,
         plotFrame: CGRect,
         data: NativePHPChartsDataSet,
-        x: (NativePHPChartsPoint) -> Double,
-        y: (NativePHPChartsPoint) -> Double
+        candidateAxis: CandidateAxis,
+        distance: (NativePHPChartsPoint, CGPoint, ChartProxy) -> CGFloat
     ) -> NativePHPChartsPoint? {
         guard plotFrame.contains(location) else {
             return nil
@@ -77,24 +89,42 @@ enum NativePHPChartsSelection {
         let plotLocation = CGPoint(x: location.x - plotFrame.minX, y: location.y - plotFrame.minY)
 
         let radius: CGFloat = 44
-        let lowerLocation = max(0, plotLocation.x - radius)
-        let upperLocation = min(plotFrame.width, plotLocation.x + radius)
+        let candidateRange: ClosedRange<Double>?
+        switch candidateAxis {
+        case .x:
+            let lowerLocation = max(0, plotLocation.x - radius)
+            let upperLocation = min(plotFrame.width, plotLocation.x + radius)
+            if let lower: Double = proxy.value(atX: lowerLocation),
+               let upper: Double = proxy.value(atX: upperLocation)
+            {
+                candidateRange = min(lower, upper)...max(lower, upper)
+            } else {
+                candidateRange = nil
+            }
+        case .y:
+            let lowerLocation = max(0, plotLocation.y - radius)
+            let upperLocation = min(plotFrame.height, plotLocation.y + radius)
+            if let lower: Double = proxy.value(atY: lowerLocation),
+               let upper: Double = proxy.value(atY: upperLocation)
+            {
+                candidateRange = min(lower, upper)...max(lower, upper)
+            } else {
+                candidateRange = nil
+            }
+        }
 
-        guard let lowerX: Double = proxy.value(atX: lowerLocation),
-              let upperX: Double = proxy.value(atX: upperLocation)
-        else {
+        guard let candidateRange else {
             return nil
         }
 
-        let candidates = data.selectionCandidates(in: min(lowerX, upperX)...max(lowerX, upperX))
+        let candidates = data.selectionCandidates(in: candidateRange)
         guard let point = candidates.min(by: { lhs, rhs in
-            distance(x: x(lhs), y: y(lhs), to: plotLocation, proxy: proxy)
-                < distance(x: x(rhs), y: y(rhs), to: plotLocation, proxy: proxy)
+            distance(lhs, plotLocation, proxy) < distance(rhs, plotLocation, proxy)
         }) else {
             return nil
         }
 
-        return distance(x: x(point), y: y(point), to: plotLocation, proxy: proxy) <= radius ? point : nil
+        return distance(point, plotLocation, proxy) <= radius ? point : nil
     }
 
     static func position(
@@ -112,19 +142,70 @@ enum NativePHPChartsSelection {
         return CGPoint(x: x + plotFrame.minX, y: y + plotFrame.minY)
     }
 
-    private static func distance(
-        x: Double,
-        y: Double,
+    static func pointDistance(
+        at position: NativePHPChartsPlottedPosition,
         to location: CGPoint,
         proxy: ChartProxy
     ) -> CGFloat {
-        guard let x = proxy.position(forX: x),
-              let y = proxy.position(forY: y)
+        guard let x = proxy.position(forX: position.x),
+              let y = proxy.position(forY: position.y)
         else {
             return .greatestFiniteMagnitude
         }
 
         return hypot(x - location.x, y - location.y)
+    }
+
+    static func barDistance(
+        geometry: NativePHPChartsBarGeometry,
+        to location: CGPoint,
+        proxy: ChartProxy
+    ) -> CGFloat {
+        let start: CGPoint
+        let end: CGPoint
+
+        switch geometry.orientation {
+        case .vertical:
+            guard let category = proxy.position(forX: geometry.category),
+                  let lower = proxy.position(forY: geometry.valueBounds.lowerBound),
+                  let upper = proxy.position(forY: geometry.valueBounds.upperBound)
+            else {
+                return .greatestFiniteMagnitude
+            }
+            start = CGPoint(x: category, y: lower)
+            end = CGPoint(x: category, y: upper)
+        case .horizontal:
+            guard let category = proxy.position(forY: geometry.category),
+                  let lower = proxy.position(forX: geometry.valueBounds.lowerBound),
+                  let upper = proxy.position(forX: geometry.valueBounds.upperBound)
+            else {
+                return .greatestFiniteMagnitude
+            }
+            start = CGPoint(x: lower, y: category)
+            end = CGPoint(x: upper, y: category)
+        }
+
+        return segmentDistance(from: location, start: start, end: end)
+    }
+
+    static func segmentDistance(
+        from location: CGPoint,
+        start: CGPoint,
+        end: CGPoint
+    ) -> CGFloat {
+        let deltaX = end.x - start.x
+        let deltaY = end.y - start.y
+        let lengthSquared = (deltaX * deltaX) + (deltaY * deltaY)
+
+        guard lengthSquared > 0 else {
+            return hypot(location.x - start.x, location.y - start.y)
+        }
+
+        let projection = ((location.x - start.x) * deltaX + (location.y - start.y) * deltaY) / lengthSquared
+        let fraction = min(max(projection, 0), 1)
+        let closest = CGPoint(x: start.x + (fraction * deltaX), y: start.y + (fraction * deltaY))
+
+        return hypot(location.x - closest.x, location.y - closest.y)
     }
 }
 

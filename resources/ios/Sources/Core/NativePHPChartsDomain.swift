@@ -4,7 +4,7 @@ struct NativePHPChartsDomain {
     let x: ClosedRange<Double>
     let y: ClosedRange<Double>
     let baseline: Double
-    private let stackedBounds: [String: ClosedRange<Double>]
+    private let stackedGeometry: NativePHPChartsStackedGeometry
 
     init(
         data: NativePHPChartsDataSet,
@@ -19,12 +19,12 @@ struct NativePHPChartsDomain {
             maximum: configuration.xAxis.plotValue(configuration.xAxis.maximum, formatter: formatter)
         )
 
-        let stack = NativePHPChartsDomain.makeStackedBounds(data: data)
-        stackedBounds = stack
+        let stack = NativePHPChartsStackedGeometry(data: data)
+        stackedGeometry = stack
         let values: [Double]
 
         if configuration.areaMode == .stacked || kind == .bar && configuration.barMode == .stacked {
-            values = stack.values.flatMap { [$0.lowerBound, $0.upperBound] }
+            values = stack.ranges.flatMap { [$0.lowerBound, $0.upperBound] }
         } else {
             values = data.points.flatMap { point in
                 [point.value, point.errorMin, point.errorMax].compactMap { $0 }
@@ -65,15 +65,27 @@ struct NativePHPChartsDomain {
             return min(0, point.value)...max(0, point.value)
         }
 
-        return stackedBounds[point.selectionID] ?? min(0, point.value)...max(0, point.value)
+        return stackedGeometry.bounds(for: point)
     }
 
     func areaOuterY(for point: NativePHPChartsPoint, bounds: ClosedRange<Double>) -> Double {
         point.value >= 0 ? bounds.upperBound : bounds.lowerBound
     }
 
-    func stackedBounds(for point: NativePHPChartsPoint) -> ClosedRange<Double> {
-        stackedBounds[point.selectionID] ?? min(0, point.value)...max(0, point.value)
+    func barGeometry(
+        for point: NativePHPChartsPoint,
+        data: NativePHPChartsDataSet,
+        mode: NativePHPChartsBarMode,
+        orientation: NativePHPChartsBarOrientation
+    ) -> NativePHPChartsBarGeometry {
+        NativePHPChartsBarGeometry.resolve(
+            point: point,
+            data: data,
+            baseline: baseline,
+            mode: mode,
+            orientation: orientation,
+            stackedGeometry: stackedGeometry
+        )
     }
 
     private static func makeXDomain(data: NativePHPChartsDataSet) -> ClosedRange<Double> {
@@ -118,8 +130,52 @@ struct NativePHPChartsDomain {
 
         return minimum > 0 ? domain.lowerBound : domain.upperBound
     }
+}
 
-    private static func makeStackedBounds(data: NativePHPChartsDataSet) -> [String: ClosedRange<Double>] {
+struct NativePHPChartsPlottedPosition: Equatable {
+    let x: Double
+    let y: Double
+}
+
+struct NativePHPChartsBarGeometry: Equatable {
+    let category: Double
+    let valueBounds: ClosedRange<Double>
+    let orientation: NativePHPChartsBarOrientation
+
+    static func resolve(
+        point: NativePHPChartsPoint,
+        data: NativePHPChartsDataSet,
+        baseline: Double,
+        mode: NativePHPChartsBarMode,
+        orientation: NativePHPChartsBarOrientation,
+        stackedGeometry: NativePHPChartsStackedGeometry
+    ) -> NativePHPChartsBarGeometry {
+        NativePHPChartsBarGeometry(
+            category: data.renderX(for: point, kind: .bar, barMode: mode),
+            valueBounds: mode == .stacked
+                ? stackedGeometry.bounds(for: point)
+                : min(baseline, point.value)...max(baseline, point.value),
+            orientation: orientation
+        )
+    }
+
+    var anchor: NativePHPChartsPlottedPosition {
+        let value = (valueBounds.lowerBound + valueBounds.upperBound) / 2
+
+        switch orientation {
+        case .vertical:
+            return NativePHPChartsPlottedPosition(x: category, y: value)
+        case .horizontal:
+            return NativePHPChartsPlottedPosition(x: value, y: category)
+        }
+    }
+}
+
+struct NativePHPChartsStackedGeometry {
+    let ranges: [ClosedRange<Double>]
+    private let boundsBySelectionID: [String: ClosedRange<Double>]
+
+    init(data: NativePHPChartsDataSet) {
         var positive: [Double: Double] = [:]
         var negative: [Double: Double] = [:]
         var bounds: [String: ClosedRange<Double>] = [:]
@@ -140,7 +196,12 @@ struct NativePHPChartsDomain {
             }
         }
 
-        return bounds
+        boundsBySelectionID = bounds
+        ranges = Array(bounds.values)
+    }
+
+    func bounds(for point: NativePHPChartsPoint) -> ClosedRange<Double> {
+        boundsBySelectionID[point.selectionID] ?? min(0, point.value)...max(0, point.value)
     }
 }
 

@@ -9,6 +9,29 @@ function nativeRendererSource(string $path): string
     return $source;
 }
 
+function nativeRendererBlock(string $source, string $opening): string
+{
+    $start = strpos($source, $opening);
+
+    expect($start)->not->toBeFalse();
+
+    $openingBrace = strpos($source, '{', $start);
+
+    expect($openingBrace)->not->toBeFalse();
+
+    $depth = 0;
+    $length = strlen($source);
+    for ($offset = $openingBrace; $offset < $length; $offset++) {
+        if ($source[$offset] === '{') {
+            $depth++;
+        } elseif ($source[$offset] === '}' && --$depth === 0) {
+            return substr($source, $start, $offset - $start + 1);
+        }
+    }
+
+    throw new RuntimeException("Unable to find the closing brace for {$opening}.");
+}
+
 it('sizes Android chart geometry from rendered font metrics', function () {
     $layout = nativeRendererSource('resources/android/src/core/NativePHPChartsLayout.kt');
     $drawing = nativeRendererSource('resources/android/src/rendering/NativePHPChartsDrawing.kt');
@@ -139,6 +162,54 @@ it('keeps unreleased interaction viewport and sampling identity wired through bo
         ->toContain('viewport: NativePHPChartsViewportConfiguration.decode(input.viewportJSON)')
         ->and($iosPlot)
         ->toContain('NativePHPChartsViewportPayload');
+});
+
+it('clips every Android Cartesian viewport layer while leaving axes outside', function () {
+    $plot = nativeRendererSource('resources/android/src/rendering/NativePHPChartsPlot.kt');
+    $clipOpening = 'clipRect(layout.plot.left, layout.plot.top, layout.plot.right, layout.plot.bottom) {';
+    $clip = nativeRendererBlock($plot, $clipOpening);
+    $clippedDrawCalls = [
+        'drawNativePHPChartsAnnotations(',
+        'NativePHPChartsKind.Line -> drawNativePHPChartsLines(',
+        'NativePHPChartsKind.Area -> drawNativePHPChartsLines(',
+        'NativePHPChartsKind.Bar -> drawNativePHPChartsBars(',
+        'NativePHPChartsKind.Scatter -> drawNativePHPChartsScatter(',
+        'NativePHPChartsKind.Candlestick -> drawNativePHPChartsCandlesticks(',
+        'drawNativePHPChartsSelectionOverlay(',
+        'drawNativePHPChartsTooltip(',
+    ];
+
+    expect($plot)
+        ->toContain("drawNativePHPChartsAxes(configuration, layout, drawingResources)\n        {$clipOpening}")
+        ->and($clip)->not->toContain('drawNativePHPChartsAxes(');
+
+    foreach ($clippedDrawCalls as $drawCall) {
+        expect($clip)->toContain($drawCall);
+    }
+});
+
+it('uses the shared iOS bar geometry for rendering and selection', function () {
+    $domain = nativeRendererSource('resources/ios/Sources/Core/NativePHPChartsDomain.swift');
+    $marks = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsMarks.swift');
+    $selection = nativeRendererSource('resources/ios/Sources/Interaction/NativePHPChartsSelection.swift');
+    $selectionOverlay = nativeRendererSource('resources/ios/Sources/Interaction/NativePHPChartsSelectionOverlay.swift');
+
+    expect($domain)
+        ->toContain('struct NativePHPChartsBarGeometry: Equatable')
+        ->toContain('func barGeometry(')
+        ->toContain('var anchor: NativePHPChartsPlottedPosition')
+        ->and($marks)->toContain('let geometry = snapshot.domain.barGeometry(')
+        ->and($selectionOverlay)
+        ->toContain('private func selectionDistance(')
+        ->toContain('NativePHPChartsSelection.barDistance(')
+        ->toContain('geometry: snapshot.domain.barGeometry(')
+        ->toContain('private func plottedPosition(for point: NativePHPChartsPoint) -> NativePHPChartsPlottedPosition')
+        ->toContain('return snapshot.domain.barGeometry(')
+        ->toContain(').anchor')
+        ->and($selection)
+        ->toContain('static func barDistance(')
+        ->toContain('static func candidateAxis(')
+        ->toContain('kind == .bar && barOrientation == .horizontal ? .y : .x');
 });
 
 it('keeps candlestick and radar contracts wired through both native platforms', function () {

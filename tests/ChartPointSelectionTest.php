@@ -28,6 +28,26 @@ it('decodes the canonical version 1 point selection payload', function () {
         ]);
 });
 
+it('preserves the exact version 1 bar selection payload', function () {
+    $payload = [
+        'version' => 1,
+        'chart_type' => 'bar',
+        'series_id' => 'actual',
+        'series_name' => 'Actual',
+        'point_id' => 'actual-august',
+        'point_index' => 2,
+        'x_type' => 'category',
+        'x' => 'August',
+        'label' => 'August',
+        'value' => 42000.5,
+        'localized_value' => 'C$42,000.50',
+    ];
+
+    $selection = PointSelection::fromJson(json_encode($payload, JSON_THROW_ON_ERROR));
+
+    expect($selection->toArray())->toBe($payload);
+});
+
 it('decodes numeric and datetime x values', function (string $xType, mixed $x, mixed $expected) {
     $selection = PointSelection::fromJson(json_encode([
         'version' => 1,

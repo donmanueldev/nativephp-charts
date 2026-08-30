@@ -200,24 +200,27 @@ struct NativePHPChartsMarks: ChartContent {
 
     @ChartContentBuilder
     private func bar(series: NativePHPChartsSeries, point: NativePHPChartsPoint) -> some ChartContent {
-        let bounds = snapshot.configuration.barMode == .stacked
-            ? snapshot.domain.stackedBounds(for: point)
-            : min(snapshot.domain.baseline, point.value)...max(snapshot.domain.baseline, point.value)
+        let geometry = snapshot.domain.barGeometry(
+            for: point,
+            data: snapshot.data,
+            mode: snapshot.configuration.barMode,
+            orientation: snapshot.configuration.barOrientation
+        )
 
         if snapshot.configuration.barOrientation == .horizontal {
             BarMark(
-                xStart: .value("Start", animated(bounds.lowerBound)),
-                xEnd: .value(series.name, animated(bounds.upperBound)),
-                y: .value("Y", renderX(for: point)),
+                xStart: .value("Start", animated(geometry.valueBounds.lowerBound)),
+                xEnd: .value(series.name, animated(geometry.valueBounds.upperBound)),
+                y: .value("Y", geometry.category),
                 height: barStyle(for: series).width.map(MarkDimension.fixed) ?? .automatic
             )
             .foregroundStyle(resolvedColor(for: series))
             .cornerRadius(barStyle(for: series).radius ?? 5)
         } else {
             BarMark(
-                x: .value("X", renderX(for: point)),
-                yStart: .value("Start", animated(bounds.lowerBound)),
-                yEnd: .value(series.name, animated(bounds.upperBound)),
+                x: .value("X", geometry.category),
+                yStart: .value("Start", animated(geometry.valueBounds.lowerBound)),
+                yEnd: .value(series.name, animated(geometry.valueBounds.upperBound)),
                 width: barStyle(for: series).width.map(MarkDimension.fixed) ?? .automatic
             )
             .foregroundStyle(resolvedColor(for: series))

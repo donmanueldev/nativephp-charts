@@ -366,11 +366,11 @@ internal fun NativePHPChartsPlot(
                     it, selectedData, configuration.interaction, layout, drawingResources,
                 )
             }
-        }
-        selected?.takeIf { configuration.interaction.tooltip != "none" }?.let {
-            drawNativePHPChartsTooltip(
-                it, selectedData, configuration.interaction, formatting, layout, drawingResources,
-            )
+            selected?.takeIf { configuration.interaction.tooltip != "none" }?.let {
+                drawNativePHPChartsTooltip(
+                    it, selectedData, configuration.interaction, formatting, layout, drawingResources,
+                )
+            }
         }
     }
 }
