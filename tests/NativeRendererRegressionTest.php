@@ -240,3 +240,44 @@ it('keeps candlestick and radar contracts wired through both native platforms', 
         ->toContain('NativePHPChartsRadarSelection')
         ->toContain('chartType: "radar"');
 });
+
+it('keeps neutral line and candlestick styles aligned in both native renderers', function () {
+    $androidDecoder = nativeRendererSource('resources/android/src/core/NativePHPChartsDecoder.kt');
+    $androidDrawing = nativeRendererSource('resources/android/src/rendering/NativePHPChartsDrawing.kt');
+    $iosStyle = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsStyle.swift');
+    $iosMarks = nativeRendererSource('resources/ios/Sources/Rendering/NativePHPChartsMarks.swift');
+
+    expect($androidDecoder)
+        ->toContain('fallback?.has("label_count") == true')
+        ->toContain('interpolation = line?.optString("interpolation", "linear") ?: "linear"')
+        ->toContain('dash = line?.optJSONArray("dash")?.floatList().orEmpty()')
+        ->toContain('candlestickRisingColor = candlestick?.optionalString("rising_color")')
+        ->toContain('candlestickWickWidth = candlestick.float("wick_width", 1.5f)')
+        ->and($androidDrawing)
+        ->toContain('?: configuration.style.interpolation')
+        ->toContain('series.style?.dash ?: configuration.style.dash')
+        ->toContain('configuration.style.candlestickRisingColor')
+        ->toContain('configuration.style.candlestickWickWidth')
+        ->and($iosStyle)
+        ->toContain('struct Candlestick: Decodable, Equatable')
+        ->toContain('func overriding(_ override: Candlestick?) -> Candlestick')
+        ->toContain('var resolvedWickWidth: CGFloat { wickWidth ?? 1.5 }')
+        ->and($iosMarks)
+        ->toContain('.overriding(series.style?.candlestick)')
+        ->toContain('visualStyle.resolvedWickWidth');
+});
+
+it('avoids repeated grouped bar offsets and radar selection rebuilding', function () {
+    $androidLayout = nativeRendererSource('resources/android/src/core/NativePHPChartsLayout.kt');
+    $iosRadar = nativeRendererSource('resources/ios/Sources/RadarChartRenderer.swift');
+
+    expect($androidLayout)
+        ->toContain('val precedingWidths = barWidths.runningFold(0f, Float::plus).dropLast(1)')
+        ->toContain('val precedingHeights = barHeights.runningFold(0f, Float::plus).dropLast(1)')
+        ->not->toContain('barWidths.take(seriesIndex).sum()')
+        ->not->toContain('barHeights.take(seriesIndex).sum()')
+        ->and($iosRadar)
+        ->toContain('let selections: [NativePHPChartsRadarSelection]')
+        ->toContain('selections = decodedSeries.flatMap')
+        ->not->toContain('var selections: [NativePHPChartsRadarSelection]');
+});
