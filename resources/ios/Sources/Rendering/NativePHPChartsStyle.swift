@@ -53,11 +53,13 @@ struct NativePHPChartsStyle: Decodable {
         let color: String?
         let width: CGFloat?
         let interpolation: String?
+        let dash: [CGFloat]?
 
-        init(color: String? = nil, width: CGFloat? = nil, interpolation: String? = nil) {
+        init(color: String? = nil, width: CGFloat? = nil, interpolation: String? = nil, dash: [CGFloat]? = nil) {
             self.color = color
             self.width = width
             self.interpolation = interpolation
+            self.dash = dash
         }
     }
 

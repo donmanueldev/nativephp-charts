@@ -84,6 +84,24 @@ final class NativePHPChartsFormatter {
         }
     }
 
+    func xWire(_ plotX: Double) -> NativePHPChartsWireValue {
+        switch xAxis.type {
+        case .category, .number:
+            return .number(plotX)
+        case .date:
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.timeZone = timezone
+            formatter.dateFormat = "yyyy-MM-dd"
+            return .string(formatter.string(from: Date(timeIntervalSince1970: plotX)))
+        case .datetime:
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return .string(formatter.string(from: Date(timeIntervalSince1970: plotX)))
+        }
+    }
+
     static func makeNumberFormatter(
         locale: Locale,
         configuration: NativePHPChartsNumberFormat

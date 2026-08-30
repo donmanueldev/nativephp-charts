@@ -1,15 +1,85 @@
 import Charts
 import SwiftUI
 
+struct NativePHPChartsAnnotations: ChartContent {
+    let snapshot: NativePHPChartsSnapshot
+
+    @ChartContentBuilder
+    var body: some ChartContent {
+        ForEach(snapshot.configuration.annotations) { annotation in
+            if annotation.type == "line", let value = plotValue(annotation.value, axis: annotation.axis) {
+                if annotation.axis == physicalXAxis {
+                    RuleMark(x: .value(annotation.label ?? annotation.id, value))
+                        .foregroundStyle(color(annotation))
+                        .lineStyle(StrokeStyle(lineWidth: annotation.width ?? 1))
+                        .annotation(position: .top, alignment: .leading) {
+                            annotationLabel(annotation)
+                        }
+                } else {
+                    RuleMark(y: .value(annotation.label ?? annotation.id, value))
+                        .foregroundStyle(color(annotation))
+                        .lineStyle(StrokeStyle(lineWidth: annotation.width ?? 1))
+                        .annotation(position: .top, alignment: .trailing) {
+                            annotationLabel(annotation)
+                        }
+                }
+            } else if annotation.type == "band",
+                      let from = plotValue(annotation.from, axis: annotation.axis),
+                      let to = plotValue(annotation.to, axis: annotation.axis)
+            {
+                if annotation.axis == physicalXAxis {
+                    RectangleMark(
+                        xStart: .value("Band start", from),
+                        xEnd: .value("Band end", to)
+                    )
+                    .foregroundStyle(color(annotation).opacity(annotation.opacity ?? 0.12))
+                } else {
+                    RectangleMark(
+                        yStart: .value("Band start", from),
+                        yEnd: .value("Band end", to)
+                    )
+                    .foregroundStyle(color(annotation).opacity(annotation.opacity ?? 0.12))
+                }
+            }
+        }
+    }
+
+    private func plotValue(_ value: NativePHPChartsWireValue?, axis: String) -> Double? {
+        guard axis == "x" else { return value?.numberValue }
+        if snapshot.configuration.xAxis.type == .category {
+            return snapshot.data.categoryPlotX(value)
+        }
+        return snapshot.configuration.xAxis.plotValue(value, formatter: snapshot.formatter)
+    }
+
+    private var physicalXAxis: String {
+        snapshot.configuration.barOrientation == .horizontal ? "y" : "x"
+    }
+
+    private func color(_ annotation: NativePHPChartsAnnotation) -> Color {
+        snapshot.configuration.style.color(annotation.color, fallback: .indigo)
+    }
+
+    @ViewBuilder
+    private func annotationLabel(_ annotation: NativePHPChartsAnnotation) -> some View {
+        if let label = annotation.label {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(color(annotation))
+        }
+    }
+}
+
 struct NativePHPChartsMarks: ChartContent {
     let kind: NativePHPChartsKind
     let snapshot: NativePHPChartsSnapshot
     let progress: CGFloat
+    let viewport: ClosedRange<Double>?
 
     @ChartContentBuilder
     var body: some ChartContent {
         ForEach(snapshot.data.series) { series in
-            ForEach(series.points) { point in
+            ForEach(points(for: series)) { point in
                 switch kind {
                 case .line:
                     line(series: series, point: point)
@@ -19,29 +89,78 @@ struct NativePHPChartsMarks: ChartContent {
                     bar(series: series, point: point)
                 case .scatter:
                     scatter(series: series, point: point)
+                case .candlestick:
+                    candlestick(point: point)
+                }
+
+                if kind != .candlestick, let errorMin = point.errorMin, let errorMax = point.errorMax {
+                    errorRange(series: series, point: point, minimum: errorMin, maximum: errorMax)
                 }
             }
         }
     }
 
+    private func points(for series: NativePHPChartsSeries) -> [NativePHPChartsPoint] {
+        guard kind == .line || kind == .area else {
+            return series.points
+        }
+
+        return snapshot.data.visiblePoints(for: series, in: viewport)
+    }
+
+    @ChartContentBuilder
+    private func candlestick(point: NativePHPChartsPoint) -> some ChartContent {
+        if let open = point.open, let high = point.high, let low = point.low, let close = point.close {
+            let color: Color = close >= open ? Color(red: 0.09, green: 0.64, blue: 0.36) : Color(red: 0.86, green: 0.18, blue: 0.22)
+            RuleMark(
+                x: .value("X", renderX(for: point)),
+                yStart: .value("Low", animated(low)),
+                yEnd: .value("High", animated(high))
+            )
+            .foregroundStyle(color)
+            .lineStyle(StrokeStyle(lineWidth: 1.5))
+
+            BarMark(
+                x: .value("X", renderX(for: point)),
+                yStart: .value("Open", animated(open)),
+                yEnd: .value("Close", animated(close)),
+                width: .ratio(0.62)
+            )
+            .foregroundStyle(color)
+        }
+    }
+
     @ChartContentBuilder
     private func line(series: NativePHPChartsSeries, point: NativePHPChartsPoint) -> some ChartContent {
+        if let target = snapshot.data.fillTarget(for: series, point: point) {
+            AreaMark(
+                x: .value("X", renderX(for: point)),
+                yStart: .value("Fill start", animated(target.value)),
+                yEnd: .value("Fill end", animated(point.value)),
+                series: .value("Fill series", series.id)
+            )
+            .foregroundStyle(areaStyle(for: series))
+            .opacity(areaOpacity(for: series))
+            .interpolationMethod(interpolation(for: series))
+        }
+
         LineMark(
-            x: .value("X", snapshot.data.renderX(for: point, kind: kind)),
+            x: .value("X", renderX(for: point)),
             y: .value(series.name, animated(point.value)),
             series: .value("Series", series.id)
         )
         .foregroundStyle(resolvedColor(for: series))
         .lineStyle(
             StrokeStyle(
-                lineWidth: snapshot.configuration.style.line.width ?? 2.75,
+                lineWidth: lineStyle(for: series).width ?? 2.75,
                 lineCap: .round,
-                lineJoin: .round
+                lineJoin: .round,
+                dash: lineStyle(for: series).dash ?? []
             )
         )
-        .interpolationMethod(interpolation)
+        .interpolationMethod(interpolation(for: series))
 
-        if pointsVisible || series.points.count == 1 {
+        if pointsVisible(for: series) || series.points.count == 1 {
             pointMark(series: series, point: point, y: animated(point.value), defaultSize: 5)
         }
     }
@@ -52,38 +171,58 @@ struct NativePHPChartsMarks: ChartContent {
         let outerY = snapshot.domain.areaOuterY(for: point, bounds: bounds)
 
         AreaMark(
-            x: .value("X", snapshot.data.renderX(for: point, kind: kind)),
+            x: .value("X", renderX(for: point)),
             yStart: .value("Start", animated(bounds.lowerBound, from: 0)),
             yEnd: .value("End", animated(bounds.upperBound, from: 0)),
             series: .value("Series", series.id)
         )
         .foregroundStyle(areaStyle(for: series))
-        .opacity(snapshot.configuration.style.area.opacity ?? 0.28)
-        .interpolationMethod(interpolation)
+        .opacity(areaOpacity(for: series))
+        .interpolationMethod(interpolation(for: series))
 
         LineMark(
-            x: .value("X", snapshot.data.renderX(for: point, kind: kind)),
+            x: .value("X", renderX(for: point)),
             y: .value(series.name, animated(outerY, from: 0)),
             series: .value("Series", series.id)
         )
         .foregroundStyle(resolvedColor(for: series))
-        .lineStyle(StrokeStyle(lineWidth: snapshot.configuration.style.line.width ?? 2.25, lineCap: .round))
-        .interpolationMethod(interpolation)
+        .lineStyle(StrokeStyle(
+            lineWidth: lineStyle(for: series).width ?? 2.25,
+            lineCap: .round,
+            dash: lineStyle(for: series).dash ?? []
+        ))
+        .interpolationMethod(interpolation(for: series))
 
-        if pointsVisible || series.points.count == 1 {
+        if pointsVisible(for: series) || series.points.count == 1 {
             pointMark(series: series, point: point, y: animated(outerY, from: 0), defaultSize: 4.5)
         }
     }
 
+    @ChartContentBuilder
     private func bar(series: NativePHPChartsSeries, point: NativePHPChartsPoint) -> some ChartContent {
-        BarMark(
-            x: .value("X", snapshot.data.renderX(for: point, kind: kind)),
-            yStart: .value("Start", snapshot.domain.baseline),
-            yEnd: .value(series.name, animated(point.value)),
-            width: snapshot.configuration.style.bar.width.map(MarkDimension.fixed) ?? .automatic
-        )
-        .foregroundStyle(resolvedColor(for: series))
-        .cornerRadius(snapshot.configuration.style.bar.radius ?? 5)
+        let bounds = snapshot.configuration.barMode == .stacked
+            ? snapshot.domain.stackedBounds(for: point)
+            : min(snapshot.domain.baseline, point.value)...max(snapshot.domain.baseline, point.value)
+
+        if snapshot.configuration.barOrientation == .horizontal {
+            BarMark(
+                xStart: .value("Start", animated(bounds.lowerBound)),
+                xEnd: .value(series.name, animated(bounds.upperBound)),
+                y: .value("Y", renderX(for: point)),
+                height: barStyle(for: series).width.map(MarkDimension.fixed) ?? .automatic
+            )
+            .foregroundStyle(resolvedColor(for: series))
+            .cornerRadius(barStyle(for: series).radius ?? 5)
+        } else {
+            BarMark(
+                x: .value("X", renderX(for: point)),
+                yStart: .value("Start", animated(bounds.lowerBound)),
+                yEnd: .value(series.name, animated(bounds.upperBound)),
+                width: barStyle(for: series).width.map(MarkDimension.fixed) ?? .automatic
+            )
+            .foregroundStyle(resolvedColor(for: series))
+            .cornerRadius(barStyle(for: series).radius ?? 5)
+        }
     }
 
     private func scatter(series: NativePHPChartsSeries, point: NativePHPChartsPoint) -> some ChartContent {
@@ -97,19 +236,50 @@ struct NativePHPChartsMarks: ChartContent {
         defaultSize: CGFloat
     ) -> some ChartContent {
         PointMark(
-            x: .value("X", snapshot.data.renderX(for: point, kind: kind)),
+            x: .value("X", renderX(for: point)),
             y: .value(series.name, y)
         )
         .foregroundStyle(pointColor(for: series))
-        .symbolSize(pow(snapshot.configuration.style.points.size ?? defaultSize, 2))
+        .symbolSize(pow(pointsStyle(for: series).size ?? defaultSize, 2))
     }
 
-    private var interpolation: InterpolationMethod {
-        snapshot.configuration.style.line.interpolation == "smooth" ? .catmullRom : .linear
+    @ChartContentBuilder
+    private func errorRange(
+        series: NativePHPChartsSeries,
+        point: NativePHPChartsPoint,
+        minimum: Double,
+        maximum: Double
+    ) -> some ChartContent {
+        if kind == .bar, snapshot.configuration.barOrientation == .horizontal {
+            RuleMark(
+                xStart: .value("Error minimum", animated(minimum)),
+                xEnd: .value("Error maximum", animated(maximum)),
+                y: .value("Y", renderX(for: point))
+            )
+            .foregroundStyle(resolvedColor(for: series))
+            .lineStyle(StrokeStyle(lineWidth: 1.25, lineCap: .round))
+        } else {
+            RuleMark(
+                x: .value("X", renderX(for: point)),
+                yStart: .value("Error minimum", animated(minimum)),
+                yEnd: .value("Error maximum", animated(maximum))
+            )
+            .foregroundStyle(resolvedColor(for: series))
+            .lineStyle(StrokeStyle(lineWidth: 1.25, lineCap: .round))
+        }
     }
 
-    private var pointsVisible: Bool {
-        snapshot.configuration.style.points.visible ?? snapshot.configuration.showPoints
+    private func interpolation(for series: NativePHPChartsSeries) -> InterpolationMethod {
+        switch lineStyle(for: series).interpolation {
+        case "smooth": .catmullRom
+        case "step_before": .stepStart
+        case "step_after": .stepEnd
+        default: .linear
+        }
+    }
+
+    private func pointsVisible(for series: NativePHPChartsSeries) -> Bool {
+        pointsStyle(for: series).visible ?? snapshot.configuration.showPoints
     }
 
     private func animated(_ value: Double, from baseline: Double? = nil) -> Double {
@@ -117,10 +287,13 @@ struct NativePHPChartsMarks: ChartContent {
         return baseline + ((value - baseline) * Double(progress))
     }
 
+    private func renderX(for point: NativePHPChartsPoint) -> Double {
+        snapshot.data.renderX(for: point, kind: kind, barMode: snapshot.configuration.barMode)
+    }
+
     private func pointColor(for series: NativePHPChartsSeries) -> Color {
-        let override = snapshot.data.series.count == 1
-            ? snapshot.configuration.style.points.color
-            : nil
+        let override = series.style?.points.color
+            ?? (snapshot.data.series.count == 1 ? snapshot.configuration.style.points.color : nil)
 
         return snapshot.configuration.style.color(
             override,
@@ -129,9 +302,8 @@ struct NativePHPChartsMarks: ChartContent {
     }
 
     private func resolvedColor(for series: NativePHPChartsSeries) -> Color {
-        let override: String? = kind == .bar || snapshot.data.series.count > 1
-            ? nil
-            : snapshot.configuration.style.line.color
+        let override = series.style?.line.color
+            ?? (kind == .bar || snapshot.data.series.count > 1 ? nil : snapshot.configuration.style.line.color)
 
         return snapshot.configuration.style.color(override, fallback: series.color)
     }
@@ -139,7 +311,7 @@ struct NativePHPChartsMarks: ChartContent {
     private func areaStyle(for series: NativePHPChartsSeries) -> AnyShapeStyle {
         let color = resolvedColor(for: series)
 
-        guard snapshot.configuration.style.area.gradient ?? true else {
+        guard areaStyleConfiguration(for: series).gradient ?? true else {
             return AnyShapeStyle(color)
         }
 
@@ -149,6 +321,49 @@ struct NativePHPChartsMarks: ChartContent {
                 startPoint: .top,
                 endPoint: .bottom
             )
+        )
+    }
+
+    private func lineStyle(for series: NativePHPChartsSeries) -> NativePHPChartsStyle.Line {
+        let local = series.style?.line
+        let global = snapshot.configuration.style.line
+        return NativePHPChartsStyle.Line(
+            color: local?.color ?? global.color,
+            width: local?.width ?? global.width,
+            interpolation: local?.interpolation ?? global.interpolation,
+            dash: local?.dash ?? global.dash
+        )
+    }
+
+    private func pointsStyle(for series: NativePHPChartsSeries) -> NativePHPChartsStyle.Points {
+        let local = series.style?.points
+        let global = snapshot.configuration.style.points
+        return NativePHPChartsStyle.Points(
+            visible: local?.visible ?? global.visible,
+            color: local?.color ?? global.color,
+            size: local?.size ?? global.size
+        )
+    }
+
+    private func areaStyleConfiguration(for series: NativePHPChartsSeries) -> NativePHPChartsStyle.Area {
+        let local = series.style?.area
+        let global = snapshot.configuration.style.area
+        return NativePHPChartsStyle.Area(
+            opacity: local?.opacity ?? global.opacity,
+            gradient: local?.gradient ?? global.gradient
+        )
+    }
+
+    private func areaOpacity(for series: NativePHPChartsSeries) -> Double {
+        areaStyleConfiguration(for: series).opacity ?? 0.28
+    }
+
+    private func barStyle(for series: NativePHPChartsSeries) -> NativePHPChartsStyle.Bar {
+        let local = series.style?.bar
+        let global = snapshot.configuration.style.bar
+        return NativePHPChartsStyle.Bar(
+            radius: local?.radius ?? global.radius,
+            width: local?.width ?? global.width
         )
     }
 }

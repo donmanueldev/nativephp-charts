@@ -38,6 +38,29 @@ struct NativePHPChartsSelectionPayload: Encodable {
     }
 }
 
+struct NativePHPChartsViewportPayload: Encodable {
+    let version = 1
+    let chartType: String
+    let axis = "x"
+    let reason: NativePHPChartsViewportReason
+    let xType: String
+    let minimum: NativePHPChartsWireValue
+    let maximum: NativePHPChartsWireValue
+
+    enum CodingKeys: String, CodingKey {
+        case version, axis, reason, minimum, maximum
+        case chartType = "chart_type"
+        case xType = "x_type"
+    }
+
+    func json() -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        guard let data = try? encoder.encode(self) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+}
+
 enum NativePHPChartsSelection {
     static func closestPoint(
         to location: CGPoint,

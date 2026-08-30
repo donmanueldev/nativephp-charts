@@ -9,31 +9,55 @@ struct NativePHPChartsDomain {
     init(
         data: NativePHPChartsDataSet,
         configuration: NativePHPChartsConfiguration,
+        formatter: NativePHPChartsFormatter,
         kind: NativePHPChartsKind
     ) {
-        x = NativePHPChartsDomain.makeXDomain(data: data)
+        let automaticX = NativePHPChartsDomain.makeXDomain(data: data)
+        x = NativePHPChartsDomain.explicitDomain(
+            automatic: automaticX,
+            minimum: configuration.xAxis.plotValue(configuration.xAxis.minimum, formatter: formatter),
+            maximum: configuration.xAxis.plotValue(configuration.xAxis.maximum, formatter: formatter)
+        )
 
         let stack = NativePHPChartsDomain.makeStackedBounds(data: data)
         stackedBounds = stack
         let values: [Double]
 
-        if configuration.areaMode == .stacked {
+        if configuration.areaMode == .stacked || kind == .bar && configuration.barMode == .stacked {
             values = stack.values.flatMap { [$0.lowerBound, $0.upperBound] }
         } else {
-            values = data.points.map(\.value)
+            values = data.points.flatMap { point in
+                [point.value, point.errorMin, point.errorMax].compactMap { $0 }
+            }
         }
 
         let includesZero = configuration.beginAtZero || kind == .area
-        let yDomain = NativePHPChartsDomain.makeYDomain(
+        let automaticY = NativePHPChartsDomain.makeYDomain(
             values: values,
             beginAtZero: includesZero
         )
+        let yDomain = NativePHPChartsDomain.explicitDomain(
+            automatic: automaticY,
+            minimum: configuration.yAxis.minimum?.numberValue,
+            maximum: configuration.yAxis.maximum?.numberValue
+        )
         y = yDomain
-        baseline = NativePHPChartsDomain.makeBaseline(
+        baseline = configuration.yAxis.baseline?.numberValue ?? NativePHPChartsDomain.makeBaseline(
             values: values,
             includesZero: includesZero,
             domain: yDomain
         )
+    }
+
+    private static func explicitDomain(
+        automatic: ClosedRange<Double>,
+        minimum: Double?,
+        maximum: Double?
+    ) -> ClosedRange<Double> {
+        let lower = minimum ?? automatic.lowerBound
+        let upper = maximum ?? automatic.upperBound
+
+        return lower < upper ? lower...upper : automatic
     }
 
     func areaBounds(for point: NativePHPChartsPoint, mode: NativePHPChartsAreaMode) -> ClosedRange<Double> {
@@ -46,6 +70,10 @@ struct NativePHPChartsDomain {
 
     func areaOuterY(for point: NativePHPChartsPoint, bounds: ClosedRange<Double>) -> Double {
         point.value >= 0 ? bounds.upperBound : bounds.lowerBound
+    }
+
+    func stackedBounds(for point: NativePHPChartsPoint) -> ClosedRange<Double> {
+        stackedBounds[point.selectionID] ?? min(0, point.value)...max(0, point.value)
     }
 
     private static func makeXDomain(data: NativePHPChartsDataSet) -> ClosedRange<Double> {

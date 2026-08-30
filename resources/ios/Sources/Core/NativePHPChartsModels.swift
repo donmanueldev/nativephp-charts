@@ -6,6 +6,7 @@ enum NativePHPChartsKind: String, Codable {
     case area
     case bar
     case scatter
+    case candlestick
 }
 
 enum NativePHPChartsXAxisType: String, Codable {
@@ -60,6 +61,20 @@ struct NativePHPChartsWirePoint: Decodable {
     let label: String
     let value: Double
     let x: NativePHPChartsWireValue?
+    let errorMin: Double?
+    let errorMax: Double?
+    let sourceIndex: Int?
+    let open: Double?
+    let high: Double?
+    let low: Double?
+    let close: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case id, label, value, x, open, high, low, close
+        case errorMin = "error_min"
+        case errorMax = "error_max"
+        case sourceIndex = "source_index"
+    }
 }
 
 struct NativePHPChartsWireSeries: Decodable {
@@ -67,6 +82,13 @@ struct NativePHPChartsWireSeries: Decodable {
     let name: String
     let color: String
     let points: [NativePHPChartsWirePoint]
+    let style: NativePHPChartsStyle?
+    let fillTo: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, color, points, style
+        case fillTo = "fill_to"
+    }
 }
 
 struct NativePHPChartsPoint: Identifiable, Hashable {
@@ -78,6 +100,12 @@ struct NativePHPChartsPoint: Identifiable, Hashable {
     let index: Int
     let seriesID: String
     let seriesIndex: Int
+    let errorMin: Double?
+    let errorMax: Double?
+    let open: Double?
+    let high: Double?
+    let low: Double?
+    let close: Double?
 
     var selectionID: String {
         "\(seriesID.utf8.count):\(seriesID)\(id)"
@@ -90,6 +118,8 @@ struct NativePHPChartsSeries: Identifiable {
     let colorValue: String
     let points: [NativePHPChartsPoint]
     let index: Int
+    let style: NativePHPChartsStyle?
+    let fillTo: String?
 
     var color: Color {
         Color(argb: ColorParser.parse(colorValue, default: 0xFF6366F1))
@@ -106,6 +136,7 @@ struct NativePHPChartsDataSet {
     private let pointsBySelectionID: [String: NativePHPChartsPoint]
     private let seriesByID: [String: NativePHPChartsSeries]
     private let pointsByX: [Double: [NativePHPChartsPoint]]
+    private let pointsBySeriesAndX: [String: [Double: NativePHPChartsPoint]]
     private let groupedBarGeometry: NativePHPChartsGroupedBarGeometry
 
     init(
@@ -129,6 +160,18 @@ struct NativePHPChartsDataSet {
             uniquingKeysWith: { existing, _ in existing }
         )
         pointsByX = Dictionary(grouping: points, by: \.plotX)
+        pointsBySeriesAndX = Dictionary(
+            series.map { series in
+                (
+                    series.id,
+                    Dictionary(
+                        series.points.map { ($0.plotX, $0) },
+                        uniquingKeysWith: { existing, _ in existing }
+                    )
+                )
+            },
+            uniquingKeysWith: { existing, _ in existing }
+        )
         groupedBarGeometry = NativePHPChartsGroupedBarGeometry(
             points: points,
             xValues: xValues,
@@ -164,35 +207,96 @@ struct NativePHPChartsDataSet {
         seriesByID[id]
     }
 
-    func renderX(for point: NativePHPChartsPoint, kind: NativePHPChartsKind) -> Double {
-        guard kind == .bar else {
+    func points(atPlotX plotX: Double) -> [NativePHPChartsPoint] {
+        pointsByX[plotX, default: []]
+    }
+
+    func fillTarget(for series: NativePHPChartsSeries, point: NativePHPChartsPoint) -> NativePHPChartsPoint? {
+        guard let fillTo = series.fillTo else { return nil }
+        return pointsBySeriesAndX[fillTo]?[point.plotX]
+    }
+
+    func visiblePoints(
+        for series: NativePHPChartsSeries,
+        in viewport: ClosedRange<Double>?
+    ) -> [NativePHPChartsPoint] {
+        let points = series.points
+        guard let viewport, points.count > 2
+        else {
+            return points
+        }
+
+        var visible = Array(repeating: false, count: points.count)
+
+        for index in points.indices {
+            if viewport.contains(points[index].plotX) {
+                visible[index] = true
+            }
+
+            guard index > points.startIndex else { continue }
+
+            let previousIndex = points.index(before: index)
+            let segmentMinimum = min(points[previousIndex].plotX, points[index].plotX)
+            let segmentMaximum = max(points[previousIndex].plotX, points[index].plotX)
+            if segmentMinimum <= viewport.upperBound, segmentMaximum >= viewport.lowerBound {
+                visible[previousIndex] = true
+                visible[index] = true
+            }
+        }
+
+        return points.enumerated().compactMap { index, point in
+            visible[index] ? point : nil
+        }
+    }
+
+    func categoryPlotX(_ value: NativePHPChartsWireValue?) -> Double? {
+        guard case let .string(category) = value else { return nil }
+        return points.first { ($0.x?.stringValue ?? $0.label) == category }?.plotX
+    }
+
+    func renderX(
+        for point: NativePHPChartsPoint,
+        kind: NativePHPChartsKind,
+        barMode: NativePHPChartsBarMode = .grouped
+    ) -> Double {
+        guard kind == .bar, barMode == .grouped else {
             return point.plotX
         }
 
         return groupedBarGeometry.x(for: point)
     }
 
-    func xDomain(for kind: NativePHPChartsKind, fallback: ClosedRange<Double>) -> ClosedRange<Double> {
-        guard kind == .bar else {
+    func xDomain(
+        for kind: NativePHPChartsKind,
+        barMode: NativePHPChartsBarMode = .grouped,
+        fallback: ClosedRange<Double>
+    ) -> ClosedRange<Double> {
+        guard kind == .bar, barMode == .grouped else {
             return fallback
         }
 
         return groupedBarGeometry.domain ?? fallback
     }
 
-    func axisValues(desiredCount: Int) -> [Double] {
-        let count = min(max(desiredCount, 1), xValues.count)
+    func axisValues(
+        desiredCount: Int,
+        in domain: ClosedRange<Double>? = nil
+    ) -> [Double] {
+        let availableValues = domain.map { visibleDomain in
+            xValues.filter(visibleDomain.contains)
+        } ?? xValues
+        let count = min(max(desiredCount, 1), availableValues.count)
 
         guard count > 0 else {
             return []
         }
-        guard xValues.count > count, count > 1 else {
-            return xValues
+        guard availableValues.count > count, count > 1 else {
+            return availableValues
         }
 
         return (0..<count).map { index in
-            let position = Double(index) * Double(xValues.count - 1) / Double(count - 1)
-            return xValues[Int(position.rounded())]
+            let position = Double(index) * Double(availableValues.count - 1) / Double(count - 1)
+            return availableValues[Int(position.rounded())]
         }
     }
 
@@ -270,9 +374,15 @@ struct NativePHPChartsDataSet {
                     value: wirePoint.value,
                     x: wirePoint.x,
                     plotX: plotX,
-                    index: pointIndex,
+                    index: wirePoint.sourceIndex ?? pointIndex,
                     seriesID: wireSeries.id,
-                    seriesIndex: seriesIndex
+                    seriesIndex: seriesIndex,
+                    errorMin: wirePoint.errorMin,
+                    errorMax: wirePoint.errorMax,
+                    open: wirePoint.open,
+                    high: wirePoint.high,
+                    low: wirePoint.low,
+                    close: wirePoint.close
                 )
             }
 
@@ -281,7 +391,9 @@ struct NativePHPChartsDataSet {
                 name: wireSeries.name,
                 colorValue: wireSeries.color,
                 points: points,
-                index: seriesIndex
+                index: seriesIndex,
+                style: wireSeries.style,
+                fillTo: wireSeries.fillTo
             )
         }
 

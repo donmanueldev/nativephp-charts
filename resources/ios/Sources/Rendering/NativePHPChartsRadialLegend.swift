@@ -63,7 +63,8 @@ struct NativePHPChartsRadialLegend: View {
     }
 
     private var legendFont: Font {
-        let scaledSize = (configuration.style.fontSize ?? 11) * fontScale
+        let spatialScale = NativePHPChartsTypography.spatialScale(Double(fontScale))
+        let scaledSize = (configuration.style.fontSize ?? 11) * CGFloat(spatialScale)
 
         if let token = configuration.style.font,
            let resolved = NativeUIFontResolver.font(token, size: scaledSize)

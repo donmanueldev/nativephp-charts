@@ -46,10 +46,14 @@ struct NativePHPChartsRadialPlot: View {
                 withAnimation(nil) { revealProgress = 1 }
             }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(snapshot.configuration.accessibilityLabel)
-        .accessibilityValue(accessibilitySummary)
-        .accessibilityAdjustableAction(moveAccessibleSelection)
+        .accessibilityRepresentation {
+            NativePHPChartsAccessibilityRepresentation(
+                label: snapshot.configuration.accessibilityLabel,
+                value: accessibilitySummary,
+                actions: accessibleSegmentActions,
+                onSelect: select
+            )
+        }
     }
 
     private var selectedSegment: NativePHPChartsRadialSegment? {
@@ -60,12 +64,12 @@ struct NativePHPChartsRadialPlot: View {
         CGFloat(snapshot.configuration.innerRadiusRatio)
     }
 
-    private func angularRange(for segment: NativePHPChartsRadialSegment) -> ClosedRange<Double> {
+    private func angularRange(for segment: NativePHPChartsRadialSegment) -> Range<Double> {
         let rawDegrees = segment.value / snapshot.data.total * 360
         let gapDegrees = min(Double(snapshot.configuration.style.gap), rawDegrees * 0.45)
         let halfGap = snapshot.data.total * gapDegrees / 720
 
-        return (segment.lowerBound + halfGap)...(segment.upperBound - halfGap)
+        return (segment.lowerBound + halfGap)..<(segment.upperBound - halfGap)
     }
 
     private var accessibilitySummary: String {
@@ -116,25 +120,58 @@ struct NativePHPChartsRadialPlot: View {
         )
     }
 
-    private func moveAccessibleSelection(_ direction: AccessibilityAdjustmentDirection) {
+    private var previousAccessibleSegment: NativePHPChartsRadialSegment? {
         let segments = snapshot.data.selectableSegments
-        guard !segments.isEmpty else { return }
+        guard let current = segments.firstIndex(where: { $0.id == selectedSegmentID }),
+              current > segments.startIndex
+        else { return nil }
 
-        let current = segments.firstIndex { $0.id == selectedSegmentID }
-        let target: Int
+        return segments[segments.index(before: current)]
+    }
 
-        switch direction {
-        case .increment:
-            target = min((current ?? -1) + 1, segments.count - 1)
-        case .decrement:
-            target = max((current ?? segments.count) - 1, 0)
-        @unknown default:
-            return
+    private var nextAccessibleSegment: NativePHPChartsRadialSegment? {
+        let segments = snapshot.data.selectableSegments
+        guard !segments.isEmpty else { return nil }
+
+        guard let current = segments.firstIndex(where: { $0.id == selectedSegmentID }) else {
+            return segments.first
         }
 
-        guard current != target else { return }
-        let segment = segments[target]
-        select(segment)
+        let next = segments.index(after: current)
+        return next < segments.endIndex ? segments[next] : nil
+    }
+
+    private var accessibleSegmentActions: [NativePHPChartsAccessibilityAction<NativePHPChartsRadialSegment>] {
+        var actions: [NativePHPChartsAccessibilityAction<NativePHPChartsRadialSegment>] = []
+
+        if let previousAccessibleSegment {
+            actions.append(
+                NativePHPChartsAccessibilityAction(
+                    dataID: snapshot.data.animationID,
+                    direction: .previous,
+                    targetID: previousAccessibleSegment.id,
+                    label: accessibilityActionLabel(for: previousAccessibleSegment),
+                    target: previousAccessibleSegment
+                )
+            )
+        }
+        if let nextAccessibleSegment {
+            actions.append(
+                NativePHPChartsAccessibilityAction(
+                    dataID: snapshot.data.animationID,
+                    direction: .next,
+                    targetID: nextAccessibleSegment.id,
+                    label: accessibilityActionLabel(for: nextAccessibleSegment),
+                    target: nextAccessibleSegment
+                )
+            )
+        }
+
+        return actions
+    }
+
+    private func accessibilityActionLabel(for segment: NativePHPChartsRadialSegment) -> String {
+        "\(segment.label), \(snapshot.formatter.value(segment.value))"
     }
 
     private func synchronizeSelection() {
