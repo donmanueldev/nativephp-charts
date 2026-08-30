@@ -5,3 +5,4 @@
 *.log
 /.build/
 resources/ios/.build/
+android-harness/

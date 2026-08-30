@@ -172,6 +172,11 @@ internal object NativePHPChartsLayoutEngine {
         }
 
         fun categoryY(point: NativePHPChartsPoint): Float {
+            val number = formatting.xNumeric(point)
+            if (number != null && xDomain != null && xDomain.span > 0.0) {
+                return plot.top + (((number - xDomain.minimum) / xDomain.span).toFloat() * plot.height)
+            }
+
             val index = categoryIndexes[point.x?.toString() ?: point.label] ?: 0
             return plot.top + ((index + 0.5f) * plot.height / categories.size.coerceAtLeast(1))
         }
@@ -248,8 +253,15 @@ internal object NativePHPChartsLayoutEngine {
         }
         val yLabels = if (isHorizontalBar) {
             val categoryLabelCount = configuration.xAxis.labelCount.coerceIn(2, 12)
-            evenlySpacedIndexes(categories.size, categoryLabelCount).map { index ->
-                categoryY(categories[index]) to formatting.x(categories[index])
+            val visibleCategories = if (configuration.xAxis.type == NativePHPChartsXType.Category || xDomain == null) {
+                categories
+            } else {
+                categories.filter { point ->
+                    formatting.xNumeric(point)?.let { value -> value in xDomain.minimum..xDomain.maximum } == true
+                }
+            }
+            evenlySpacedIndexes(visibleCategories.size, categoryLabelCount).map { index ->
+                categoryY(visibleCategories[index]) to formatting.x(visibleCategories[index])
             }
         } else {
             yLabelValues.map { value -> yFor(value, domain, plot) to formatting.value(value) }
@@ -440,7 +452,13 @@ internal object NativePHPChartsLayoutEngine {
         categoryY: (NativePHPChartsPoint) -> Float,
         valueX: (Double) -> Float,
     ): List<NativePHPChartsDatum> {
-        val slot = plot.height / categoryIndexes.size.coerceAtLeast(1)
+        val centers = configuration.series.flatMap(NativePHPChartsSeries::points)
+            .map(categoryY)
+            .distinct()
+            .sorted()
+        val slot = centers.zipWithNext { first, second -> second - first }
+            .minOrNull()
+            ?: plot.height
         val innerHeight = slot * 0.76f
         val computedHeight = (innerHeight / configuration.series.size.coerceAtLeast(1)).coerceAtLeast(density)
         val barHeights = configuration.series.map { series ->
@@ -474,12 +492,13 @@ internal object NativePHPChartsLayoutEngine {
     ): List<NativePHPChartsDatum> {
         val positive = mutableMapOf<String, Double>()
         val negative = mutableMapOf<String, Double>()
-        val categoryCount = configuration.series.flatMap(NativePHPChartsSeries::points)
-            .map(formatting::geometryKey)
+        val centers = configuration.series.flatMap(NativePHPChartsSeries::points)
+            .map(categoryY)
             .distinct()
-            .size
-            .coerceAtLeast(1)
-        val slot = plot.height / categoryCount
+            .sorted()
+        val slot = centers.zipWithNext { first, second -> second - first }
+            .minOrNull()
+            ?: plot.height
 
         return configuration.series.flatMap { series ->
             series.points.map { point ->
