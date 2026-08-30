@@ -109,11 +109,10 @@ it('decodes scatter and radial selections with the shared version 1 payload', fu
         ->and($selection->pointId)->toBe('web');
 })->with(['scatter', 'pie', 'donut']);
 
-it('decodes radar and candlestick selections emitted by the native renderers', function (array $payload, string $chartType, string $pointId) {
+it('preserves the exact version 1 radar and candlestick selection payloads', function (array $payload) {
     $selection = PointSelection::fromJson(json_encode($payload, JSON_THROW_ON_ERROR));
 
-    expect($selection->chartType)->toBe($chartType)
-        ->and($selection->pointId)->toBe($pointId);
+    expect($selection->toArray())->toBe($payload);
 })->with([
     'radar' => [[
         'version' => 1,
@@ -127,7 +126,7 @@ it('decodes radar and candlestick selections emitted by the native renderers', f
         'label' => 'Rendering',
         'value' => 94,
         'localized_value' => '94',
-    ], 'radar', 'rendering'],
+    ]],
     'candlestick' => [[
         'version' => 1,
         'chart_type' => 'candlestick',
@@ -140,7 +139,7 @@ it('decodes radar and candlestick selections emitted by the native renderers', f
         'label' => '29 Aug',
         'value' => 191.4,
         'localized_value' => '$191',
-    ], 'candlestick', 'aug-29'],
+    ]],
 ]);
 
 it('rejects radial payloads that violate segment identity invariants', function (array $changes, string $message) {
