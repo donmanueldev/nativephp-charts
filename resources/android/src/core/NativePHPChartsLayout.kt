@@ -492,6 +492,7 @@ internal object NativePHPChartsLayoutEngine {
                 ?: computedWidth
         }
         val totalBarWidth = barWidths.sum()
+        val precedingWidths = barWidths.runningFold(0f, Float::plus).dropLast(1)
 
         return configuration.series.flatMapIndexed { seriesIndex, series ->
             series.points.mapNotNull { point ->
@@ -499,7 +500,7 @@ internal object NativePHPChartsLayoutEngine {
                 if (categoryIndexes[key] == null) return@mapNotNull null
                 val center = xFor(point)
                 val barWidth = barWidths[seriesIndex]
-                val precedingWidth = barWidths.take(seriesIndex).sum()
+                val precedingWidth = precedingWidths[seriesIndex]
                 val left = center - (totalBarWidth / 2f) + precedingWidth
                 val valueY = yFor(point.value, domain, plot)
                 val baseline = yFor(configuration.yAxis.baseline ?: 0.0, domain, plot).coerceIn(plot.top, plot.bottom)
@@ -519,6 +520,12 @@ internal object NativePHPChartsLayoutEngine {
     ): List<NativePHPChartsDatum> {
         val positive = mutableMapOf<String, Double>()
         val negative = mutableMapOf<String, Double>()
+        val categoryCount = configuration.series.flatMap(NativePHPChartsSeries::points)
+            .map(formatting::geometryKey)
+            .distinct()
+            .size
+            .coerceAtLeast(1)
+        val slot = plot.width / categoryCount
 
         return configuration.series.flatMap { series ->
             series.points.map { point ->
@@ -528,11 +535,6 @@ internal object NativePHPChartsLayoutEngine {
                 val end = start + point.value
                 accumulator[key] = end
                 val center = xFor(point)
-                val slot = plot.width / configuration.series.flatMap(NativePHPChartsSeries::points)
-                    .map(formatting::geometryKey)
-                    .distinct()
-                    .size
-                    .coerceAtLeast(1)
                 val width = (series.style?.barWidth ?: configuration.style.barWidth)
                     ?.let { min(slot * 0.76f, it * density) }
                     ?: slot * 0.76f
@@ -567,6 +569,7 @@ internal object NativePHPChartsLayoutEngine {
                 ?: computedHeight
         }
         val totalHeight = barHeights.sum()
+        val precedingHeights = barHeights.runningFold(0f, Float::plus).dropLast(1)
         val baseline = valueX(configuration.yAxis.baseline ?: 0.0).coerceIn(plot.left, plot.right)
 
         return configuration.series.flatMapIndexed { seriesIndex, series ->
@@ -574,7 +577,7 @@ internal object NativePHPChartsLayoutEngine {
                 val key = point.x?.toString() ?: point.label
                 if (categoryIndexes[key] == null) return@mapNotNull null
                 val height = barHeights[seriesIndex]
-                val top = categoryY(point) - totalHeight / 2f + barHeights.take(seriesIndex).sum()
+                val top = categoryY(point) - totalHeight / 2f + precedingHeights[seriesIndex]
                 val value = valueX(point.value)
                 val rect = Rect(min(value, baseline), top, max(value, baseline), top + height)
                 NativePHPChartsDatum(series, point, rect.center, rect)

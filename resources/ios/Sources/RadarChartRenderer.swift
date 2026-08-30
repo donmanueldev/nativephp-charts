@@ -119,11 +119,16 @@ struct NativePHPChartsRadarSnapshot {
     let gridLevels: Int
     let fillOpacity: Double
     let animationID: Int
+    let selections: [NativePHPChartsRadarSelection]
 
     init(input: NativePHPChartsRadarWireInput) {
-        axes = Self.decode([NativePHPChartsRadarAxis].self, input.axesJSON)
-        series = Self.decode([NativePHPChartsRadarSeries].self, input.seriesJSON)
-        style = NativePHPChartsStyle.decode(input.styleJSON)
+        let decodedAxes = Self.decode([NativePHPChartsRadarAxis].self, input.axesJSON)
+        let decodedSeries = Self.decode([NativePHPChartsRadarSeries].self, input.seriesJSON)
+        let decodedStyle = NativePHPChartsStyle.decode(input.styleJSON)
+
+        axes = decodedAxes
+        series = decodedSeries
+        style = decodedStyle
         legend = NativePHPChartsLegendConfiguration.decode(input.legendJSON)
         formatter = NativePHPChartsRadarFormatter(input: input)
         animated = input.animated
@@ -131,25 +136,22 @@ struct NativePHPChartsRadarSnapshot {
         accessibilityLabel = input.accessibilityLabel
         onSelect = input.onSelect
         gridLevels = min(max(input.gridLevels, 2), 10)
-        fillOpacity = min(max(style.area.opacity ?? input.fillOpacity, 0), 1)
+        fillOpacity = min(max(decodedStyle.area.opacity ?? input.fillOpacity, 0), 1)
+        selections = decodedSeries.flatMap { item in
+            item.values.enumerated().compactMap { index, value in
+                guard let axis = decodedAxes[safe: index], axis.id == value.axis else { return nil }
+                return NativePHPChartsRadarSelection(series: item, axis: axis, value: value, index: index)
+            }
+        }
 
         var hasher = Hasher()
-        hasher.combine(axes)
-        hasher.combine(series)
+        hasher.combine(decodedAxes)
+        hasher.combine(decodedSeries)
         animationID = hasher.finalize()
     }
 
     var isEmpty: Bool { axes.count < 3 || series.allSatisfy(\.values.isEmpty) }
     var legendVisible: Bool { legend.visible ?? (series.count > 1) }
-
-    var selections: [NativePHPChartsRadarSelection] {
-        series.flatMap { item in
-            item.values.enumerated().compactMap { index, value in
-                guard let axis = axes[safe: index], axis.id == value.axis else { return nil }
-                return NativePHPChartsRadarSelection(series: item, axis: axis, value: value, index: index)
-            }
-        }
-    }
 
     func selection(id: String?) -> NativePHPChartsRadarSelection? {
         selections.first { $0.id == id }
