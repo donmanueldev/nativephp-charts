@@ -163,16 +163,21 @@ struct NativePHPChartsMarks: ChartContent {
             x: renderX(for: point),
             style: barStyle(for: series)
         ) {
-            let color: Color = geometry.close >= geometry.open
-                ? Color(red: 0.09, green: 0.64, blue: 0.36)
-                : Color(red: 0.86, green: 0.18, blue: 0.22)
+            let visualStyle = snapshot.configuration.style.candlestick
+                .overriding(series.style?.candlestick)
+            let color = snapshot.configuration.style.color(
+                visualStyle.colorValue(open: geometry.open, close: geometry.close),
+                fallback: geometry.close >= geometry.open
+                    ? Color(red: 0.09, green: 0.64, blue: 0.36)
+                    : Color(red: 0.86, green: 0.18, blue: 0.22)
+            )
             RuleMark(
                 x: .value("X", geometry.x),
                 yStart: .value("Low", animated(geometry.wickBounds.lowerBound)),
                 yEnd: .value("High", animated(geometry.wickBounds.upperBound))
             )
             .foregroundStyle(color)
-            .lineStyle(StrokeStyle(lineWidth: 1.5))
+            .lineStyle(StrokeStyle(lineWidth: visualStyle.resolvedWickWidth))
 
             BarMark(
                 x: .value("X", geometry.x),

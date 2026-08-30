@@ -32,6 +32,10 @@ internal data class NativePHPChartsSeriesStyle(
     val areaGradient: Boolean? = null,
     val barRadius: Float? = null,
     val barWidth: Float? = null,
+    val candlestickRisingColor: String? = null,
+    val candlestickFallingColor: String? = null,
+    val candlestickNeutralColor: String? = null,
+    val candlestickWickWidth: Float? = null,
 )
 
 internal data class NativePHPChartsSeries(
@@ -113,7 +117,8 @@ internal data class NativePHPChartsViewport(
 internal data class NativePHPChartsStyle(
     val lineColor: String? = null,
     val lineWidth: Float = 3f,
-    val smooth: Boolean = false,
+    val interpolation: String = "linear",
+    val dash: List<Float> = emptyList(),
     val pointColor: String? = null,
     val pointSize: Float = 4f,
     val pointsVisible: Boolean? = null,
@@ -124,6 +129,10 @@ internal data class NativePHPChartsStyle(
     val areaGradient: Boolean = true,
     val barRadius: Float = 5f,
     val barWidth: Float? = null,
+    val candlestickRisingColor: String? = null,
+    val candlestickFallingColor: String? = null,
+    val candlestickNeutralColor: String? = null,
+    val candlestickWickWidth: Float = 1.5f,
     val axisVisible: Boolean? = null,
     val axisColor: String? = null,
     val axisLabelCount: Int? = null,
@@ -165,7 +174,8 @@ internal data class NativePHPChartsConfiguration(
         result = 31 * result + beginAtZero.hashCode()
         result = 31 * result + xAxis.type.hashCode()
         result = 31 * result + xAxis.timezone.hashCode()
-        result = 31 * result + style.smooth.hashCode()
+        result = 31 * result + style.interpolation.hashCode()
+        result = 31 * result + style.dash.hashCode()
         result = 31 * result + (style.barWidth?.hashCode() ?: 0)
 
         series.forEach { item ->

@@ -38,6 +38,62 @@ it('publishes an ordered OHLC series with close as the selection value', functio
     ]);
 });
 
+it('publishes neutral candlestick colors and wick width globally and per series', function () {
+    $props = CandlestickChart::make()
+        ->style([
+            'candlestick' => [
+                'risingColor' => '#15803D',
+                'fallingColor' => '#B91C1C',
+                'neutralColor' => '#64748B',
+                'wickWidth' => 2,
+            ],
+        ])
+        ->series([[
+            'id' => 'market',
+            'name' => 'Market',
+            'color' => '#2563EB',
+            'style' => [
+                'candlestick' => [
+                    'rising_color' => '#166534',
+                    'wick_width' => 2.5,
+                ],
+            ],
+            'points' => [[
+                'id' => 'day',
+                'label' => 'Day',
+                'open' => 10,
+                'high' => 12,
+                'low' => 9,
+                'close' => 11,
+            ]],
+        ]])
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect(json_decode($props['style_json'], true, flags: JSON_THROW_ON_ERROR))->toBe([
+        'candlestick' => [
+            'rising_color' => '#15803D',
+            'falling_color' => '#B91C1C',
+            'neutral_color' => '#64748B',
+            'wick_width' => 2,
+        ],
+    ])->and(json_decode($props['series_json'], true, flags: JSON_THROW_ON_ERROR)[0]['style'])->toBe([
+        'candlestick' => [
+            'rising_color' => '#166534',
+            'wick_width' => 2.5,
+        ],
+    ]);
+});
+
+it('rejects invalid candlestick visual styles', function (array $style, string $message) {
+    expect(fn () => CandlestickChart::make()->style(['candlestick' => $style]))
+        ->toThrow(InvalidArgumentException::class, $message);
+})->with([
+    'invalid rising color' => [['risingColor' => 'green'], 'candlestick.risingColor'],
+    'zero wick width' => [['wickWidth' => 0], 'wickWidth must be greater than zero'],
+    'oversized wick width' => [['wickWidth' => 9], 'wickWidth must be greater than zero'],
+    'unknown option' => [['bodyOpacity' => 0.5], "candlestick.bodyOpacity' is not supported"],
+]);
+
 it('rejects invalid OHLC ranges and multiple series', function () {
     $invalid = [[
         'id' => 'market',

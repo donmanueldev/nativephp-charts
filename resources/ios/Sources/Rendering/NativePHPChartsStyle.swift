@@ -5,18 +5,20 @@ struct NativePHPChartsStyle: Decodable {
     let line: Line
     let area: Area
     let bar: Bar
+    let candlestick: Candlestick
     let points: Points
     let grid: Grid
     let axis: Axis
 
     enum CodingKeys: String, CodingKey {
-        case line, area, bar, points, grid, axis
+        case line, area, bar, candlestick, points, grid, axis
     }
 
     init(
         line: Line = Line(),
         area: Area = Area(),
         bar: Bar = Bar(),
+        candlestick: Candlestick = Candlestick(),
         points: Points = Points(),
         grid: Grid = Grid(),
         axis: Axis = Axis()
@@ -24,6 +26,7 @@ struct NativePHPChartsStyle: Decodable {
         self.line = line
         self.area = area
         self.bar = bar
+        self.candlestick = candlestick
         self.points = points
         self.grid = grid
         self.axis = axis
@@ -34,6 +37,7 @@ struct NativePHPChartsStyle: Decodable {
         line = try container.decodeIfPresent(Line.self, forKey: .line) ?? Line()
         area = try container.decodeIfPresent(Area.self, forKey: .area) ?? Area()
         bar = try container.decodeIfPresent(Bar.self, forKey: .bar) ?? Bar()
+        candlestick = try container.decodeIfPresent(Candlestick.self, forKey: .candlestick) ?? Candlestick()
         points = try container.decodeIfPresent(Points.self, forKey: .points) ?? Points()
         grid = try container.decodeIfPresent(Grid.self, forKey: .grid) ?? Grid()
         axis = try container.decodeIfPresent(Axis.self, forKey: .axis) ?? Axis()
@@ -93,6 +97,54 @@ struct NativePHPChartsStyle: Decodable {
                 ?? container.decodeIfPresent(CGFloat.self, forKey: .cornerRadius)
             width = try container.decodeIfPresent(CGFloat.self, forKey: .width)
         }
+    }
+
+    struct Candlestick: Decodable, Equatable {
+        let risingColor: String?
+        let fallingColor: String?
+        let neutralColor: String?
+        let wickWidth: CGFloat?
+
+        enum CodingKeys: String, CodingKey {
+            case risingColor = "rising_color"
+            case fallingColor = "falling_color"
+            case neutralColor = "neutral_color"
+            case wickWidth = "wick_width"
+        }
+
+        init(
+            risingColor: String? = nil,
+            fallingColor: String? = nil,
+            neutralColor: String? = nil,
+            wickWidth: CGFloat? = nil
+        ) {
+            self.risingColor = risingColor
+            self.fallingColor = fallingColor
+            self.neutralColor = neutralColor
+            self.wickWidth = wickWidth
+        }
+
+        func overriding(_ override: Candlestick?) -> Candlestick {
+            Candlestick(
+                risingColor: override?.risingColor ?? risingColor,
+                fallingColor: override?.fallingColor ?? fallingColor,
+                neutralColor: override?.neutralColor ?? neutralColor,
+                wickWidth: override?.wickWidth ?? wickWidth
+            )
+        }
+
+        func colorValue(open: Double, close: Double) -> String {
+            if close > open {
+                return risingColor ?? "#16A35B"
+            }
+            if close < open {
+                return fallingColor ?? "#DB2E38"
+            }
+
+            return neutralColor ?? risingColor ?? "#16A35B"
+        }
+
+        var resolvedWickWidth: CGFloat { wickWidth ?? 1.5 }
     }
 
     struct Points: Decodable {

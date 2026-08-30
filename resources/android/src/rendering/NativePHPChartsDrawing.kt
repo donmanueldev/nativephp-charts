@@ -57,7 +57,7 @@ internal class NativePHPChartsPathCache private constructor(
                 renderDataBySeries.mapValues { (seriesId, data) ->
                     val series = requireNotNull(seriesById[seriesId])
                     val interpolation = series.style?.interpolation
-                        ?: if (configuration.style.smooth) "smooth" else "linear"
+                        ?: configuration.style.interpolation
                     val target = series.fillTo?.let(renderDataBySeries::get)
                     NativePHPChartsSeriesPaths(
                         data = data,
@@ -250,7 +250,7 @@ internal fun DrawScope.drawNativePHPChartsLines(
         val path = if (progress == 1f) cachedPaths?.line else null
         val lineColor = resources.lineColors.getValue(series.id)
         val interpolation = series.style?.interpolation
-            ?: if (configuration.style.smooth) "smooth" else "linear"
+            ?: configuration.style.interpolation
         val fillBetween = if (progress == 1f) {
             cachedPaths?.fillBetween
         } else {
@@ -291,7 +291,10 @@ internal fun DrawScope.drawNativePHPChartsLines(
         }
         val resolvedPath = path ?: nativePHPChartsPath(data, interpolation, progress, layout)
         val width = (series.style?.lineWidth ?: configuration.style.lineWidth).dp.toPx()
-        val dash = series.style?.dash?.map { it.dp.toPx() }?.toFloatArray()
+        val dash = (series.style?.dash ?: configuration.style.dash)
+            .takeIf(List<Float>::isNotEmpty)
+            ?.map { it.dp.toPx() }
+            ?.toFloatArray()
         drawPath(
             resolvedPath,
             lineColor,
@@ -369,13 +372,26 @@ internal fun DrawScope.drawNativePHPChartsCandlesticks(
         val geometry = datum.candlestick ?: return@forEach
         val open = datum.point.open ?: return@forEach
         val close = datum.point.close ?: return@forEach
-        val color = if (close >= open) Color(0xFF16A35B) else Color(0xFFDB2E38)
+        val risingColor = datum.series.style?.candlestickRisingColor
+            ?: configuration.style.candlestickRisingColor
+        val fallingColor = datum.series.style?.candlestickFallingColor
+            ?: configuration.style.candlestickFallingColor
+        val neutralColor = datum.series.style?.candlestickNeutralColor
+            ?: configuration.style.candlestickNeutralColor
+            ?: risingColor
+        val color = when {
+            close > open -> chartColor(risingColor, Color(0xFF16A35B))
+            close < open -> chartColor(fallingColor, Color(0xFFDB2E38))
+            else -> chartColor(neutralColor, Color(0xFF16A35B))
+        }
+        val wickWidth = datum.series.style?.candlestickWickWidth
+            ?: configuration.style.candlestickWickWidth
         fun animatedY(value: Float): Float = layout.plot.bottom + ((value - layout.plot.bottom) * progress)
         val animatedHigh = animatedY(geometry.highY)
         val animatedLow = animatedY(geometry.lowY)
         val animatedOpen = animatedY(geometry.openY)
         val animatedClose = animatedY(geometry.closeY)
-        drawLine(color, Offset(geometry.x, animatedHigh), Offset(geometry.x, animatedLow), 1.5.dp.toPx())
+        drawLine(color, Offset(geometry.x, animatedHigh), Offset(geometry.x, animatedLow), wickWidth.dp.toPx())
         val top = min(animatedOpen, animatedClose)
         val bottom = max(animatedOpen, animatedClose)
         drawRoundRect(

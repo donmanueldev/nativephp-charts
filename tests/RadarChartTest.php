@@ -57,3 +57,8 @@ it('registers radar native renderers in the manifest', function () {
         'self_closing' => true,
     ]);
 });
+
+it('rejects cartesian axis label counts that have no radar meaning', function () {
+    expect(fn () => RadarChart::make()->style(['axis' => ['labelCount' => 6]]))
+        ->toThrow(InvalidArgumentException::class, "style option 'axis.labelCount' is not supported");
+});

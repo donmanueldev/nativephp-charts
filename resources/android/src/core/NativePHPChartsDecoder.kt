@@ -99,6 +99,7 @@ internal object NativePHPChartsDecoder {
         val points = root.optJSONObject("points")
         val area = root.optJSONObject("area")
         val bar = root.optJSONObject("bar")
+        val candlestick = root.optJSONObject("candlestick")
 
         return NativePHPChartsSeriesStyle(
             lineColor = line?.optionalString("color"),
@@ -112,6 +113,10 @@ internal object NativePHPChartsDecoder {
             areaGradient = area.booleanOrNull("gradient"),
             barRadius = bar?.floatOrNull("radius"),
             barWidth = bar?.floatOrNull("width"),
+            candlestickRisingColor = candlestick?.optionalString("rising_color"),
+            candlestickFallingColor = candlestick?.optionalString("falling_color"),
+            candlestickNeutralColor = candlestick?.optionalString("neutral_color"),
+            candlestickWickWidth = candlestick?.floatOrNull("wick_width"),
         )
     }
 
@@ -122,11 +127,13 @@ internal object NativePHPChartsDecoder {
         val area = root.optJSONObject("area")
         val bar = root.optJSONObject("bar")
         val axis = root.optJSONObject("axis")
+        val candlestick = root.optJSONObject("candlestick")
 
         return NativePHPChartsStyle(
             lineColor = line?.optString("color")?.takeIf(String::isNotBlank),
             lineWidth = line.float("width", 3f),
-            smooth = line?.optString("interpolation") == "smooth",
+            interpolation = line?.optString("interpolation", "linear") ?: "linear",
+            dash = line?.optJSONArray("dash")?.floatList().orEmpty(),
             pointColor = points?.optString("color")?.takeIf(String::isNotBlank),
             pointSize = points.float("size", defaultPointSize(kind)),
             pointsVisible = points.booleanOrNull("visible"),
@@ -137,6 +144,10 @@ internal object NativePHPChartsDecoder {
             areaGradient = area.booleanOrNull("gradient") ?: true,
             barRadius = bar.float("radius", 5f),
             barWidth = bar?.takeIf { it.has("width") }?.optDouble("width")?.toFloat(),
+            candlestickRisingColor = candlestick?.optionalString("rising_color"),
+            candlestickFallingColor = candlestick?.optionalString("falling_color"),
+            candlestickNeutralColor = candlestick?.optionalString("neutral_color"),
+            candlestickWickWidth = candlestick.float("wick_width", 1.5f),
             axisVisible = axis.booleanOrNull("visible"),
             axisColor = axis?.optString("color")?.takeIf(String::isNotBlank),
             axisLabelCount = axis.intOrNull("label_count"),
@@ -155,8 +166,14 @@ internal object NativePHPChartsDecoder {
     }
 
     private fun decodeXAxis(value: JSONObject?, fallback: JSONObject?): NativePHPChartsXAxis {
-        val axis = value ?: fallback
-        val labelCount = axis?.let { it.optInt("label_count", it.optInt("labelCount", 4)) } ?: 4
+        val axis = value ?: JSONObject()
+        val labelCount = when {
+            axis.has("label_count") -> axis.optInt("label_count", 4)
+            axis.has("labelCount") -> axis.optInt("labelCount", 4)
+            fallback?.has("label_count") == true -> fallback.optInt("label_count", 4)
+            fallback?.has("labelCount") == true -> fallback.optInt("labelCount", 4)
+            else -> 4
+        }
         val type = when (axis?.optString("type", "category")) {
             "number" -> NativePHPChartsXType.Number
             "date" -> NativePHPChartsXType.Date

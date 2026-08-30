@@ -125,6 +125,25 @@ final class NativePHPChartsCandlestickGeometryTests: XCTestCase {
         XCTAssertEqual(data.minimumXGap, NativePHPChartsDataSet.XGap(lower: 10, upper: 12))
     }
 
+    func testCandlestickStyleResolvesDirectionOverridesAndStableDefaults() throws {
+        let global = NativePHPChartsStyle.Candlestick(
+            risingColor: "#15803D",
+            fallingColor: "#B91C1C",
+            neutralColor: "#64748B",
+            wickWidth: 2
+        )
+        let series = NativePHPChartsStyle.Candlestick(risingColor: "#166534", wickWidth: 2.5)
+        let resolved = global.overriding(series)
+
+        XCTAssertEqual(resolved.colorValue(open: 10, close: 12), "#166534")
+        XCTAssertEqual(resolved.colorValue(open: 12, close: 10), "#B91C1C")
+        XCTAssertEqual(resolved.colorValue(open: 10, close: 10), "#64748B")
+        XCTAssertEqual(resolved.resolvedWickWidth, 2.5)
+        XCTAssertEqual(NativePHPChartsStyle.Candlestick().colorValue(open: 10, close: 12), "#16A35B")
+        XCTAssertEqual(NativePHPChartsStyle.Candlestick().colorValue(open: 12, close: 10), "#DB2E38")
+        XCTAssertEqual(NativePHPChartsStyle.Candlestick().resolvedWickWidth, 1.5)
+    }
+
     private func makePoint(
         open: Double?,
         high: Double?,
