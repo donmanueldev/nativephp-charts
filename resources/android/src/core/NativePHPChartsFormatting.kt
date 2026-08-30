@@ -9,6 +9,7 @@ import java.time.ZoneId
 import java.util.Currency
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToLong
 
 internal class NativePHPChartsFormatting(private val configuration: NativePHPChartsConfiguration) {
     private val locale = if (configuration.locale.isBlank()) Locale.getDefault() else Locale.forLanguageTag(configuration.locale)
@@ -57,6 +58,25 @@ internal class NativePHPChartsFormatting(private val configuration: NativePHPCha
         NativePHPChartsXType.Date, NativePHPChartsXType.Datetime -> formatDate(point.x?.toString()) ?: point.label
     }
 
+    fun x(value: Double): String = when (configuration.xAxis.type) {
+        NativePHPChartsXType.Category -> value.toString()
+        NativePHPChartsXType.Number -> xNumber.format(value)
+        NativePHPChartsXType.Date, NativePHPChartsXType.Datetime ->
+            xDateFormatter?.format(Date.from(value.toInstant())) ?: value.toString()
+    }
+
+    fun xNumeric(value: Any?): Double? = when (configuration.xAxis.type) {
+        NativePHPChartsXType.Category -> null
+        NativePHPChartsXType.Number -> (value as? Number)?.toDouble() ?: value?.toString()?.toDoubleOrNull()
+        NativePHPChartsXType.Date -> runCatching {
+            LocalDate.parse(value.toString())
+                .atStartOfDay(timezone ?: ZoneId.systemDefault())
+                .toInstant()
+                .preciseEpochSeconds()
+        }.getOrNull()
+        NativePHPChartsXType.Datetime -> parseInstant(value?.toString())?.preciseEpochSeconds()
+    }
+
     fun xNumeric(point: NativePHPChartsPoint): Double? = when (configuration.xAxis.type) {
         NativePHPChartsXType.Category -> null
         NativePHPChartsXType.Number -> (point.x as? Number)?.toDouble() ?: point.x?.toString()?.toDoubleOrNull()
@@ -73,6 +93,13 @@ internal class NativePHPChartsFormatting(private val configuration: NativePHPCha
         NativePHPChartsXType.Category -> point.x?.toString() ?: point.label
         NativePHPChartsXType.Number, NativePHPChartsXType.Date, NativePHPChartsXType.Datetime ->
             xNumeric(point)?.toString() ?: point.x?.toString() ?: point.label
+    }
+
+    fun xWire(value: Double): Any = when (configuration.xAxis.type) {
+        NativePHPChartsXType.Number -> value
+        NativePHPChartsXType.Date -> value.toInstant().atZone(timezone ?: ZoneId.systemDefault()).toLocalDate().toString()
+        NativePHPChartsXType.Datetime -> value.toMicrosecondInstant().toString()
+        NativePHPChartsXType.Category -> value
     }
 
     private fun formatDate(raw: String?): String? {
@@ -93,3 +120,16 @@ internal class NativePHPChartsFormatting(private val configuration: NativePHPCha
 }
 
 private fun Instant.preciseEpochSeconds(): Double = epochSecond.toDouble() + (nano.toDouble() / 1_000_000_000.0)
+
+private fun Double.toInstant(): Instant {
+    val seconds = toLong()
+    val nanos = ((this - seconds) * 1_000_000_000.0).toLong()
+    return Instant.ofEpochSecond(seconds, nanos)
+}
+
+private fun Double.toMicrosecondInstant(): Instant {
+    val epochMicroseconds = (this * 1_000_000.0).roundToLong()
+    val seconds = Math.floorDiv(epochMicroseconds, 1_000_000L)
+    val microseconds = Math.floorMod(epochMicroseconds, 1_000_000L)
+    return Instant.ofEpochSecond(seconds, microseconds * 1_000L)
+}

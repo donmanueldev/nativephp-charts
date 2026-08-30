@@ -79,7 +79,7 @@ private fun NativePHPChartsLegendItem(
                 configuration.style.lineColor.takeIf { configuration.series.size == 1 },
                 series.color,
             )
-            NativePHPChartsKind.Bar -> series.color
+            NativePHPChartsKind.Bar, NativePHPChartsKind.Candlestick -> series.color
         }
         Box(modifier = Modifier.padding(top = 4.dp, end = 6.dp).size(legend.markerSize.dp).background(markerColor, CircleShape))
         Text(

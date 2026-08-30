@@ -19,7 +19,12 @@ internal object NativePHPChartsDecoder {
             xAxis = decodeXAxis(input.xAxisJson.asObject("x_axis_json"), legacyAxis),
             yAxis = decodeYAxis(input.yAxisJson.asObject("y_axis_json"), legacyAxis, input),
             legend = decodeLegend(input.legendJson.asObject("legend_json")),
+            annotations = decodeAnnotations(input.annotationsJson),
+            interaction = decodeInteraction(input.interactionJson.asObject("interaction_json")),
+            viewport = decodeViewport(input.viewportJson.asObject("viewport_json")),
             areaMode = input.areaMode,
+            barMode = input.barMode,
+            barOrientation = input.barOrientation,
             showGrid = input.showGrid,
             showPoints = input.showPoints,
             beginAtZero = input.beginAtZero,
@@ -28,6 +33,7 @@ internal object NativePHPChartsDecoder {
             accessibilityLabel = input.accessibilityLabel,
             locale = input.locale,
             onSelect = input.onSelect,
+            onViewportChange = input.onViewportChange,
         )
     }
 
@@ -65,12 +71,20 @@ internal object NativePHPChartsDecoder {
                                         label = point.optString("label"),
                                         value = value,
                                         x = point.opt("x").takeUnless { it == JSONObject.NULL },
-                                        index = pointIndex,
+                                        index = point.optInt("source_index", pointIndex),
+                                        errorMin = point.doubleOrNull("error_min"),
+                                        errorMax = point.doubleOrNull("error_max"),
+                                        open = point.doubleOrNull("open"),
+                                        high = point.doubleOrNull("high"),
+                                        low = point.doubleOrNull("low"),
+                                        close = point.doubleOrNull("close"),
                                     ),
                                 )
                             }
                         },
                         index = seriesIndex,
+                        style = item.optJSONObject("style")?.let(::decodeSeriesStyle),
+                        fillTo = item.optionalString("fill_to"),
                     ),
                 )
             }
@@ -78,6 +92,27 @@ internal object NativePHPChartsDecoder {
     } catch (exception: Exception) {
         Log.w(LOG_TAG, "Unable to decode series_json; rendering the empty state", exception)
         emptyList()
+    }
+
+    private fun decodeSeriesStyle(root: JSONObject): NativePHPChartsSeriesStyle {
+        val line = root.optJSONObject("line")
+        val points = root.optJSONObject("points")
+        val area = root.optJSONObject("area")
+        val bar = root.optJSONObject("bar")
+
+        return NativePHPChartsSeriesStyle(
+            lineColor = line?.optionalString("color"),
+            lineWidth = line?.floatOrNull("width"),
+            interpolation = line?.optionalString("interpolation"),
+            dash = line?.optJSONArray("dash")?.floatList(),
+            pointColor = points?.optionalString("color"),
+            pointSize = points?.floatOrNull("size"),
+            pointsVisible = points.booleanOrNull("visible"),
+            areaOpacity = area?.floatOrNull("opacity")?.coerceIn(0f, 1f),
+            areaGradient = area.booleanOrNull("gradient"),
+            barRadius = bar?.floatOrNull("radius"),
+            barWidth = bar?.floatOrNull("width"),
+        )
     }
 
     private fun decodeStyle(root: JSONObject, kind: NativePHPChartsKind): NativePHPChartsStyle {
@@ -116,6 +151,7 @@ internal object NativePHPChartsDecoder {
         NativePHPChartsKind.Area -> 4.5f
         NativePHPChartsKind.Scatter -> 7f
         NativePHPChartsKind.Bar -> 4f
+        NativePHPChartsKind.Candlestick -> 4f
     }
 
     private fun decodeXAxis(value: JSONObject?, fallback: JSONObject?): NativePHPChartsXAxis {
@@ -134,6 +170,11 @@ internal object NativePHPChartsDecoder {
             labelCount = labelCount.coerceIn(2, 12),
             dateFormat = axis?.optString("date_format", axis.optString("dateFormat", "medium")) ?: "medium",
             timezone = axis?.optString("timezone", axis.optString("timeZone", "")) ?: "",
+            title = axis?.optionalString("title"),
+            minimum = axis?.optionalValue("minimum"),
+            maximum = axis?.optionalValue("maximum"),
+            baseline = axis?.optionalValue("baseline"),
+            interval = axis?.doubleOrNull("interval"),
         )
     }
 
@@ -157,6 +198,11 @@ internal object NativePHPChartsDecoder {
             currencyCode = axis.optString("currency_code", input.currencyCode),
             minimumFractionDigits = axis.optInt("minimum_fraction_digits", input.minimumFractionDigits),
             maximumFractionDigits = axis.optInt("maximum_fraction_digits", input.maximumFractionDigits),
+            title = axis.optionalString("title"),
+            minimum = axis.doubleOrNull("minimum"),
+            maximum = axis.doubleOrNull("maximum"),
+            baseline = axis.doubleOrNull("baseline"),
+            interval = axis.doubleOrNull("interval"),
         )
     }
 
@@ -172,6 +218,48 @@ internal object NativePHPChartsDecoder {
             labelColor = style?.optString("label_color", style.optString("labelColor"))?.takeIf(String::isNotBlank),
         )
     }
+
+    private fun decodeAnnotations(json: String): List<NativePHPChartsAnnotation> = try {
+        val root = JSONArray(json)
+        buildList {
+            for (index in 0 until root.length()) {
+                val item = root.optJSONObject(index) ?: continue
+                add(
+                    NativePHPChartsAnnotation(
+                        id = item.optString("id", "annotation-$index"),
+                        type = item.optString("type", "line"),
+                        axis = item.optString("axis", "y"),
+                        color = chartColor(item.optString("color"), Color(0xFF6366F1)),
+                        label = item.optionalString("label"),
+                        value = item.optionalValue("value"),
+                        from = item.optionalValue("from"),
+                        to = item.optionalValue("to"),
+                        width = item.float("width", 1f),
+                        opacity = item.float("opacity", 0.12f).coerceIn(0f, 1f),
+                    ),
+                )
+            }
+        }
+    } catch (exception: Exception) {
+        Log.w(LOG_TAG, "Unable to decode annotations_json; ignoring annotations", exception)
+        emptyList()
+    }
+
+    private fun decodeInteraction(root: JSONObject): NativePHPChartsInteraction = NativePHPChartsInteraction(
+        enabled = root.optBoolean("enabled", true),
+        mode = root.optString("mode", "tap"),
+        crosshair = root.optString("crosshair", "x"),
+        tooltip = root.optString("tooltip", "single"),
+    )
+
+    private fun decodeViewport(root: JSONObject): NativePHPChartsViewport = NativePHPChartsViewport(
+        enabled = root.optBoolean("enabled", false),
+        pan = root.optBoolean("pan", true),
+        zoom = root.optBoolean("zoom", true),
+        minimum = root.optionalValue("minimum"),
+        maximum = root.optionalValue("maximum"),
+        minimumSpan = root.doubleOrNull("minimum_span"),
+    )
 }
 
 private const val LOG_TAG = "NativePHPCharts"
@@ -191,6 +279,23 @@ private fun JSONObject?.booleanOrNull(name: String): Boolean? =
 
 private fun JSONObject?.intOrNull(name: String): Int? =
     if (this?.has(name) == true) optInt(name) else null
+
+private fun JSONObject.optionalString(name: String): String? =
+    if (has(name)) optString(name).takeIf(String::isNotBlank) else null
+
+private fun JSONObject.optionalValue(name: String): Any? =
+    if (has(name)) opt(name).takeUnless { it == JSONObject.NULL } else null
+
+private fun JSONObject.doubleOrNull(name: String): Double? =
+    if (has(name)) optDouble(name).takeIf(Double::isFinite) else null
+
+private fun JSONObject.floatOrNull(name: String): Float? = doubleOrNull(name)?.toFloat()
+
+private fun JSONArray.floatList(): List<Float> = buildList {
+    for (index in 0 until length()) {
+        optDouble(index).takeIf(Double::isFinite)?.toFloat()?.let(::add)
+    }
+}
 
 internal fun chartColor(value: String?, fallback: Color): Color = value
     ?.takeIf(String::isNotBlank)

@@ -16,12 +16,23 @@ internal data class NativePHPChartsSelectionIdentity(
     val pointId: String,
 )
 
+internal data class NativePHPChartsAnnotationGeometry(
+    val annotation: NativePHPChartsAnnotation,
+    val physicalAxis: String,
+    val start: Float,
+    val end: Float,
+)
+
 internal data class NativePHPChartsDatum(
     val series: NativePHPChartsSeries,
     val point: NativePHPChartsPoint,
     val center: Offset,
     val bar: Rect? = null,
     val areaBaseY: Float? = null,
+    val errorMinY: Float? = null,
+    val errorMaxY: Float? = null,
+    val errorMinX: Float? = null,
+    val errorMaxX: Float? = null,
 ) {
     val selectionIdentity = NativePHPChartsSelectionIdentity(series.id, point.id)
 }
@@ -29,11 +40,15 @@ internal data class NativePHPChartsDatum(
 internal data class NativePHPChartsLayout(
     val plot: Rect,
     val domain: NativePHPChartsDomain,
+    val xDomain: NativePHPChartsDomain?,
+    val baselineX: Float?,
+    val valueBaselineX: Float?,
     val baselineY: Float,
     val data: List<NativePHPChartsDatum>,
     val dataBySeries: Map<String, List<NativePHPChartsDatum>>,
     val xLabels: List<Pair<Float, String>>,
     val yLabels: List<Pair<Float, String>>,
+    val annotations: List<NativePHPChartsAnnotationGeometry>,
     val hitIndex: NativePHPChartsHitIndex,
 ) {
     fun nearest(location: Offset, threshold: Float): NativePHPChartsDatum? {
@@ -49,47 +64,70 @@ internal object NativePHPChartsLayoutEngine {
         density: Float,
         measureAxisLabel: (String) -> Float,
         axisLabelHeight: Float,
+        viewportOverride: NativePHPChartsDomain? = null,
     ): NativePHPChartsLayout {
         val values = when {
-            configuration.kind == NativePHPChartsKind.Area && configuration.areaMode == "stacked" -> {
+            configuration.kind == NativePHPChartsKind.Area && configuration.areaMode == "stacked" ||
+                configuration.kind == NativePHPChartsKind.Bar && configuration.barMode == "stacked" -> {
                 stackedGeometryValues(configuration.series, formatting)
             }
-            else -> configuration.series.flatMap { series -> series.points.map(NativePHPChartsPoint::value) }
+            else -> configuration.series.flatMap { series ->
+                series.points.flatMap { point -> listOfNotNull(point.value, point.errorMin, point.errorMax) }
+            }
         }
         val geometryRequiresZero = configuration.kind == NativePHPChartsKind.Area
-        val domain = domain(values, configuration.beginAtZero || geometryRequiresZero)
+        val automaticDomain = domain(values, configuration.beginAtZero || geometryRequiresZero)
+        val domain = explicitDomain(
+            automaticDomain,
+            configuration.yAxis.minimum,
+            configuration.yAxis.maximum,
+        )
         val legacyAxisVisible = if (configuration.kind == NativePHPChartsKind.Bar) configuration.showPoints else true
         val xAxisVisible = configuration.xAxis.visible ?: configuration.style.axisVisible ?: legacyAxisVisible
         val yAxisVisible = configuration.yAxis.visible ?: configuration.style.axisVisible ?: legacyAxisVisible
-        val yLabelCount = (configuration.style.axisLabelCount ?: configuration.yAxis.labelCount).coerceIn(2, 12)
-        val yLabelValues = (0 until yLabelCount).map { index ->
+        val isHorizontalBar = configuration.kind == NativePHPChartsKind.Bar && configuration.barOrientation == "horizontal"
+        val categories = configuration.series.flatMap(NativePHPChartsSeries::points)
+            .distinctBy { it.x?.toString() ?: it.label }
+        val categoryIndexes = categories.mapIndexed { index, point ->
+            (point.x?.toString() ?: point.label) to index
+        }.toMap()
+        val yLabelCount = configuration.yAxis.labelCount.coerceIn(2, 12)
+        val yLabelValues = configuration.yAxis.interval?.let { interval ->
+            ticks(domain, interval).asReversed()
+        } ?: (0 until yLabelCount).map { index ->
             val fraction = index.toDouble() / (yLabelCount - 1)
             domain.maximum - (domain.span * fraction)
         }
-        val measuredYLabelWidth = if (yAxisVisible) {
-            yLabelValues.maxOfOrNull { measureAxisLabel(formatting.value(it)) } ?: 0f
+        val verticalAxisVisible = if (isHorizontalBar) xAxisVisible else yAxisVisible
+        val horizontalAxisVisible = if (isHorizontalBar) yAxisVisible else xAxisVisible
+        val measuredYLabelWidth = if (verticalAxisVisible) {
+            if (isHorizontalBar) {
+                categories.maxOfOrNull { measureAxisLabel(formatting.x(it)) } ?: 0f
+            } else {
+                yLabelValues.maxOfOrNull { measureAxisLabel(formatting.value(it)) } ?: 0f
+            }
         } else {
             0f
         }
         val yLabelWidth = min(measuredYLabelWidth, size.width.coerceAtLeast(0) * 0.45f)
         val horizontalPadding = 12f * density
         val labelSpacing = 8f * density
-        val left = horizontalPadding + if (yAxisVisible) yLabelWidth + labelSpacing else 0f
+        val verticalTitle = if (isHorizontalBar) configuration.xAxis.title else configuration.yAxis.title
+        val horizontalTitle = if (isHorizontalBar) configuration.yAxis.title else configuration.xAxis.title
+        val yTitleWidth = if (verticalAxisVisible && verticalTitle != null) axisLabelHeight + labelSpacing else 0f
+        val left = horizontalPadding + yTitleWidth + if (verticalAxisVisible) yLabelWidth + labelSpacing else 0f
         val right = max(left + density, size.width - horizontalPadding)
-        val top = (12f * density) + if (yAxisVisible) axisLabelHeight / 2f else 0f
-        val bottomPadding = if (xAxisVisible) {
-            (20f * density) + axisLabelHeight
+        val top = (12f * density) + if (verticalAxisVisible) axisLabelHeight / 2f else 0f
+        val bottomPadding = if (horizontalAxisVisible) {
+            (20f * density) + axisLabelHeight +
+                if (horizontalTitle != null) axisLabelHeight + labelSpacing else 0f
         } else {
             max(12f * density, axisLabelHeight / 2f)
         }
         val bottom = max(top + density, size.height - bottomPadding)
         val plot = Rect(left, top, right, bottom)
-        val baselineY = yFor(0.0, domain, plot).coerceIn(plot.top, plot.bottom)
-        val categories = configuration.series.flatMap(NativePHPChartsSeries::points)
-            .distinctBy { it.x?.toString() ?: it.label }
-        val categoryIndexes = categories.mapIndexed { index, point ->
-            (point.x?.toString() ?: point.label) to index
-        }.toMap()
+        val baselineValue = configuration.yAxis.baseline ?: 0.0
+        val baselineY = yFor(baselineValue, domain, plot).coerceIn(plot.top, plot.bottom)
         val numericX = configuration.series.flatMap(NativePHPChartsSeries::points).mapNotNull(formatting::xNumeric)
         val xMinimum = numericX.minOrNull()
         val xMaximum = numericX.maxOrNull()
@@ -101,14 +139,29 @@ internal object NativePHPChartsLayoutEngine {
         } else {
             null
         }
+        val automaticXDomain = if (xMinimum != null && xMaximum != null) {
+            val padding = numericPadding ?: if (xMinimum == xMaximum) {
+                max(abs(xMinimum) * 0.05, 1.0)
+            } else {
+                (xMaximum - xMinimum) * 0.05
+            }
+            NativePHPChartsDomain(xMinimum - padding, xMaximum + padding)
+        } else {
+            null
+        }
+        val fullXDomain = automaticXDomain?.let {
+            explicitDomain(
+                it,
+                formatting.xNumeric(configuration.xAxis.minimum),
+                formatting.xNumeric(configuration.xAxis.maximum),
+            )
+        }
+        val xDomain = viewportOverride ?: fullXDomain
 
         fun xFor(point: NativePHPChartsPoint): Float {
             val number = formatting.xNumeric(point)
-            if (number != null && xMinimum != null && xMaximum != null && xMaximum != xMinimum) {
-                val padding = numericPadding ?: 0.0
-                val paddedMinimum = xMinimum - padding
-                val paddedMaximum = xMaximum + padding
-                return plot.left + (((number - paddedMinimum) / (paddedMaximum - paddedMinimum)).toFloat() * plot.width)
+            if (number != null && xDomain != null && xDomain.span > 0.0) {
+                return plot.left + (((number - xDomain.minimum) / xDomain.span).toFloat() * plot.width)
             }
             val index = categoryIndexes[point.x?.toString() ?: point.label] ?: 0
             if (configuration.kind == NativePHPChartsKind.Bar) {
@@ -118,20 +171,48 @@ internal object NativePHPChartsLayoutEngine {
             return if (categories.size <= 1) plot.center.x else plot.left + (plot.width * index / (categories.size - 1))
         }
 
+        fun categoryY(point: NativePHPChartsPoint): Float {
+            val index = categoryIndexes[point.x?.toString() ?: point.label] ?: 0
+            return plot.top + ((index + 0.5f) * plot.height / categories.size.coerceAtLeast(1))
+        }
+
+        fun valueX(value: Double): Float =
+            plot.left + (((value - domain.minimum) / domain.span).toFloat() * plot.width)
+
         val data = when (configuration.kind) {
-            NativePHPChartsKind.Bar -> groupedBars(
-                configuration,
-                plot,
-                domain,
-                categoryIndexes,
-                density,
-                ::xFor,
-            )
+            NativePHPChartsKind.Bar -> if (isHorizontalBar && configuration.barMode == "stacked") {
+                stackedHorizontalBars(configuration, formatting, plot, density, ::categoryY, ::valueX)
+            } else if (isHorizontalBar) {
+                groupedHorizontalBars(configuration, plot, categoryIndexes, density, ::categoryY, ::valueX)
+            } else if (configuration.barMode == "stacked") {
+                stackedBars(configuration, formatting, plot, domain, density, ::xFor)
+            } else {
+                groupedBars(
+                    configuration,
+                    plot,
+                    domain,
+                    categoryIndexes,
+                    density,
+                    ::xFor,
+                )
+            }
             NativePHPChartsKind.Area -> areaData(configuration, formatting, domain, plot, ::xFor)
-            NativePHPChartsKind.Line, NativePHPChartsKind.Scatter -> configuration.series.flatMap { series ->
+            NativePHPChartsKind.Line, NativePHPChartsKind.Scatter, NativePHPChartsKind.Candlestick -> configuration.series.flatMap { series ->
                 series.points.map { point ->
                     NativePHPChartsDatum(series, point, Offset(xFor(point), yFor(point.value, domain, plot)))
                 }
+            }
+        }.map { datum ->
+            if (isHorizontalBar) {
+                datum.copy(
+                    errorMinX = datum.point.errorMin?.let(::valueX),
+                    errorMaxX = datum.point.errorMax?.let(::valueX),
+                )
+            } else {
+                datum.copy(
+                    errorMinY = datum.point.errorMin?.let { yFor(it, domain, plot) },
+                    errorMaxY = datum.point.errorMax?.let { yFor(it, domain, plot) },
+                )
             }
         }
         val xLabelPoints = if (configuration.xAxis.type == NativePHPChartsXType.Category) {
@@ -144,28 +225,92 @@ internal object NativePHPChartsLayoutEngine {
                 .distinctBy { (value, _) -> value }
                 .map { (_, point) -> point }
         }
-        val desiredLabels = (configuration.style.axisLabelCount ?: configuration.xAxis.labelCount)
+        val desiredLabels = configuration.xAxis.labelCount
             .coerceIn(2, 12)
             .coerceAtMost(xLabelPoints.size.coerceAtLeast(1))
         val labelIndexes = evenlySpacedIndexes(xLabelPoints.size, desiredLabels)
-        val labels = labelIndexes.map { index ->
-            val point = xLabelPoints[index]
-            xFor(point) to formatting.x(point)
+        val labels = if (isHorizontalBar) {
+            yLabelValues.asReversed().map { value -> valueX(value) to formatting.value(value) }
+        } else if (configuration.xAxis.type != NativePHPChartsXType.Category && xDomain != null && configuration.xAxis.interval != null) {
+            val interval = if (configuration.xAxis.type == NativePHPChartsXType.Date) {
+                configuration.xAxis.interval * 86_400.0
+            } else {
+                configuration.xAxis.interval
+            }
+            ticks(xDomain, interval).map { value ->
+                xFor(value, xDomain, plot) to formatting.x(value)
+            }
+        } else {
+            labelIndexes.map { index ->
+                val point = xLabelPoints[index]
+                xFor(point) to formatting.x(point)
+            }
         }
-        val yLabels = yLabelValues.mapIndexed { index, value ->
-            val fraction = index.toFloat() / (yLabelCount - 1)
-            val y = plot.top + (plot.height * fraction)
-            y to formatting.value(value)
+        val yLabels = if (isHorizontalBar) {
+            val categoryLabelCount = configuration.xAxis.labelCount.coerceIn(2, 12)
+            evenlySpacedIndexes(categories.size, categoryLabelCount).map { index ->
+                categoryY(categories[index]) to formatting.x(categories[index])
+            }
+        } else {
+            yLabelValues.map { value -> yFor(value, domain, plot) to formatting.value(value) }
+        }
+        val baselineX = configuration.xAxis.baseline.takeUnless { isHorizontalBar }
+            ?.let(formatting::xNumeric)
+            ?.let { value -> xDomain?.let { domain -> xFor(value, domain, plot) } }
+        val valueBaselineX = if (isHorizontalBar) valueX(configuration.yAxis.baseline ?: 0.0) else null
+        fun annotationPosition(annotation: NativePHPChartsAnnotation, value: Any?): Float? {
+            if (annotation.axis == "y") {
+                return (value as? Number)?.toDouble()?.let { number ->
+                    if (isHorizontalBar) valueX(number) else yFor(number, domain, plot)
+                }
+            }
+
+            if (isHorizontalBar) {
+                val target = if (configuration.xAxis.type == NativePHPChartsXType.Category) {
+                    categories.firstOrNull { (it.x?.toString() ?: it.label) == value?.toString() }
+                } else {
+                    val numericValue = formatting.xNumeric(value)
+                    categories.firstOrNull { formatting.xNumeric(it) == numericValue }
+                }
+                return target?.let(::categoryY)
+            }
+
+            if (configuration.xAxis.type == NativePHPChartsXType.Category) {
+                val point = categories.firstOrNull { (it.x?.toString() ?: it.label) == value?.toString() }
+                return point?.let { if (isHorizontalBar) categoryY(it) else xFor(it) }
+            }
+
+            val number = formatting.xNumeric(value) ?: return null
+            return xDomain?.let { xFor(number, it, plot) }
+        }
+        val annotationGeometry = configuration.annotations.mapNotNull { annotation ->
+            val firstValue = if (annotation.type == "band") annotation.from else annotation.value
+            val start = annotationPosition(annotation, firstValue) ?: return@mapNotNull null
+            val end = if (annotation.type == "band") {
+                annotationPosition(annotation, annotation.to) ?: return@mapNotNull null
+            } else {
+                start
+            }
+            val physicalAxis = if (isHorizontalBar) {
+                if (annotation.axis == "x") "y" else "x"
+            } else {
+                annotation.axis
+            }
+            NativePHPChartsAnnotationGeometry(annotation, physicalAxis, min(start, end), max(start, end))
         }
 
         return NativePHPChartsLayout(
             plot = plot,
             domain = domain,
+            xDomain = xDomain,
+            baselineX = baselineX,
+            valueBaselineX = valueBaselineX,
             baselineY = baselineY,
             data = data,
             dataBySeries = data.groupBy { it.series.id },
             xLabels = labels,
             yLabels = yLabels,
+            annotations = annotationGeometry,
             hitIndex = NativePHPChartsHitIndex.build(data),
         )
     }
@@ -178,7 +323,7 @@ internal object NativePHPChartsLayoutEngine {
         xFor: (NativePHPChartsPoint) -> Float,
     ): List<NativePHPChartsDatum> {
         if (configuration.areaMode != "stacked") {
-            val baseline = yFor(0.0, domain, plot)
+            val baseline = yFor(configuration.yAxis.baseline ?: 0.0, domain, plot)
             return configuration.series.flatMap { series ->
                 series.points.map { point ->
                     NativePHPChartsDatum(
@@ -229,18 +374,127 @@ internal object NativePHPChartsLayoutEngine {
             ?: plot.width
         val innerWidth = groupWidth * 0.76f
         val computedWidth = (innerWidth / configuration.series.size.coerceAtLeast(1)).coerceAtLeast(1f * density)
-        val barWidth = configuration.style.barWidth?.let { min(computedWidth, it * density) } ?: computedWidth
-        val totalBarWidth = barWidth * configuration.series.size.coerceAtLeast(1)
+        val barWidths = configuration.series.map { series ->
+            (series.style?.barWidth ?: configuration.style.barWidth)
+                ?.let { min(computedWidth, it * density) }
+                ?: computedWidth
+        }
+        val totalBarWidth = barWidths.sum()
 
         return configuration.series.flatMapIndexed { seriesIndex, series ->
             series.points.mapNotNull { point ->
                 val key = point.x?.toString() ?: point.label
                 if (categoryIndexes[key] == null) return@mapNotNull null
                 val center = xFor(point)
-                val left = center - (totalBarWidth / 2f) + (seriesIndex * barWidth)
+                val barWidth = barWidths[seriesIndex]
+                val precedingWidth = barWidths.take(seriesIndex).sum()
+                val left = center - (totalBarWidth / 2f) + precedingWidth
                 val valueY = yFor(point.value, domain, plot)
-                val baseline = yFor(0.0, domain, plot).coerceIn(plot.top, plot.bottom)
+                val baseline = yFor(configuration.yAxis.baseline ?: 0.0, domain, plot).coerceIn(plot.top, plot.bottom)
                 val rect = Rect(left, min(valueY, baseline), left + barWidth, max(valueY, baseline))
+                NativePHPChartsDatum(series, point, rect.center, rect)
+            }
+        }
+    }
+
+    private fun stackedBars(
+        configuration: NativePHPChartsConfiguration,
+        formatting: NativePHPChartsFormatting,
+        plot: Rect,
+        domain: NativePHPChartsDomain,
+        density: Float,
+        xFor: (NativePHPChartsPoint) -> Float,
+    ): List<NativePHPChartsDatum> {
+        val positive = mutableMapOf<String, Double>()
+        val negative = mutableMapOf<String, Double>()
+
+        return configuration.series.flatMap { series ->
+            series.points.map { point ->
+                val key = formatting.geometryKey(point)
+                val accumulator = if (point.value >= 0) positive else negative
+                val start = accumulator[key] ?: 0.0
+                val end = start + point.value
+                accumulator[key] = end
+                val center = xFor(point)
+                val slot = plot.width / configuration.series.flatMap(NativePHPChartsSeries::points)
+                    .map(formatting::geometryKey)
+                    .distinct()
+                    .size
+                    .coerceAtLeast(1)
+                val width = (series.style?.barWidth ?: configuration.style.barWidth)
+                    ?.let { min(slot * 0.76f, it * density) }
+                    ?: slot * 0.76f
+                val startY = yFor(start, domain, plot)
+                val endY = yFor(end, domain, plot)
+                val rect = Rect(center - width / 2f, min(startY, endY), center + width / 2f, max(startY, endY))
+                NativePHPChartsDatum(series, point, rect.center, rect)
+            }
+        }
+    }
+
+    private fun groupedHorizontalBars(
+        configuration: NativePHPChartsConfiguration,
+        plot: Rect,
+        categoryIndexes: Map<String, Int>,
+        density: Float,
+        categoryY: (NativePHPChartsPoint) -> Float,
+        valueX: (Double) -> Float,
+    ): List<NativePHPChartsDatum> {
+        val slot = plot.height / categoryIndexes.size.coerceAtLeast(1)
+        val innerHeight = slot * 0.76f
+        val computedHeight = (innerHeight / configuration.series.size.coerceAtLeast(1)).coerceAtLeast(density)
+        val barHeights = configuration.series.map { series ->
+            (series.style?.barWidth ?: configuration.style.barWidth)
+                ?.let { min(computedHeight, it * density) }
+                ?: computedHeight
+        }
+        val totalHeight = barHeights.sum()
+        val baseline = valueX(configuration.yAxis.baseline ?: 0.0).coerceIn(plot.left, plot.right)
+
+        return configuration.series.flatMapIndexed { seriesIndex, series ->
+            series.points.mapNotNull { point ->
+                val key = point.x?.toString() ?: point.label
+                if (categoryIndexes[key] == null) return@mapNotNull null
+                val height = barHeights[seriesIndex]
+                val top = categoryY(point) - totalHeight / 2f + barHeights.take(seriesIndex).sum()
+                val value = valueX(point.value)
+                val rect = Rect(min(value, baseline), top, max(value, baseline), top + height)
+                NativePHPChartsDatum(series, point, rect.center, rect)
+            }
+        }
+    }
+
+    private fun stackedHorizontalBars(
+        configuration: NativePHPChartsConfiguration,
+        formatting: NativePHPChartsFormatting,
+        plot: Rect,
+        density: Float,
+        categoryY: (NativePHPChartsPoint) -> Float,
+        valueX: (Double) -> Float,
+    ): List<NativePHPChartsDatum> {
+        val positive = mutableMapOf<String, Double>()
+        val negative = mutableMapOf<String, Double>()
+        val categoryCount = configuration.series.flatMap(NativePHPChartsSeries::points)
+            .map(formatting::geometryKey)
+            .distinct()
+            .size
+            .coerceAtLeast(1)
+        val slot = plot.height / categoryCount
+
+        return configuration.series.flatMap { series ->
+            series.points.map { point ->
+                val key = formatting.geometryKey(point)
+                val accumulator = if (point.value >= 0) positive else negative
+                val start = accumulator[key] ?: 0.0
+                val end = start + point.value
+                accumulator[key] = end
+                val height = (series.style?.barWidth ?: configuration.style.barWidth)
+                    ?.let { min(slot * 0.76f, it * density) }
+                    ?: slot * 0.76f
+                val center = categoryY(point)
+                val startX = valueX(start)
+                val endX = valueX(end)
+                val rect = Rect(min(startX, endX), center - height / 2f, max(startX, endX), center + height / 2f)
                 NativePHPChartsDatum(series, point, rect.center, rect)
             }
         }
@@ -263,6 +517,30 @@ internal object NativePHPChartsLayoutEngine {
             maximum += padding
         }
         return NativePHPChartsDomain(minimum, maximum)
+    }
+
+    private fun explicitDomain(
+        automatic: NativePHPChartsDomain,
+        minimum: Double?,
+        maximum: Double?,
+    ): NativePHPChartsDomain {
+        val lower = minimum ?: automatic.minimum
+        val upper = maximum ?: automatic.maximum
+        return if (lower < upper) NativePHPChartsDomain(lower, upper) else automatic
+    }
+
+    private fun ticks(domain: NativePHPChartsDomain, interval: Double): List<Double> {
+        if (!interval.isFinite() || interval <= 0.0) return emptyList()
+
+        val first = kotlin.math.ceil(domain.minimum / interval) * interval
+        val count = kotlin.math.floor((domain.maximum - first) / interval).toInt() + 1
+        if (count <= 0) return emptyList()
+
+        return (0 until min(count, 1_000)).map { first + (it * interval) }
+    }
+
+    private fun xFor(value: Double, domain: NativePHPChartsDomain, plot: Rect): Float {
+        return plot.left + (((value - domain.minimum) / domain.span).toFloat() * plot.width)
     }
 
     private fun yFor(value: Double, domain: NativePHPChartsDomain, plot: Rect): Float =
