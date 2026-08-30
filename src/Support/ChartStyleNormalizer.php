@@ -6,11 +6,11 @@ use InvalidArgumentException;
 
 final class ChartStyleNormalizer
 {
-    /** @return array<string, array<string, bool|float|int|string>> */
+    /** @return array<string, array<string, mixed>> */
     public static function normalize(array $style, string $chartType, string $chartName): array
     {
         $allowed = [
-            'line' => ['color', 'width', 'interpolation'],
+            'line' => ['color', 'width', 'interpolation', 'dash'],
             'area' => ['opacity', 'gradient'],
             'bar' => ['radius', 'corner_radius', 'cornerRadius', 'width'],
             'segment' => ['gap', 'corner_radius', 'cornerRadius', 'opacity'],
@@ -23,6 +23,8 @@ final class ChartStyleNormalizer
             'area' => ['line', 'area', 'points', 'grid', 'axis'],
             'bar' => ['bar', 'grid', 'axis'],
             'scatter' => ['points', 'grid', 'axis'],
+            'candlestick' => ['bar', 'grid', 'axis'],
+            'radar' => ['line', 'area', 'points', 'grid', 'axis'],
             'pie', 'donut' => ['segment'],
             default => throw new InvalidArgumentException("The chart type '{$chartType}' is not supported."),
         };
@@ -65,11 +67,24 @@ final class ChartStyleNormalizer
             $normalized['width'] = self::positiveNumber($style['width'], $chartName, 'line.width', 16.0);
         }
         if (array_key_exists('interpolation', $style)) {
-            if (! is_string($style['interpolation']) || ! in_array($style['interpolation'], ['linear', 'smooth'], true)) {
-                throw new InvalidArgumentException("The {$chartName} style line.interpolation must be linear or smooth.");
+            if (! is_string($style['interpolation']) || ! in_array($style['interpolation'], ['linear', 'smooth', 'step_before', 'step_after'], true)) {
+                throw new InvalidArgumentException("The {$chartName} style line.interpolation must be linear, smooth, step_before, or step_after.");
             }
 
             $normalized['interpolation'] = $style['interpolation'];
+        }
+        if (array_key_exists('dash', $style)) {
+            if (! is_array($style['dash']) || ! array_is_list($style['dash']) || count($style['dash']) < 2 || count($style['dash']) > 8 || count($style['dash']) % 2 !== 0) {
+                throw new InvalidArgumentException("The {$chartName} style line.dash must be a list of 2, 4, 6, or 8 numbers.");
+            }
+
+            $normalized['dash'] = array_map(function (mixed $value) use ($chartName): float {
+                if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value) || $value <= 0 || $value > 128) {
+                    throw new InvalidArgumentException("The {$chartName} style line.dash values must be greater than zero and no more than 128.");
+                }
+
+                return (float) $value;
+            }, $style['dash']);
         }
 
         return $normalized;

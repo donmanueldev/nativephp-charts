@@ -28,10 +28,15 @@ abstract class ChartElement extends Element
     /** @var array<string, mixed> */
     protected array $legend = [];
 
-    /** @var array<string, array<string, bool|float|int|string>> */
+    /** @var array<string, array<string, mixed>> */
     protected array $chartStyle = [];
 
     protected ?string $selectMethod = null;
+
+    /** @var array<string, bool|int|string>|null */
+    private ?array $commonWireSnapshot = null;
+
+    private ?int $commonWireLegendItemCount = null;
 
     abstract protected function chartType(): string;
 
@@ -44,6 +49,7 @@ abstract class ChartElement extends Element
     public function style(array $style): static
     {
         $this->chartStyle = ChartStyleNormalizer::normalize($style, $this->chartType(), $this->chartName());
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -53,6 +59,7 @@ abstract class ChartElement extends Element
     {
         LegendNormalizer::normalize($legend, $this->legendItemCount(), $this->chartName());
         $this->legend = $legend;
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -67,6 +74,7 @@ abstract class ChartElement extends Element
     public function animated(bool $animated): static
     {
         $this->chartProps['animated'] = $animated;
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -74,6 +82,7 @@ abstract class ChartElement extends Element
     public function emptyLabel(string $emptyLabel): static
     {
         $this->chartProps['empty_label'] = $this->requiredText($emptyLabel, 'empty label');
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -81,6 +90,7 @@ abstract class ChartElement extends Element
     public function a11yLabel(string $a11yLabel): static
     {
         $this->chartProps['a11y_label'] = $this->requiredText($a11yLabel, 'accessibility label');
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -99,6 +109,7 @@ abstract class ChartElement extends Element
         }
 
         $this->chartProps['locale'] = $locale;
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -110,6 +121,7 @@ abstract class ChartElement extends Element
         }
 
         $this->chartProps['value_format'] = $valueFormat;
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -122,6 +134,7 @@ abstract class ChartElement extends Element
         }
 
         $this->chartProps['currency_code'] = $currencyCode;
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -129,6 +142,7 @@ abstract class ChartElement extends Element
     public function minimumFractionDigits(int $digits): static
     {
         $this->chartProps['minimum_fraction_digits'] = $this->fractionDigits($digits, 'minimum fraction digits');
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -136,6 +150,7 @@ abstract class ChartElement extends Element
     public function maximumFractionDigits(int $digits): static
     {
         $this->chartProps['maximum_fraction_digits'] = $this->fractionDigits($digits, 'maximum fraction digits');
+        $this->invalidateCommonWireSnapshot();
 
         return $this;
     }
@@ -159,17 +174,16 @@ abstract class ChartElement extends Element
     /** @return array<string, bool|int|string> */
     protected function resolveCommonProps(CallbackRegistry $registry): array
     {
-        $format = AxisNormalizer::y($this->formattingProps(), $this->chartName());
-        $this->syncFormattingProps($format);
-        $legend = LegendNormalizer::normalize($this->legend, $this->legendItemCount(), $this->chartName());
-
         return [
-            ...$this->chartProps,
-            'contract_version' => 1,
-            'style_json' => WireEncoder::encode($this->chartStyle, $this->chartName(), emptyAsObject: true),
-            'legend_json' => WireEncoder::encode($legend, $this->chartName()),
+            ...$this->commonWireSnapshot(),
             'on_select' => $this->selectMethod === null ? 0 : $registry->register($this->selectMethod),
         ];
+    }
+
+    protected function invalidateCommonWireSnapshot(): void
+    {
+        $this->commonWireSnapshot = null;
+        $this->commonWireLegendItemCount = null;
     }
 
     /** @param array<string, mixed> $format */
@@ -288,6 +302,27 @@ abstract class ChartElement extends Element
             'currency_code' => $this->chartProps['currency_code'],
             'minimum_fraction_digits' => $this->chartProps['minimum_fraction_digits'],
             'maximum_fraction_digits' => $this->chartProps['maximum_fraction_digits'],
+        ];
+    }
+
+    /** @return array<string, bool|int|string> */
+    private function commonWireSnapshot(): array
+    {
+        $legendItemCount = $this->legendItemCount();
+        if ($this->commonWireSnapshot !== null && $this->commonWireLegendItemCount === $legendItemCount) {
+            return $this->commonWireSnapshot;
+        }
+
+        $format = AxisNormalizer::y($this->formattingProps(), $this->chartName());
+        $this->syncFormattingProps($format);
+        $legend = LegendNormalizer::normalize($this->legend, $legendItemCount, $this->chartName());
+        $this->commonWireLegendItemCount = $legendItemCount;
+
+        return $this->commonWireSnapshot = [
+            ...$this->chartProps,
+            'contract_version' => 1,
+            'style_json' => WireEncoder::encode($this->chartStyle, $this->chartName(), emptyAsObject: true),
+            'legend_json' => WireEncoder::encode($legend, $this->chartName()),
         ];
     }
 }
