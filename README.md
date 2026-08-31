@@ -344,7 +344,26 @@ composer test
 swift test
 ```
 
-PHP tests prove normalization, serialization, compatibility, and callback registration. The package-owned Swift harness compiles the iOS renderers and exercises native geometry, interaction, formatting, and accessibility helpers. There is no equivalent package-owned Android compile harness yet: Kotlin source regressions remain weaker evidence than a generated Android build. Neither harness proves rendered geometry or gestures in a simulator, emulator, or physical device, so those results must be recorded separately.
+PHP tests prove normalization, serialization, compatibility, and callback registration. The package-owned Swift harness compiles the iOS renderers and exercises native geometry, interaction, formatting, and accessibility helpers. The Android integration job compiles the generated shell from a clean consuming application. Neither gate proves rendered geometry or gestures in a simulator, emulator, or physical device, so those results must be recorded separately.
+
+The `Android native integration` CI job creates an ephemeral Laravel application, installs this checkout as a NativePHP plugin, regenerates the Android shell, and runs `:app:assembleDebug`. Its Gradle log is uploaded as a workflow artifact. This gate catches Kotlin, Compose, generated-shell, and plugin-registration failures; it does not replace interaction or accessibility acceptance on hardware.
+
+### 1.1 native acceptance matrix
+
+The following matrix is the release gate for 1.1. A checked CI build is necessary but not sufficient. Record the current Android emulator, iOS simulator, Android device, and iOS device result for every row before changing this README, `nativephp.json`, or the release status to stable.
+
+| Chart | Required native fixture evidence | Current release state |
+| --- | --- | --- |
+| Line | Empty, single/constant, mixed-sign, dense, long labels, selection, tooltip, callback, pan and pinch viewport | Pending device evidence |
+| Area | Overlay and stacked multi-series, zero baseline, clipping, selection, tooltip, callback, dark appearance | Pending device evidence |
+| Bar | Grouped and stacked, vertical and horizontal, extreme-bar selection, clipping, pan and pinch | Pending device evidence |
+| Scatter | Number, date, and datetime x values, dense points, error ranges, selection, tooltip, callback | Pending device evidence |
+| Pie | Empty and populated composition, long labels, segment selection, tooltip, callback, text scale | Pending device evidence |
+| Donut | Empty and populated composition, inner-radius bounds, long labels, selection, tooltip, callback | Pending device evidence |
+| Radar | Three and 24 axes, dense labels, polygon selection, tooltip, callback, text scale | Pending device evidence |
+| Candlestick | Empty and OHLC data, wick/body/extreme selection, tooltip, callback, date viewport and clipping | Pending device evidence |
+
+For every populated fixture, run both `es-NI` with `NIO` and `en-US` with `USD`, use stable IDs across a data update, test light and dark appearance, and exercise VoiceOver or TalkBack at the platform's enlarged text setting. Treat a missing cell as a failed release gate, not as an implicit pass.
 
 ## Platform and frontend scope
 

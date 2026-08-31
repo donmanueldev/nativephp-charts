@@ -31,6 +31,31 @@ it('publishes normalized radar axes and ordered series values', function () {
         ->and($props['fill_opacity'])->toBe(0.3);
 });
 
+it('serializes the maximum supported radar axis count without platform-specific options', function () {
+    $axes = array_map(
+        fn (int $index): array => ['id' => "axis-{$index}", 'label' => "Capability {$index}", 'maximum' => 100],
+        range(1, 24),
+    );
+    $values = array_map(
+        fn (array $axis, int $index): array => ['axis' => $axis['id'], 'value' => 50 + $index % 50],
+        $axes,
+        range(1, 24),
+    );
+
+    $props = RadarChart::make()
+        ->axes($axes)
+        ->series([[
+            'id' => 'stress',
+            'name' => 'Stress profile',
+            'color' => '#6366F1',
+            'values' => $values,
+        ]])
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect(json_decode($props['axes_json'], true, flags: JSON_THROW_ON_ERROR))->toHaveCount(24)
+        ->and(json_decode($props['series_json'], true, flags: JSON_THROW_ON_ERROR)[0]['values'])->toHaveCount(24);
+});
+
 it('rejects incomplete out of order and out of range radar data', function (array $values, string $message) {
     $chart = RadarChart::make()->axes([
         ['id' => 'a', 'label' => 'A', 'maximum' => 10],

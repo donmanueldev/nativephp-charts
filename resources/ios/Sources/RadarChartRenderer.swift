@@ -258,6 +258,23 @@ enum NativePHPChartsRadarPathGeometry {
     }
 }
 
+enum NativePHPChartsRadarAxisLabelLayout {
+    static func displayLabel(label: String, index: Int, axisCount: Int) -> String? {
+        if axisCount <= 8 { return label }
+        if axisCount <= 12 { return abbreviate(label, maximumLength: 10) }
+
+        return index.isMultiple(of: 2) ? String(index + 1) : nil
+    }
+
+    static func abbreviate(_ label: String, maximumLength: Int) -> String {
+        let normalized = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard maximumLength > 1 else { return "…" }
+        guard normalized.count > maximumLength else { return normalized }
+
+        return String(normalized.prefix(maximumLength - 1)).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
+    }
+}
+
 struct NativePHPChartsRadarChartRenderer: View {
     let node: NativeUINode
 
@@ -419,12 +436,18 @@ private struct NativePHPChartsRadarPlot: View {
             for index in snapshot.axes.indices {
                 let outer = point(index: index, ratio: 1, center: center, radius: radius)
                 context.stroke(Path { $0.move(to: center); $0.addLine(to: outer) }, with: .color(axisColor), lineWidth: 1)
-                let labelPoint = point(index: index, ratio: 1.17, center: center, radius: radius)
-                let labelColor = snapshot.style.color(snapshot.style.axis.labelColor, fallback: .secondary)
-                context.draw(
-                    context.resolve(Text(snapshot.axes[index].label).font(snapshot.style.axisFont(scale: 1)).foregroundStyle(labelColor)),
-                    at: labelPoint
-                )
+                if let displayLabel = NativePHPChartsRadarAxisLabelLayout.displayLabel(
+                    label: snapshot.axes[index].label,
+                    index: index,
+                    axisCount: snapshot.axes.count
+                ) {
+                    let labelPoint = point(index: index, ratio: 1.17, center: center, radius: radius)
+                    let labelColor = snapshot.style.color(snapshot.style.axis.labelColor, fallback: .secondary)
+                    context.draw(
+                        context.resolve(Text(displayLabel).font(snapshot.style.axisFont(scale: 1)).foregroundStyle(labelColor)),
+                        at: labelPoint
+                    )
+                }
             }
         }
 

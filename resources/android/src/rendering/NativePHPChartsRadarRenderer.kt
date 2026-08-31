@@ -166,6 +166,33 @@ internal fun nativePHPChartsRadarNavigation(
     )
 }
 
+/**
+ * Keeps a dense radar readable without changing the semantic axis labels used by
+ * tooltips, selection callbacks, or accessibility actions.
+ *
+ * Twelve short labels still fit around the plot. Beyond that, rendering every
+ * label would overlap, so the visible ring uses stable one-based axis markers
+ * on alternating axes instead. A selected point always exposes its full label.
+ */
+internal fun nativePHPChartsRadarAxisDisplayLabel(
+    label: String,
+    index: Int,
+    axisCount: Int,
+): String? = when {
+    axisCount <= 8 -> label
+    axisCount <= 12 -> nativePHPChartsRadarAbbreviateAxisLabel(label, maximumLength = 10)
+    index % 2 == 0 -> (index + 1).toString()
+    else -> null
+}
+
+internal fun nativePHPChartsRadarAbbreviateAxisLabel(label: String, maximumLength: Int): String {
+    val normalized = label.trim()
+    if (maximumLength <= 1) return "…"
+    if (normalized.length <= maximumLength) return normalized
+
+    return normalized.take(maximumLength - 1).trimEnd() + "…"
+}
+
 internal fun nativePHPChartsRadarNearestSelection(
     selections: List<Pair<NativePHPChartsRadarSelection, Offset>>,
     location: Offset,
@@ -426,13 +453,19 @@ private fun NativePHPChartsRadarPlot(
             configuration.axes.indices.forEach { index ->
                 val outer = geometry.point(index, 1.0, progress.value)
                 drawLine(axisColor, geometry.center, outer, 1.dp.toPx())
-                val label = geometry.point(index, 1.16, progress.value)
-                drawContext.canvas.nativeCanvas.drawText(
-                    configuration.axes[index].label,
-                    label.x,
-                    label.y - labelPaint.fontMetrics.ascent / 2,
-                    labelPaint,
-                )
+                nativePHPChartsRadarAxisDisplayLabel(
+                    label = configuration.axes[index].label,
+                    index = index,
+                    axisCount = configuration.axes.size,
+                )?.let { displayLabel ->
+                    val label = geometry.point(index, 1.16, progress.value)
+                    drawContext.canvas.nativeCanvas.drawText(
+                        displayLabel,
+                        label.x,
+                        label.y - labelPaint.fontMetrics.ascent / 2,
+                        labelPaint,
+                    )
+                }
             }
         }
 

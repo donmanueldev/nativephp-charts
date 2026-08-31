@@ -128,6 +128,24 @@ final class NativePHPChartsRadarBehaviorTests: XCTestCase {
         )
     }
 
+    func testDenseAxisLabelsUseStableMarkersWithoutChangingFullSemanticLabels() {
+        XCTAssertEqual(
+            NativePHPChartsRadarAxisLabelLayout.displayLabel(label: "Fulfilment reliability", index: 0, axisCount: 3),
+            "Fulfilment reliability"
+        )
+        XCTAssertEqual(
+            NativePHPChartsRadarAxisLabelLayout.displayLabel(label: "Fulfilment reliability", index: 0, axisCount: 12),
+            "Fulfilmen…"
+        )
+        XCTAssertEqual(
+            NativePHPChartsRadarAxisLabelLayout.displayLabel(label: "Capability dimension 1", index: 0, axisCount: 24),
+            "1"
+        )
+        XCTAssertNil(
+            NativePHPChartsRadarAxisLabelLayout.displayLabel(label: "Capability dimension 2", index: 1, axisCount: 24)
+        )
+    }
+
     func testStepBeforeUsesTheDestinationXForTheClosingElbow() throws {
         let points = [
             CGPoint(x: 10, y: 10),
