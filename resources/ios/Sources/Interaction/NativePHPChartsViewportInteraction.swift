@@ -75,6 +75,15 @@ struct NativePHPChartsViewportInteraction {
         return clamped(lower...(lower + span), to: fullDomain)
     }
 
+    static func logicalTranslation(_ physicalTranslation: Double, reversed: Bool) -> Double {
+        reversed ? -physicalTranslation : physicalTranslation
+    }
+
+    static func logicalFraction(_ physicalFraction: Double, reversed: Bool) -> Double {
+        let fraction = clamp(physicalFraction, to: 0...1)
+        return reversed ? 1 - fraction : fraction
+    }
+
     private static func clamped(
         _ range: ClosedRange<Double>,
         to fullDomain: ClosedRange<Double>

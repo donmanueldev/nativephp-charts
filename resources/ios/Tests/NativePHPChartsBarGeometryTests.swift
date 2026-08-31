@@ -77,6 +77,19 @@ final class NativePHPChartsBarGeometryTests: XCTestCase {
         )
     }
 
+    func testGroupedBarPlotDomainAddsRoomForBarsAtViewportBoundaries() {
+        let data = makeDataSet(values: [[30, 40], [50, 60]])
+        let logicalViewport = 0.0...1.0
+        let renderedDomain = data.xDomain(
+            for: .bar,
+            barMode: .grouped,
+            fallback: logicalViewport
+        )
+
+        XCTAssertLessThan(renderedDomain.lowerBound, logicalViewport.lowerBound)
+        XCTAssertGreaterThan(renderedDomain.upperBound, logicalViewport.upperBound)
+    }
+
     func testLongBarSegmentsRemainSelectableNearBothRenderedEnds() {
         XCTAssertEqual(
             NativePHPChartsSelection.segmentDistance(

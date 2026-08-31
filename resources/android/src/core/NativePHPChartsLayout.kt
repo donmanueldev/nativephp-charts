@@ -278,6 +278,7 @@ internal object NativePHPChartsLayoutEngine {
             configuration.series
                 .flatMap(NativePHPChartsSeries::points)
                 .mapNotNull { point -> formatting.xNumeric(point)?.let { value -> value to point } }
+                .filter { (value, _) -> xDomain == null || value in xDomain.minimum..xDomain.maximum }
                 .sortedBy { (value, _) -> value }
                 .distinctBy { (value, _) -> value }
                 .map { (_, point) -> point }

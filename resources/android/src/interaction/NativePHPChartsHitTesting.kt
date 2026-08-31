@@ -7,7 +7,7 @@ import kotlin.math.min
 
 internal class NativePHPChartsHitIndex private constructor(
     private val dataSortedByX: List<NativePHPChartsDatum>,
-    private val maximumBarHalfWidth: Float,
+    private val maximumMarkHalfWidth: Float,
 ) {
     fun nearest(plot: Rect, location: Offset, threshold: Float): NativePHPChartsDatum? {
         if (!plot.contains(location) || threshold <= 0f || dataSortedByX.isEmpty()) {
@@ -16,13 +16,16 @@ internal class NativePHPChartsHitIndex private constructor(
 
         var result: NativePHPChartsDatum? = null
         var nearestDistance = Float.POSITIVE_INFINITY
-        val horizontalReach = threshold + maximumBarHalfWidth
+        val horizontalReach = threshold + maximumMarkHalfWidth
         val start = lowerBound(location.x - horizontalReach)
 
         for (index in start until dataSortedByX.size) {
             val datum = dataSortedByX[index]
             if (datum.center.x > location.x + horizontalReach) {
                 break
+            }
+            if (!datum.isVisibleIn(plot)) {
+                continue
             }
             val distance = when {
                 datum.bar?.contains(location) == true -> 0f
@@ -81,9 +84,22 @@ internal class NativePHPChartsHitIndex private constructor(
     companion object {
         fun build(data: List<NativePHPChartsDatum>): NativePHPChartsHitIndex = NativePHPChartsHitIndex(
             dataSortedByX = data.sortedBy { it.center.x },
-            maximumBarHalfWidth = data.maxOfOrNull {
+            maximumMarkHalfWidth = data.maxOfOrNull {
                 max(it.bar?.width?.div(2f) ?: 0f, it.candlestick?.body?.width?.div(2f) ?: 0f)
             } ?: 0f,
         )
     }
+}
+
+private fun NativePHPChartsDatum.isVisibleIn(plot: Rect): Boolean {
+    bar?.let { return it.overlaps(plot) }
+    candlestick?.let { geometry ->
+        if (geometry.body.overlaps(plot)) return true
+
+        val wickTop = min(geometry.wickStart.y, geometry.wickEnd.y)
+        val wickBottom = max(geometry.wickStart.y, geometry.wickEnd.y)
+        return geometry.x in plot.left..plot.right && wickTop <= plot.bottom && wickBottom >= plot.top
+    }
+
+    return center.x in plot.left..plot.right && center.y in plot.top..plot.bottom
 }

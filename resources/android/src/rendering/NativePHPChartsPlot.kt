@@ -347,7 +347,7 @@ internal fun NativePHPChartsPlot(
     ) {
         drawNativePHPChartsAxes(configuration, layout, drawingResources)
         clipRect(layout.plot.left, layout.plot.top, layout.plot.right, layout.plot.bottom) {
-            drawNativePHPChartsAnnotations(layout, drawingResources)
+            drawNativePHPChartsAnnotations(layout)
             when (configuration.kind) {
                 NativePHPChartsKind.Line -> drawNativePHPChartsLines(
                     configuration, layout, progress.value, false, drawingResources, requireNotNull(pathCache),
@@ -372,6 +372,7 @@ internal fun NativePHPChartsPlot(
                 )
             }
         }
+        drawNativePHPChartsAnnotationLabels(layout, drawingResources)
     }
 }
 

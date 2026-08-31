@@ -286,7 +286,7 @@ struct NativePHPChartsDataSet {
             return fallback
         }
 
-        return groupedBarGeometry.domain ?? fallback
+        return groupedBarGeometry.domain(containing: fallback)
     }
 
     func axisValues(

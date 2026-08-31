@@ -91,7 +91,7 @@ struct NativePHPChartsPlot: View {
                 onPreview: preview,
                 onCommit: select,
                 viewport: viewportDomain,
-                fullViewport: categoryDomain,
+                fullViewport: snapshot.domain.x,
                 onViewportPreview: { viewportDomain = $0 },
                 onViewportCommit: commitViewport
             )
@@ -100,7 +100,7 @@ struct NativePHPChartsPlot: View {
         .task(id: snapshot.data.animationID) {
             await revealChart()
         }
-        .task(id: viewportConfigurationKey) {
+        .task(id: configuredViewportDomain) {
             let configuredDomain = configuredViewportDomain
             if viewportDomain != configuredDomain {
                 viewportDomain = configuredDomain
@@ -137,7 +137,7 @@ struct NativePHPChartsPlot: View {
         snapshot.data.xDomain(
             for: kind,
             barMode: snapshot.configuration.barMode,
-            fallback: snapshot.domain.x
+            fallback: viewportDomain ?? snapshot.domain.x
         )
     }
 
@@ -165,11 +165,6 @@ struct NativePHPChartsPlot: View {
         else { return nil }
 
         return minimum...maximum
-    }
-
-    private var viewportConfigurationKey: String {
-        let viewport = snapshot.configuration.viewport
-        return "\(viewport.enabled)|\(String(describing: viewport.minimum))|\(String(describing: viewport.maximum))"
     }
 
     private var physicalXAxisTitle: String? {

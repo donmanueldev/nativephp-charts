@@ -187,7 +187,6 @@ internal fun DrawScope.drawNativePHPChartsAxes(
 
 internal fun DrawScope.drawNativePHPChartsAnnotations(
     layout: NativePHPChartsLayout,
-    resources: NativePHPChartsDrawingResources,
 ) {
     layout.annotations.forEach { geometry ->
         val annotation = geometry.annotation
@@ -223,15 +222,34 @@ internal fun DrawScope.drawNativePHPChartsAnnotations(
                 annotation.width.dp.toPx(),
             )
         }
+    }
+}
 
-        annotation.label?.let { label ->
-            val paint = resources.axisLabelPaint
-            paint.color = annotation.color.toArgb()
-            paint.textAlign = Paint.Align.RIGHT
-            val x = if (geometry.physicalAxis == "x") geometry.start - 4.dp.toPx() else layout.plot.right
-            val y = if (geometry.physicalAxis == "x") layout.plot.top - paint.fontMetrics.descent else geometry.start - 4.dp.toPx()
-            drawContext.canvas.nativeCanvas.drawText(label, x, y, paint)
+internal fun DrawScope.drawNativePHPChartsAnnotationLabels(
+    layout: NativePHPChartsLayout,
+    resources: NativePHPChartsDrawingResources,
+) {
+    layout.annotations.forEach { geometry ->
+        val annotation = geometry.annotation
+        if (annotation.type == "band") return@forEach
+        val label = annotation.label ?: return@forEach
+        val isVisible = if (geometry.physicalAxis == "x") {
+            geometry.start in layout.plot.left..layout.plot.right
+        } else {
+            geometry.start in layout.plot.top..layout.plot.bottom
         }
+        if (!isVisible) return@forEach
+
+        val paint = resources.axisLabelPaint
+        paint.color = annotation.color.toArgb()
+        paint.textAlign = Paint.Align.RIGHT
+        val x = if (geometry.physicalAxis == "x") geometry.start - 4.dp.toPx() else layout.plot.right
+        val y = if (geometry.physicalAxis == "x") {
+            layout.plot.top - paint.fontMetrics.descent
+        } else {
+            geometry.start - 4.dp.toPx()
+        }
+        drawContext.canvas.nativeCanvas.drawText(label, x, y, paint)
     }
 }
 

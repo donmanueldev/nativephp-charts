@@ -92,6 +92,49 @@ final class NativePHPChartsViewportInteractionTests: XCTestCase {
         XCTAssertNil(state.reason)
     }
 
+    func testHorizontalAxisReversesPhysicalGestureCoordinates() {
+        XCTAssertEqual(
+            NativePHPChartsViewportInteraction.logicalTranslation(40, reversed: true),
+            -40
+        )
+        XCTAssertEqual(
+            NativePHPChartsViewportInteraction.logicalFraction(0.2, reversed: true),
+            0.8,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            NativePHPChartsViewportInteraction.logicalTranslation(40, reversed: false),
+            40
+        )
+        XCTAssertEqual(
+            NativePHPChartsViewportInteraction.logicalFraction(0.2, reversed: false),
+            0.2,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testHorizontalAxisPanAndZoomResolveInLogicalDomainCoordinates() throws {
+        var state = NativePHPChartsViewportInteraction.State(domain: 20...60)
+        state.updatePan(
+            translation: NativePHPChartsViewportInteraction.logicalTranslation(30, reversed: true)
+        )
+        state.updateZoom(
+            magnification: 2,
+            focalFraction: NativePHPChartsViewportInteraction.logicalFraction(0.25, reversed: true)
+        )
+
+        let domain = try XCTUnwrap(
+            NativePHPChartsViewportInteraction.resolve(
+                state: state,
+                fullDomain: 0...100,
+                axisLength: 200,
+                configuredMinimumSpan: nil
+            )
+        )
+        XCTAssertEqual(domain.lowerBound, 38, accuracy: 0.000_001)
+        XCTAssertEqual(domain.upperBound, 58, accuracy: 0.000_001)
+    }
+
     func testInvalidGeometryDoesNotProduceADomain() {
         let state = NativePHPChartsViewportInteraction.State(domain: 20...40)
 

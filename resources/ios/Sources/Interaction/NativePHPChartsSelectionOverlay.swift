@@ -209,8 +209,15 @@ struct NativePHPChartsSelectionOverlay: View {
                 guard plotFrame.contains(gesture.startLocation) else { return }
 
                 guard var state = viewportGesture ?? initialViewportGesture() else { return }
-                let translation = isHorizontalBar ? gesture.translation.height : gesture.translation.width
-                state.updatePan(translation: Double(translation))
+                let physicalTranslation = isHorizontalBar
+                    ? gesture.translation.height
+                    : gesture.translation.width
+                state.updatePan(
+                    translation: NativePHPChartsViewportInteraction.logicalTranslation(
+                        Double(physicalTranslation),
+                        reversed: isHorizontalBar
+                    )
+                )
                 updateViewportGesture(&state, in: plotFrame)
             }
             .onEnded { _ in
@@ -270,7 +277,10 @@ struct NativePHPChartsSelectionOverlay: View {
         let coordinate = isHorizontalBar
             ? (location.y - plotFrame.minY) / plotFrame.height
             : (location.x - plotFrame.minX) / plotFrame.width
-        return min(max(Double(coordinate), 0), 1)
+        return NativePHPChartsViewportInteraction.logicalFraction(
+            Double(coordinate),
+            reversed: isHorizontalBar
+        )
     }
 
     @ViewBuilder

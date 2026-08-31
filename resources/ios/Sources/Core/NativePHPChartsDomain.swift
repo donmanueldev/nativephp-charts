@@ -206,13 +206,15 @@ struct NativePHPChartsStackedGeometry {
 }
 
 struct NativePHPChartsGroupedBarGeometry {
-    let domain: ClosedRange<Double>?
     private let positions: [String: Double]
+    private let xValues: [Double]
+    private let outerPadding: Double
 
     init(points: [NativePHPChartsPoint], xValues: [Double], seriesCount: Int) {
         guard !points.isEmpty, seriesCount > 0 else {
             positions = [:]
-            domain = nil
+            self.xValues = []
+            outerPadding = 0
             return
         }
 
@@ -227,15 +229,21 @@ struct NativePHPChartsGroupedBarGeometry {
             let offset = (Double(point.seriesIndex) - centerIndex) * slotSpacing
             return (point.selectionID, point.plotX + offset)
         })
+        self.xValues = xValues
+        let markPadding = max(slotSpacing * 0.55, groupSpacing * 0.08)
+        outerPadding = centerIndex * slotSpacing + markPadding
+    }
 
-        let renderedValues = positions.values
-        guard let minimum = renderedValues.min(), let maximum = renderedValues.max() else {
-            domain = nil
-            return
+    func domain(containing logicalDomain: ClosedRange<Double>) -> ClosedRange<Double> {
+        guard let minimum = xValues.first(where: logicalDomain.contains),
+              let maximum = xValues.last(where: logicalDomain.contains)
+        else {
+            return logicalDomain
         }
 
-        let padding = max(slotSpacing * 0.55, groupSpacing * 0.08)
-        domain = (minimum - padding)...(maximum + padding)
+        let lowerBound = min(logicalDomain.lowerBound, minimum - outerPadding)
+        let upperBound = max(logicalDomain.upperBound, maximum + outerPadding)
+        return lowerBound...upperBound
     }
 
     func x(for point: NativePHPChartsPoint) -> Double {

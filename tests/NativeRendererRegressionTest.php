@@ -92,7 +92,7 @@ it('applies explicit cartesian axis contracts in both native renderers', functio
         ->toContain('baseline = axis.doubleOrNull("baseline")')
         ->and($androidLayout)
         ->toContain('configuration.yAxis.minimum')
-        ->toContain('configuration.xAxis.interval * 86_400.0')
+        ->toContain('interval * 86_400.0')
         ->toContain('configuration.yAxis.labelCount.coerceIn(2, 12)')
         ->and($androidDrawing)
         ->toContain('if (isHorizontalBar) configuration.yAxis.title else configuration.xAxis.title')
@@ -161,15 +161,16 @@ it('keeps unreleased interaction viewport and sampling identity wired through bo
         ->toContain('selection: NativePHPChartsSelectionConfiguration.decode(input.interactionJSON)')
         ->toContain('viewport: NativePHPChartsViewportConfiguration.decode(input.viewportJSON)')
         ->and($iosPlot)
-        ->toContain('NativePHPChartsViewportPayload');
+        ->toContain('NativePHPChartsViewportPayload')
+        ->toContain('.task(id: configuredViewportDomain)');
 });
 
-it('clips every Android Cartesian viewport layer while leaving axes outside', function () {
+it('clips every Android Cartesian viewport layer while leaving axes and annotation labels outside', function () {
     $plot = nativeRendererSource('resources/android/src/rendering/NativePHPChartsPlot.kt');
     $clipOpening = 'clipRect(layout.plot.left, layout.plot.top, layout.plot.right, layout.plot.bottom) {';
     $clip = nativeRendererBlock($plot, $clipOpening);
     $clippedDrawCalls = [
-        'drawNativePHPChartsAnnotations(',
+        'drawNativePHPChartsAnnotations(layout)',
         'NativePHPChartsKind.Line -> drawNativePHPChartsLines(',
         'NativePHPChartsKind.Area -> drawNativePHPChartsLines(',
         'NativePHPChartsKind.Bar -> drawNativePHPChartsBars(',
@@ -181,11 +182,43 @@ it('clips every Android Cartesian viewport layer while leaving axes outside', fu
 
     expect($plot)
         ->toContain("drawNativePHPChartsAxes(configuration, layout, drawingResources)\n        {$clipOpening}")
-        ->and($clip)->not->toContain('drawNativePHPChartsAxes(');
+        ->and($clip)
+        ->not->toContain('drawNativePHPChartsAxes(')
+        ->not->toContain('drawNativePHPChartsAnnotationLabels(');
 
     foreach ($clippedDrawCalls as $drawCall) {
         expect($clip)->toContain($drawCall);
     }
+
+    $clipOffset = strpos($plot, $clipOpening);
+    $labelOffset = strpos($plot, 'drawNativePHPChartsAnnotationLabels(');
+
+    expect($labelOffset)->toBeGreaterThan($clipOffset + strlen($clip));
+});
+
+it('derives Android viewport labels from visible data', function () {
+    $layout = nativeRendererBlock(
+        nativeRendererSource('resources/android/src/core/NativePHPChartsLayout.kt'),
+        'fun build(',
+    );
+
+    expect($layout)
+        ->toContain('value in xDomain.minimum..xDomain.maximum')
+        ->toContain('ticks(xDomain, interval)');
+});
+
+it('excludes clipped Android geometry from selection candidates', function () {
+    $hitTesting = nativeRendererSource('resources/android/src/interaction/NativePHPChartsHitTesting.kt');
+    $nearest = nativeRendererBlock($hitTesting, 'fun nearest(');
+    $visibleGeometry = nativeRendererBlock($hitTesting, 'private fun NativePHPChartsDatum.isVisibleIn(');
+
+    expect($nearest)
+        ->toContain('if (!datum.isVisibleIn(plot))')
+        ->and($visibleGeometry)
+        ->toContain('bar?.let { return it.overlaps(plot) }')
+        ->toContain('if (geometry.body.overlaps(plot)) return true')
+        ->toContain('geometry.x in plot.left..plot.right')
+        ->toContain('center.x in plot.left..plot.right && center.y in plot.top..plot.bottom');
 });
 
 it('uses the shared iOS bar geometry for rendering and selection', function () {
