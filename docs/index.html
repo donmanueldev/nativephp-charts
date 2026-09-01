@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NativePHP Charts — Native charts for NativePHP Mobile</title>
+  <meta name="description" content="Native line, area, bar, scatter, candlestick, radar, pie, and donut components for NativePHP Mobile on iOS and Android.">
+  <meta name="theme-color" content="#080808">
+  <meta property="og:title" content="NativePHP Charts">
+  <meta property="og:description" content="Native charts for NativePHP Mobile. Swift Charts and SwiftUI Canvas on iOS, Jetpack Compose Canvas on Android, and one platform-neutral Blade API.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://donmanueldev.github.io/nativephp-charts/">
+  <meta property="og:image" content="https://donmanueldev.github.io/nativephp-charts/assets/brand/nativephp-charts-512.png">
+  <meta property="og:image:alt" content="NativePHP Charts ember volcano logo">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:image" content="https://donmanueldev.github.io/nativephp-charts/assets/brand/nativephp-charts-512.png">
+  <link rel="canonical" href="https://donmanueldev.github.io/nativephp-charts/">
+  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/brand/apple-touch-icon.png">
+  <link rel="stylesheet" href="assets/initial.css">
+  <link rel="preload" href="assets/styles.css" as="style">
+  <link rel="stylesheet" href="assets/styles.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="assets/styles.css"></noscript>
+  <script src="assets/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <header class="site-header" data-site-header>
+    <div class="shell header-inner">
+      <a class="brand" href="#top" aria-label="NativePHP Charts home">
+        <img src="assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34">
+        <span>NativePHP Charts</span>
+      </a>
+
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-menu-toggle>
+        <span class="sr-only">Toggle navigation</span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </button>
+
+      <nav class="primary-navigation" id="primary-navigation" aria-label="Primary" data-navigation>
+        <a href="#demos">Charts</a>
+        <a href="#installation">Installation</a>
+        <a href="#api">Usage</a>
+        <a class="nav-cta" href="https://github.com/donmanueldev/nativephp-charts">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="hero grid-surface" id="top">
+      <div class="shell hero-layout">
+        <div class="hero-copy">
+          <p class="status-note">Native UI components</p>
+          <h1>Native charts for<br>NativePHP Mobile.</h1>
+          <p>Swift Charts and SwiftUI Canvas on iOS. Jetpack Compose Canvas on Android. One platform-neutral Blade API.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#installation">Get started</a>
+            <a class="button button-secondary" href="https://github.com/donmanueldev/nativephp-charts">View on GitHub</a>
+          </div>
+          <ul class="compatibility" aria-label="Compatibility">
+            <li>NativePHP Mobile 4</li>
+            <li>PHP 8.4+</li>
+            <li>iOS 18.2+</li>
+            <li>Android API 26+</li>
+          </ul>
+        </div>
+
+        <div class="hero-devices" aria-label="Native chart screenshots on iOS and Android">
+          <figure class="device device-android">
+            <img src="assets/runtime/android/biyuyo-budget-charts.png" srcset="assets/runtime/android/biyuyo-budget-charts-480.webp 480w, assets/runtime/android/biyuyo-budget-charts-768.webp 768w, assets/runtime/android/biyuyo-budget-charts.png 1280w" sizes="(max-width: 620px) 46vw, (max-width: 860px) 265px, 294px" alt="Android Biyuyo budget showing native bar and donut charts" width="1280" height="2856" fetchpriority="high">
+            <figcaption>Android · Biyuyo budget</figcaption>
+          </figure>
+          <figure class="device device-ios">
+            <img src="assets/runtime/ios/biyuyo-goal-charts.png" srcset="assets/runtime/ios/biyuyo-goal-charts-320.webp 320w, assets/runtime/ios/biyuyo-goal-charts-402.webp 402w" sizes="(max-width: 620px) 46vw, (max-width: 860px) 265px, 294px" alt="iOS Biyuyo savings goal showing native line and donut charts" width="402" height="874" fetchpriority="high">
+            <figcaption>iOS · Biyuyo goal</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="installation section" id="installation">
+      <div class="shell installation-layout">
+        <div class="section-heading">
+          <h2>Install once.<br>Render natively.</h2>
+          <p>The package provides native iOS and Android renderers behind a validated PHP contract. Register it, rebuild your chosen target, and render charts directly from Blade.</p>
+        </div>
+
+        <div class="installation-steps">
+          <div class="code-window code-window-compact">
+            <div class="code-toolbar">
+              <span>Terminal</span>
+              <button class="copy-button" type="button" data-copy-target="install-command">Copy</button>
+            </div>
+            <pre id="install-command"><code>composer require donmanueldev/nativephp-charts:^1.0
+php artisan vendor:publish --tag=nativephp-plugins-provider --no-interaction
+php artisan native:plugin:register donmanueldev/nativephp-charts --no-interaction
+php artisan native:plugin:list
+php artisan native:plugin:validate</code></pre>
+          </div>
+          <div class="requirements" aria-label="Package requirements">
+            <div><span>PHP</span><strong>8.4 or newer</strong></div>
+            <div><span>NativePHP Mobile</span><strong>4.x</strong></div>
+            <div><span>iOS</span><strong>18.2 or newer</strong></div>
+            <div><span>Android</span><strong>API 26 or newer</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demos section section-muted" id="demos">
+      <div class="shell">
+        <div class="section-heading section-heading-wide">
+          <h2>Supported charts.<br>One native API.</h2>
+          <p>Line, area, bar, scatter, candlestick, radar, pie, and donut render on iOS and Android as real native components — never a WebView. The gallery shows current simulator captures; the API section documents every registered component.</p>
+        </div>
+
+        <div class="demo-rail" aria-label="Chart demo gallery">
+          <figure class="demo-item">
+            <div class="screenshot-frame platform-android"><img src="assets/screenshots/line-android.png" alt="Android weekly traffic forecast after refreshing the native line series" width="1280" height="2856" loading="lazy"></div>
+            <figcaption><strong>Line</strong><span>Android</span></figcaption>
+          </figure>
+          <figure class="demo-item demo-item-lifted">
+            <div class="screenshot-frame platform-android"><img src="assets/screenshots/area-android.png" alt="Android stacked area chart comparing strength and cardio training load" width="1280" height="2856" loading="lazy"></div>
+            <figcaption><strong>Area</strong><span>Android</span></figcaption>
+          </figure>
+          <figure class="demo-item">
+            <div class="screenshot-frame platform-android"><img src="assets/screenshots/bar-android.png" alt="Android sprint throughput bar chart with the Web value selected" width="1280" height="2856" loading="lazy"></div>
+            <figcaption><strong>Bar</strong><span>Android</span></figcaption>
+          </figure>
+          <figure class="demo-item demo-item-lifted">
+            <div class="screenshot-frame platform-ios"><img src="assets/screenshots/scatter-ios.png" alt="iOS multi-series scatter chart with a selected observation" width="402" height="874" loading="lazy"></div>
+            <figcaption><strong>Scatter</strong><span>iOS</span></figcaption>
+          </figure>
+          <figure class="demo-item">
+            <div class="screenshot-frame platform-ios"><img src="assets/screenshots/pie-ios.png" alt="iOS pie chart displaying the listening mix by format" width="402" height="874" loading="lazy"></div>
+            <figcaption><strong>Pie</strong><span>iOS</span></figcaption>
+          </figure>
+          <figure class="demo-item demo-item-lifted">
+            <div class="screenshot-frame platform-ios"><img src="assets/screenshots/donut-ios.png" alt="iOS listening mix donut chart with the Music segment selected" width="402" height="874" loading="lazy"></div>
+            <figcaption><strong>Donut</strong><span>iOS</span></figcaption>
+          </figure>
+        </div>
+
+      </div>
+    </section>
+
+    <details class="evidence-disclosure">
+      <summary>
+        <span class="evidence-summary-kicker">Native runtime evidence</span>
+        <strong>Browse platform captures</strong>
+        <span>Application showcases, dense-data runs, and Biyuyo product flows on iOS and Android.</span>
+        <span class="evidence-summary-action" aria-hidden="true">
+          <span class="when-closed">View captures</span>
+          <span class="when-open">Hide captures</span>
+        </span>
+      </summary>
+
+      <div class="evidence-content">
+    <section class="coverage-gallery section grid-surface" id="showcases">
+      <div class="shell">
+        <div class="section-heading section-heading-wide">
+          <p class="section-kicker">Real application data</p>
+          <h2>Five stories.<br>Both platforms.</h2>
+          <p>Every showcase was selected and captured in the installed app on the running iOS simulator and Android emulator.</p>
+        </div>
+
+        <div class="coverage-grid" aria-label="Application data showcases on iOS and Android">
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Weather</h3><p>Managua after the rain · Line</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/showcases/weather.png" alt="iOS Weather showcase with the Managua after the rain line chart" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/showcases/weather.png" alt="Android Weather showcase with the Managua after the rain line chart" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Training</h3><p>Weekly training load · Area</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/showcases/training.png" alt="iOS Training showcase with the weekly training load area chart" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/showcases/training.png" alt="Android Training showcase with the weekly training load area chart" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Product</h3><p>Release throughput · Bar</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/showcases/product.png" alt="iOS Product showcase with the release throughput bar chart" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/showcases/product.png" alt="Android Product showcase with the release throughput bar chart" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Audio</h3><p>Listening mix · Donut</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/showcases/audio.png" alt="iOS Audio showcase with the listening mix donut chart" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/showcases/audio.png" alt="Android Audio showcase with the listening mix donut chart" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item coverage-item-research">
+            <div class="coverage-heading"><h3>Research</h3><p>Battery efficiency · Scatter</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/showcases/research.png" alt="iOS Research showcase with the battery efficiency scatter chart" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/showcases/research.png" alt="Android Research showcase with the battery efficiency scatter chart" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="coverage-gallery coverage-performance section section-muted" id="performance">
+      <div class="shell">
+        <div class="section-heading section-heading-wide">
+          <p class="section-kicker">Runtime evidence</p>
+          <h2>Runtime coverage.<br>Exercised in-app.</h2>
+          <p>The same deterministic Performance Lab was exercised independently on iOS and Android, including renderer switching and data reloads. These captures are runtime evidence, not a physical-device performance certification.</p>
+        </div>
+
+        <div class="coverage-grid coverage-grid-performance" aria-label="Performance renderer screenshots on iOS and Android">
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Line</h3><p>100 points</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/performance/line.png" alt="iOS Performance Lab rendering a line chart with 100 points" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/line.png" alt="Android Performance Lab rendering a line chart with 100 points" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Area</h3><p>10 points per series</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/performance/area.png" alt="iOS Performance Lab rendering stacked area data with 10 points per series" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/area.png" alt="Android Performance Lab rendering stacked area data with 10 points per series" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Bar</h3><p>100 points per series</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/performance/bar.png" alt="iOS Performance Lab rendering grouped bars with 100 points per series" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/bar.png" alt="Android Performance Lab rendering grouped bars with 100 points per series" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Scatter</h3><p>100 points per series</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/performance/scatter.png" alt="iOS Performance Lab rendering two scatter cohorts with 100 points per series" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/scatter.png" alt="Android Performance Lab rendering two scatter cohorts with 100 points per series" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Pie</h3><p>10 segments</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/performance/pie.png" alt="iOS Performance Lab rendering a pie chart with 10 segments" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/pie.png" alt="Android Performance Lab rendering a pie chart with 10 segments" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+          <article class="coverage-item">
+            <div class="coverage-heading"><h3>Donut</h3><p>10 segments</p></div>
+            <div class="coverage-platforms">
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/performance/donut.png" alt="iOS Performance Lab rendering a donut chart with 10 segments" width="402" height="874" loading="lazy"></div><figcaption>iOS</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/donut.png" alt="Android Performance Lab rendering a donut chart with 10 segments" width="1280" height="2856" loading="lazy"></div><figcaption>Android</figcaption></figure>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="biyuyo-gallery section grid-surface" id="biyuyo">
+      <div class="shell">
+        <div class="section-heading section-heading-wide">
+          <p class="section-kicker">Built with NativePHP Charts</p>
+          <h2>Biyuyo.<br>Real product flows.</h2>
+          <p>A native personal-finance experience using the same chart components for forecasts, budget simulation, and savings goals on iOS and Android.</p>
+        </div>
+
+        <div class="biyuyo-gallery-group">
+          <h3>Configuration</h3>
+          <div class="biyuyo-grid" aria-label="Biyuyo configuration screenshots on iOS and Android">
+            <figure>
+              <div class="screenshot-frame platform-ios"><img src="assets/runtime/ios/biyuyo-budget.png" alt="iOS Biyuyo budget after adjusting income and spending buffer" width="402" height="874" loading="lazy"></div>
+              <figcaption><strong>Budget simulation</strong><span>iOS</span></figcaption>
+            </figure>
+            <figure>
+              <div class="screenshot-frame platform-android"><img src="assets/runtime/android/biyuyo-budget.png" alt="Android Biyuyo budget after adjusting income and spending buffer" width="1280" height="2856" loading="lazy"></div>
+              <figcaption><strong>Budget simulation</strong><span>Android</span></figcaption>
+            </figure>
+            <figure>
+              <div class="screenshot-frame platform-ios"><img src="assets/runtime/ios/biyuyo-goal.png" alt="iOS Biyuyo trip goal after adjusting the monthly contribution" width="402" height="874" loading="lazy"></div>
+              <figcaption><strong>Savings goal</strong><span>iOS</span></figcaption>
+            </figure>
+            <figure>
+              <div class="screenshot-frame platform-android"><img src="assets/runtime/android/biyuyo-goal.png" alt="Android Biyuyo trip goal after adjusting the monthly contribution" width="1280" height="2856" loading="lazy"></div>
+              <figcaption><strong>Savings goal</strong><span>Android</span></figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="biyuyo-gallery-group">
+          <h3>Chart results</h3>
+          <div class="biyuyo-grid" aria-label="Biyuyo chart screenshots on iOS and Android">
+            <figure>
+              <div class="screenshot-frame platform-ios"><img src="assets/runtime/ios/biyuyo-budget-charts.png" alt="iOS Biyuyo budget with plan-versus-simulated bar chart and spending donut chart" width="402" height="874" loading="lazy"></div>
+              <figcaption><strong>Budget charts</strong><span>iOS</span></figcaption>
+            </figure>
+            <figure>
+              <div class="screenshot-frame platform-android"><img src="assets/runtime/android/biyuyo-budget-charts.png" alt="Android Biyuyo budget with plan-versus-simulated bar chart and spending donut chart" width="1280" height="2856" loading="lazy"></div>
+              <figcaption><strong>Budget charts</strong><span>Android</span></figcaption>
+            </figure>
+            <figure>
+              <div class="screenshot-frame platform-ios"><img src="assets/runtime/ios/biyuyo-goal-charts.png" alt="iOS Biyuyo savings goal with projected-savings line chart and progress donut chart" width="402" height="874" loading="lazy"></div>
+              <figcaption><strong>Goal charts</strong><span>iOS</span></figcaption>
+            </figure>
+            <figure>
+              <div class="screenshot-frame platform-android"><img src="assets/runtime/android/biyuyo-goal-charts.png" alt="Android Biyuyo savings goal with projected-savings line chart and progress donut chart" width="1280" height="2856" loading="lazy"></div>
+              <figcaption><strong>Goal charts</strong><span>Android</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+      </div>
+    </details>
+
+    <section class="api section" id="api">
+      <div class="shell">
+        <div class="section-heading section-heading-wide">
+          <h2>Blade in.<br>Native UI out.</h2>
+          <p>See how to render every supported chart with platform-neutral contracts for data, axes, legends, formatting, selection, and accessibility.</p>
+        </div>
+
+        <div class="api-showcase">
+          <div class="code-demo">
+            <div class="code-tabs" role="tablist" aria-label="Chart examples">
+              <button type="button" role="tab" id="tab-line" aria-controls="panel-line" aria-selected="true" tabindex="0" data-code-tab="line">Line</button>
+              <button type="button" role="tab" id="tab-area" aria-controls="panel-area" aria-selected="false" tabindex="-1" data-code-tab="area">Area</button>
+              <button type="button" role="tab" id="tab-bar" aria-controls="panel-bar" aria-selected="false" tabindex="-1" data-code-tab="bar">Bar</button>
+              <button type="button" role="tab" id="tab-scatter" aria-controls="panel-scatter" aria-selected="false" tabindex="-1" data-code-tab="scatter">Scatter</button>
+              <button type="button" role="tab" id="tab-candlestick" aria-controls="panel-candlestick" aria-selected="false" tabindex="-1" data-code-tab="candlestick">Candlestick</button>
+              <button type="button" role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="false" tabindex="-1" data-code-tab="radar">Radar</button>
+              <button type="button" role="tab" id="tab-pie" aria-controls="panel-pie" aria-selected="false" tabindex="-1" data-code-tab="pie">Pie</button>
+              <button type="button" role="tab" id="tab-donut" aria-controls="panel-donut" aria-selected="false" tabindex="-1" data-code-tab="donut">Donut</button>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-line" aria-labelledby="tab-line" data-code-panel="line">
+              <div class="code-window">
+                <div class="code-toolbar"><span>sales-overview.blade.php</span><button class="copy-button" type="button" data-copy-target="code-line">Copy</button></div>
+                <pre id="code-line"><code>&lt;native:line-chart
+    class="w-full h-80"
+    :series="[[
+        'id' =&gt; 'monthly-sales',
+        'name' =&gt; 'Ventas',
+        'color' =&gt; '#0F766E',
+        'points' =&gt; [
+            ['id' =&gt; 'jan', 'label' =&gt; 'Ene', 'value' =&gt; 42000],
+            ['id' =&gt; 'feb', 'label' =&gt; 'Feb', 'value' =&gt; 51800],
+            ['id' =&gt; 'mar', 'label' =&gt; 'Mar', 'value' =&gt; 62400],
+        ],
+    ]]"
+    locale="es-NI"
+    value-format="currency"
+    currency-code="NIO"
+    :maximum-fraction-digits="0"
+    a11y-label="Ventas mensuales en córdobas"
+/&gt;</code></pre>
+              </div>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-area" aria-labelledby="tab-area" data-code-panel="area" hidden>
+              <div class="code-window">
+                <div class="code-toolbar"><span>training-load.blade.php</span><button class="copy-button" type="button" data-copy-target="code-area">Copy</button></div>
+                <pre id="code-area"><code>&lt;native:area-chart
+    class="w-full h-80"
+    :series="$trainingSeries"
+    area-mode="stacked"
+    :legend="[
+        'visible' =&gt; true,
+        'position' =&gt; 'bottom',
+    ]"
+    :style="[
+        'line' =&gt; ['width' =&gt; 3],
+        'area' =&gt; ['opacity' =&gt; 0.28],
+    ]"
+    a11y-label="Weekly training load by activity"
+/&gt;</code></pre>
+              </div>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-bar" aria-labelledby="tab-bar" data-code-panel="bar" hidden>
+              <div class="code-window">
+                <div class="code-toolbar"><span>revenue.blade.php</span><button class="copy-button" type="button" data-copy-target="code-bar">Copy</button></div>
+                <pre id="code-bar"><code>&lt;native:bar-chart
+    class="w-full h-72"
+    :series="$series"
+    :legend="['visible' =&gt; true, 'position' =&gt; 'top']"
+    :y-axis="[
+        'valueFormat' =&gt; 'currency',
+        'currencyCode' =&gt; 'USD',
+        'maximumFractionDigits' =&gt; 0,
+    ]"
+    _select="pointSelected"
+    a11y-label="Revenue by channel"
+/&gt;</code></pre>
+              </div>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-scatter" aria-labelledby="tab-scatter" data-code-panel="scatter" hidden>
+              <div class="code-window">
+                <div class="code-toolbar"><span>experiment.blade.php</span><button class="copy-button" type="button" data-copy-target="code-scatter">Copy</button></div>
+                <pre id="code-scatter"><code>&lt;native:scatter-chart
+    class="w-full h-80"
+    :series="$experimentSeries"
+    :x-axis="['type' =&gt; 'number', 'labelCount' =&gt; 5]"
+    :y-axis="[
+        'valueFormat' =&gt; 'percent',
+        'maximumFractionDigits' =&gt; 0,
+    ]"
+    _select="pointSelected"
+    a11y-label="Conversion observations by cohort"
+/&gt;</code></pre>
+              </div>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-candlestick" aria-labelledby="tab-candlestick" data-code-panel="candlestick" hidden>
+              <div class="code-window">
+                <div class="code-toolbar"><span>exchange-rate.blade.php</span><button class="copy-button" type="button" data-copy-target="code-candlestick">Copy</button></div>
+                <pre id="code-candlestick"><code>&lt;native:candlestick-chart
+    class="w-full h-80"
+    :series="[[
+        'id' =&gt; 'nio-usd',
+        'name' =&gt; 'NIO/USD',
+        'color' =&gt; '#2563EB',
+        'points' =&gt; [[
+            'id' =&gt; '2026-08-29',
+            'label' =&gt; '29 Aug',
+            'x' =&gt; '2026-08-29',
+            'open' =&gt; 36.72,
+            'high' =&gt; 36.91,
+            'low' =&gt; 36.68,
+            'close' =&gt; 36.84,
+        ]],
+    ]]"
+    :x-axis="['type' =&gt; 'date']"
+    _select="pointSelected"
+    a11y-label="Daily NIO to USD exchange rate"
+/&gt;</code></pre>
+              </div>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-radar" aria-labelledby="tab-radar" data-code-panel="radar" hidden>
+              <div class="code-window">
+                <div class="code-toolbar"><span>capabilities.blade.php</span><button class="copy-button" type="button" data-copy-target="code-radar">Copy</button></div>
+                <pre id="code-radar"><code>&lt;native:radar-chart
+    class="w-full h-80"
+    :axes="[
+        ['id' =&gt; 'speed', 'label' =&gt; 'Speed', 'maximum' =&gt; 100],
+        ['id' =&gt; 'quality', 'label' =&gt; 'Quality', 'maximum' =&gt; 100],
+        ['id' =&gt; 'cost', 'label' =&gt; 'Cost', 'maximum' =&gt; 100],
+    ]"
+    :series="[[
+        'id' =&gt; 'nativephp',
+        'name' =&gt; 'NativePHP',
+        'color' =&gt; '#6366F1',
+        'values' =&gt; [
+            ['axis' =&gt; 'speed', 'value' =&gt; 88],
+            ['axis' =&gt; 'quality', 'value' =&gt; 92],
+            ['axis' =&gt; 'cost', 'value' =&gt; 74],
+        ],
+    ]]"
+    :grid-levels="4"
+    :fill-opacity="0.3"
+    _select="pointSelected"
+    a11y-label="NativePHP capability profile"
+/&gt;</code></pre>
+              </div>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-pie" aria-labelledby="tab-pie" data-code-panel="pie" hidden>
+              <div class="code-window">
+                <div class="code-toolbar"><span>listening-mix.blade.php</span><button class="copy-button" type="button" data-copy-target="code-pie">Copy</button></div>
+                <pre id="code-pie"><code>&lt;native:pie-chart
+    class="w-full h-72"
+    :segments="[
+        ['id' =&gt; 'music', 'label' =&gt; 'Music', 'value' =&gt; 58, 'color' =&gt; '#7C3AED'],
+        ['id' =&gt; 'podcasts', 'label' =&gt; 'Podcasts', 'value' =&gt; 27, 'color' =&gt; '#2563EB'],
+        ['id' =&gt; 'books', 'label' =&gt; 'Audiobooks', 'value' =&gt; 15, 'color' =&gt; '#F59E0B'],
+    ]"
+    :legend="['visible' =&gt; true, 'position' =&gt; 'bottom']"
+    _select="pointSelected"
+    a11y-label="Listening time by format"
+/&gt;</code></pre>
+              </div>
+            </div>
+
+            <div class="code-panel" role="tabpanel" id="panel-donut" aria-labelledby="tab-donut" data-code-panel="donut" hidden>
+              <div class="code-window">
+                <div class="code-toolbar"><span>revenue-mix.blade.php</span><button class="copy-button" type="button" data-copy-target="code-donut">Copy</button></div>
+                <pre id="code-donut"><code>&lt;native:donut-chart
+    class="w-full h-80"
+    :segments="[
+        ['id' =&gt; 'subscriptions', 'label' =&gt; 'Subscriptions', 'value' =&gt; 48200, 'color' =&gt; '#2563EB'],
+        ['id' =&gt; 'services', 'label' =&gt; 'Services', 'value' =&gt; 31750, 'color' =&gt; '#7C3AED'],
+        ['id' =&gt; 'partners', 'label' =&gt; 'Partners', 'value' =&gt; 9650, 'color' =&gt; '#F59E0B'],
+    ]"
+    :inner-radius-ratio="0.62"
+    :legend="['visible' =&gt; true, 'position' =&gt; 'bottom']"
+    _select="pointSelected"
+    value-format="currency"
+    currency-code="USD"
+    a11y-label="Quarterly revenue by channel"
+/&gt;</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="api-preview" aria-live="polite">
+            <div class="demo-panel" data-demo-panel="line">
+              <figure><div class="screenshot-frame platform-ios"><video autoplay muted loop playsinline controls preload="none" data-poster="assets/screenshots/line-ios-320.webp" aria-label="iOS line chart updating its forecast"><source data-src="assets/demos/ios/line-update.mp4" type="video/mp4"></video></div><figcaption>iOS · update</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><video autoplay muted loop playsinline controls preload="none" data-poster="assets/screenshots/line-android-640.webp" aria-label="Android line chart updating its forecast"><source data-src="assets/demos/android/line-update.mp4" type="video/mp4"></video></div><figcaption>Android · update</figcaption></figure>
+            </div>
+            <div class="demo-panel" data-demo-panel="area" hidden>
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/runtime/complete/ios/performance/area.png" alt="iOS stacked area chart in the Performance Lab" width="402" height="874" loading="lazy"></div><figcaption>iOS · stacked</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/screenshots/area-android.png" alt="Android stacked area chart comparing training load" width="1280" height="2856" loading="lazy"></div><figcaption>Android · stacked</figcaption></figure>
+            </div>
+            <div class="demo-panel" data-demo-panel="bar" hidden>
+              <figure><div class="screenshot-frame platform-ios"><video muted loop playsinline controls preload="none" data-poster="assets/screenshots/bar-ios-320.webp" aria-label="iOS bar chart selecting a value"><source data-src="assets/demos/ios/bar-selection.mp4" type="video/mp4"></video></div><figcaption>iOS · selection</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><video muted loop playsinline controls preload="none" data-poster="assets/screenshots/bar-android-640.webp" aria-label="Android bar chart selecting a value"><source data-src="assets/demos/android/bar-selection.mp4" type="video/mp4"></video></div><figcaption>Android · selection</figcaption></figure>
+            </div>
+            <div class="demo-panel" data-demo-panel="scatter" hidden>
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/screenshots/scatter-ios.png" alt="iOS multi-series scatter chart with a selected observation" width="402" height="874" loading="lazy"></div><figcaption>iOS · selection</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/scatter.png" alt="Android scatter chart in the Performance Lab" width="1280" height="2856" loading="lazy"></div><figcaption>Android · dense data</figcaption></figure>
+            </div>
+            <div class="demo-panel" data-demo-panel="pie" hidden>
+              <figure><div class="screenshot-frame platform-ios"><img src="assets/screenshots/pie-ios.png" alt="iOS pie chart displaying listening time by format" width="402" height="874" loading="lazy"></div><figcaption>iOS · composition</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><img src="assets/runtime/complete/android/performance/pie.png" alt="Android pie chart in the Performance Lab" width="1280" height="2856" loading="lazy"></div><figcaption>Android · segments</figcaption></figure>
+            </div>
+            <div class="demo-panel" data-demo-panel="donut" hidden>
+              <figure><div class="screenshot-frame platform-ios"><video muted loop playsinline controls preload="none" data-poster="assets/screenshots/donut-ios-320.webp" aria-label="iOS donut chart selecting a segment"><source data-src="assets/demos/ios/radial-selection.mp4" type="video/mp4"></video></div><figcaption>iOS · tooltip</figcaption></figure>
+              <figure><div class="screenshot-frame platform-android"><video muted loop playsinline controls preload="none" data-poster="assets/screenshots/donut-android-640.webp" aria-label="Android donut chart selecting a segment"><source data-src="assets/demos/android/radial-selection.mp4" type="video/mp4"></video></div><figcaption>Android · tooltip</figcaption></figure>
+            </div>
+            <p class="api-preview-caption">Captures from installed iOS and Android apps. No browser runtime.</p>
+          </div>
+        </div>
+
+        <div class="reference-grid" aria-label="API reference overview">
+          <article>
+            <span>01</span>
+            <h3>Data</h3>
+            <p>Ordered <code>series</code> and <code>points</code> for Cartesian charts, axes and values for radar, and segments for pie and donut.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Axes &amp; formats</h3>
+            <p>Category, number, date, and datetime x-axes with localized number, currency, percent, and date output.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Interaction</h3>
+            <p>Stable identities, immediate native highlights and tooltips, plus versioned PHP selection callbacks.</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>Semantic styles</h3>
+            <p>Platform-neutral line, area, bar, candlestick, point, grid, axis, legend, and radial segment configuration.</p>
+          </article>
+        </div>
+
+        <div class="reference-link">
+          <p>Need every property, default, and validation rule?</p>
+          <a href="https://github.com/donmanueldev/nativephp-charts#public-properties">Read the complete API reference <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="accessibility section section-ember">
+      <div class="shell accessibility-layout">
+        <div>
+          <h2>Accessibility in the contract,<br>explicit in every chart.</h2>
+          <p>The renderers provide localized values, bounded summaries, and stable selection identity. Validate VoiceOver and TalkBack behavior on your target devices as part of release acceptance.</p>
+        </div>
+        <dl class="accessibility-contract">
+          <div>
+            <dt>Purpose</dt>
+            <dd>Application-defined <code>a11y-label</code></dd>
+          </div>
+          <div>
+            <dt>Values</dt>
+            <dd>Localized with the chart formatter</dd>
+          </div>
+          <div>
+            <dt>Selection</dt>
+            <dd>Stable series, point, or segment identity</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="closing grid-surface">
+      <div class="shell closing-layout">
+        <h2>Render native charts<br>without leaving Laravel.</h2>
+        <div class="closing-actions">
+          <a class="button button-primary" href="https://github.com/donmanueldev/nativephp-charts#quick-start">Read the usage guide</a>
+          <a class="button button-secondary" href="https://github.com/donmanueldev/nativephp-charts">View source on GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-layout">
+      <a class="brand brand-footer" href="#top" aria-label="NativePHP Charts home">
+        <img src="assets/brand/nativephp-charts-mark.svg" alt="" width="50" height="38" loading="lazy">
+        <span>NativePHP Charts</span>
+      </a>
+      <nav aria-label="Footer">
+        <a href="https://github.com/donmanueldev/nativephp-charts#readme">Documentation</a>
+        <a href="https://github.com/donmanueldev/nativephp-charts/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/donmanueldev/nativephp-charts#support-and-security">Security</a>
+        <a href="https://github.com/donmanueldev/nativephp-charts/blob/main/LICENSE.md">License</a>
+      </nav>
+      <p>Line, area, bar, scatter, candlestick, radar, pie, and donut for iOS and Android.</p>
+    </div>
+  </footer>
+</body>
+</html>

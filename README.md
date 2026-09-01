@@ -1,29 +1,30 @@
+<p align="center">
+  <img src="docs/assets/brand/nativephp-charts-lockup.svg" width="420" alt="NativePHP Charts">
+</p>
+
 # NativePHP Charts
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/donmanueldev/nativephp-charts.svg?style=flat-square)](https://packagist.org/packages/donmanueldev/nativephp-charts)
 [![Tests](https://github.com/donmanueldev/nativephp-charts/actions/workflows/ci.yml/badge.svg)](https://github.com/donmanueldev/nativephp-charts/actions/workflows/ci.yml)
 [![License](https://img.shields.io/packagist/l/donmanueldev/nativephp-charts.svg?style=flat-square)](LICENSE.md)
 
-Native line, area, bar, scatter, pie, and donut charts for [NativePHP Mobile](https://nativephp.com). iOS uses Swift Charts and SwiftUI Canvas; Android uses Jetpack Compose Canvas. Data stays on the device; there is no WebView, JavaScript chart library, network service, telemetry, or third-party native chart dependency.
+**[Explore the documentation and native demos →](https://donmanueldev.github.io/nativephp-charts/)**
+
+Native line, area, bar, scatter, candlestick, radar, pie, and donut charts for [NativePHP Mobile](https://nativephp.com). iOS renders with Swift Charts and SwiftUI Canvas; Android renders with Jetpack Compose Canvas. Data stays on the device; there is no WebView, JavaScript chart library, network service, telemetry, or third-party native chart dependency.
 
 > NativePHP Charts is an independent community plugin. It is not an official NativePHP package.
 
-> **Release status:** `1.0.x` is the production contract for line, area, bar, scatter, pie, and donut charts. This branch also contains 1.1 acceptance work. Radar, candlestick, annotations, sampling, and viewport interaction remain source-only until every required native acceptance cell is recorded. Do not deploy those APIs from a development checkout as a stable release.
+## Documentation
 
-## Features
-
-- Production 1.0 `<native:line-chart>`, `<native:area-chart>`, `<native:bar-chart>`, `<native:scatter-chart>`, `<native:pie-chart>`, and `<native:donut-chart>` EDGE elements.
-- Source-only 1.1 radar, candlestick, annotations, sampling, and viewport interaction for acceptance testing; not a release promise.
-- Multiple ordered series, native legends and tooltips, stable selection, and PHP callbacks.
-- Category, number, date, and datetime axes with explicit domains, intervals, baselines, titles, and locale-aware formatting.
-- Positive, negative, mixed-sign, decimal, constant, and single-point domains.
-- Reference lines and bands, uncertainty ranges, per-series styles, stepped/dashed lines, and fill-between areas.
-- Overlay/stacked area fills, grouped/stacked bars in both orientations, independent scatter observations, and radial composition.
-- Tap or scrub selection, logical crosshairs, shared tooltips, and versioned PHP callbacks.
-- Numeric/date viewport pan and pinch zoom, plus explicit LTTB sampling for dense series.
-- Native reveal/update animations with platform motion settings.
-- Dark appearance, semantic styling, font aliases, VoiceOver, and TalkBack summaries.
-- No permissions, secrets, bridge functions, background tasks, or JavaScript API.
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Available chart types](#available-chart-types)
+- [Chart examples](#chart-examples)
+- [API guide](#api-guide)
+- [Validation and quality](#validation-and-quality)
+- [Platform and frontend scope](#platform-and-frontend-scope)
+- [Support and security](#support-and-security)
 
 ## Requirements
 
@@ -37,8 +38,6 @@ Native line, area, bar, scatter, pie, and donut charts for [NativePHP Mobile](ht
 
 ## Installation
 
-Install the stable release with:
-
 ```bash
 composer require donmanueldev/nativephp-charts:^1.0
 php artisan vendor:publish --tag=nativephp-plugins-provider --no-interaction
@@ -47,104 +46,285 @@ php artisan native:plugin:list
 php artisan native:plugin:validate
 ```
 
-The package is a compiled native UI plugin. After installing or updating it, rebuild the platform you are developing for. Choose the platform explicitly in your terminal:
-
-```bash
-php artisan native:run ios
-```
-
-or:
-
-```bash
-php artisan native:run android
-```
+The chart renderers compile into the native shell. Rebuild the iOS or Android target after installing or updating the package.
 
 ## Quick start
 
-Charts are leaf elements. Render them inside a `NativeComponent` EDGE view with an explicit height and accessible purpose.
+Charts are leaf elements inside a NativePHP `NativeComponent` screen. The complete path to a first chart is a component class, a native route, and an EDGE Blade view.
 
-```blade
-<native:line-chart
-    class="w-full h-80"
-    :series="[[
-        'id' => 'monthly-sales',
-        'name' => 'Ventas',
-        'color' => '#0F766E',
-        'points' => [
-            ['id' => 'jan', 'label' => 'Ene', 'value' => 42000],
-            ['id' => 'feb', 'label' => 'Feb', 'value' => 51800],
-            ['id' => 'mar', 'label' => 'Mar', 'value' => 62400],
-        ],
-    ]]"
-    locale="es-NI"
-    value-format="currency"
-    currency-code="NIO"
-    :maximum-fraction-digits="0"
-    a11y-label="Ventas mensuales en córdobas"
-/>
+Create `app/NativeComponents/SalesDashboard.php`:
+
+```php
+<?php
+
+namespace App\NativeComponents;
+
+use Illuminate\View\View;
+use Native\Mobile\Edge\NativeComponent;
+
+final class SalesDashboard extends NativeComponent
+{
+    public function render(): View
+    {
+        return view('native.sales-dashboard');
+    }
+}
 ```
 
-## Multiple series and legend
+Register the screen in your routes file:
 
-Series IDs must be unique within the chart. Point IDs must be unique within their series. Points without an explicit ID remain compatible with v0.2 and receive a deterministic `compat-*` identity, but explicit stable IDs are recommended for interactive and frequently updated charts.
+```php
+use App\NativeComponents\SalesDashboard;
+use Illuminate\Support\Facades\Route;
+
+Route::native('/', SalesDashboard::class);
+```
+
+Create `resources/views/native/sales-dashboard.blade.php`. Give the chart an explicit height and describe its purpose with `a11y-label`:
+
+```blade
+<native:column class="w-full h-full gap-4 p-4 safe-area">
+    <native:text class="text-2xl font-bold">Ventas</native:text>
+
+    <native:line-chart
+        class="w-full h-80"
+        :series="[[
+            'id' => 'monthly-sales',
+            'name' => 'Ventas',
+            'color' => '#0F766E',
+            'points' => [
+                ['id' => 'sales-jan', 'label' => 'Ene', 'value' => 42000],
+                ['id' => 'sales-feb', 'label' => 'Feb', 'value' => 51800],
+                ['id' => 'sales-mar', 'label' => 'Mar', 'value' => 62400],
+            ],
+        ]]"
+        locale="es-NI"
+        value-format="currency"
+        currency-code="NIO"
+        :maximum-fraction-digits="0"
+        a11y-label="Ventas mensuales en córdobas"
+    />
+</native:column>
+```
+
+The same `series` contract powers line, area, bar, and scatter charts. Every series needs a unique `id`, `name`, `color`, and ordered `points`. Give each point a stable `id` when the chart is interactive or updates frequently.
+
+<p align="center">
+  <img src="docs/assets/screenshots/line-ios-320.webp" width="220" alt="Native line chart running in the iOS simulator">
+</p>
+
+<p align="center"><sub>Native line chart rendered in the installed iOS app.</sub></p>
+
+## Available chart types
+
+| Chart | EDGE element | Data | Chart-specific option |
+| --- | --- | --- | --- |
+| Line | `<native:line-chart>` | Ordered `series` and `points` | Line and point styles |
+| Area | `<native:area-chart>` | Ordered `series` and `points` | `area-mode="overlay|stacked"` |
+| Bar | `<native:bar-chart>` | Ordered `series` and `points` | Grouped multi-series bars |
+| Scatter | `<native:scatter-chart>` | Ordered `series` and numeric/date points | Numeric x-axis by default |
+| Candlestick | `<native:candlestick-chart>` | One ordered OHLC series | Rising, falling, neutral, and wick styles |
+| Radar | `<native:radar-chart>` | Ordered `axes`, `series`, and axis values | Grid levels and fill opacity |
+| Pie | `<native:pie-chart>` | Ordered `segments` | Fixed inner radius of `0` |
+| Donut | `<native:donut-chart>` | Ordered `segments` | `inner-radius-ratio` from `0.2` to `0.85` |
+
+Every listed chart renders natively on iOS and Android and supports localized values, empty states, semantic styling, legends, selection callbacks, and accessible summaries.
+
+## Chart examples
+
+The following examples focus on the data and options that differ by chart. They use the same `NativeComponent` screen structure shown in the quick start.
+
+### Area chart
+
+Area charts support overlay and stacked multi-series fills.
 
 ```blade
 <native:area-chart
     class="w-full h-80"
     :series="[
         [
-            'id' => 'actual',
-            'name' => 'Actual',
+            'id' => 'strength',
+            'name' => 'Strength',
             'color' => '#2563EB',
             'points' => [
-                ['id' => 'actual-q1', 'label' => 'Q1', 'value' => 82],
-                ['id' => 'actual-q2', 'label' => 'Q2', 'value' => 96],
+                ['id' => 'strength-mon', 'label' => 'Mon', 'value' => 42],
+                ['id' => 'strength-tue', 'label' => 'Tue', 'value' => 51],
             ],
         ],
         [
-            'id' => 'forecast',
-            'name' => 'Forecast',
+            'id' => 'cardio',
+            'name' => 'Cardio',
             'color' => '#F59E0B',
             'points' => [
-                ['id' => 'forecast-q1', 'label' => 'Q1', 'value' => 78],
-                ['id' => 'forecast-q2', 'label' => 'Q2', 'value' => 101],
+                ['id' => 'cardio-mon', 'label' => 'Mon', 'value' => 28],
+                ['id' => 'cardio-tue', 'label' => 'Tue', 'value' => 34],
             ],
         ],
     ]"
-    area-mode="overlay"
-    :legend="[
-        'visible' => true,
-        'position' => 'bottom',
-        'alignment' => 'center',
-        'style' => ['markerSize' => 9],
-    ]"
-    a11y-label="Actual and forecast quarterly totals"
+    area-mode="stacked"
+    :legend="['visible' => true, 'position' => 'bottom']"
+    a11y-label="Weekly training load by activity"
 />
 ```
 
-`area-mode` accepts `overlay` or `stacked`. Bar charts group multiple series by category. Series should use the same ordered x values when comparison or stacking is intended.
+### Bar chart
 
-Scatter charts use the same Cartesian series contract but render independent observations without connecting lines. Numeric, date, and datetime x values retain their actual spacing.
+Bar charts render multiple series as grouped bars. Use matching ordered x values when the series are meant to be compared.
+
+```blade
+<native:bar-chart
+    class="w-full h-72"
+    :series="[
+        [
+            'id' => 'online',
+            'name' => 'Online',
+            'color' => '#7C3AED',
+            'points' => [
+                ['id' => 'online-q1', 'label' => 'Q1', 'value' => 42000],
+                ['id' => 'online-q2', 'label' => 'Q2', 'value' => 51800],
+            ],
+        ],
+        [
+            'id' => 'store',
+            'name' => 'Store',
+            'color' => '#0F766E',
+            'points' => [
+                ['id' => 'store-q1', 'label' => 'Q1', 'value' => 31000],
+                ['id' => 'store-q2', 'label' => 'Q2', 'value' => 38600],
+            ],
+        ],
+    ]"
+    :legend="['visible' => true, 'position' => 'top']"
+    :y-axis="[
+        'valueFormat' => 'currency',
+        'currencyCode' => 'USD',
+        'maximumFractionDigits' => 0,
+    ]"
+    _select="pointSelected"
+    a11y-label="Quarterly revenue by channel"
+/>
+```
+
+### Scatter chart
+
+Scatter points preserve the real spacing of numeric, date, or datetime x values. Unlike line and area charts, scatter defaults to a numeric x-axis.
 
 ```blade
 <native:scatter-chart
     class="w-full h-80"
-    :series="$experimentSeries"
+    :series="[[
+        'id' => 'control',
+        'name' => 'Control',
+        'color' => '#2563EB',
+        'points' => [
+            ['id' => 'control-1', 'x' => 1.2, 'label' => 'Observation 1', 'value' => 0.34],
+            ['id' => 'control-2', 'x' => 2.8, 'label' => 'Observation 2', 'value' => 0.47],
+        ],
+    ]]"
     :x-axis="['type' => 'number', 'labelCount' => 5]"
     :y-axis="['valueFormat' => 'percent', 'maximumFractionDigits' => 0]"
-    :legend="['visible' => true, 'position' => 'top']"
     _select="pointSelected"
-    a11y-label="Conversion observations by cohort"
+    a11y-label="Conversion observations for the control cohort"
 />
 ```
 
-## Pie and donut charts
+Percentage values are fractions: `0.47` renders as `47%`.
 
-Radial charts use ordered `segments`. Segment IDs must be unique, values must be finite and non-negative, and every non-empty chart must contain at least one positive value.
+### Candlestick chart
+
+Candlestick charts accept one ordered series. Every point defines `open`, `high`, `low`, and `close`; the high-low range must contain the candle body. Use a date or datetime x-axis for market data.
+
+```blade
+<native:candlestick-chart
+    class="w-full h-80"
+    :series="[[
+        'id' => 'nio-usd',
+        'name' => 'NIO/USD',
+        'color' => '#2563EB',
+        'points' => [
+            [
+                'id' => '2026-08-28',
+                'label' => '28 Aug',
+                'x' => '2026-08-28',
+                'open' => 36.72,
+                'high' => 36.91,
+                'low' => 36.68,
+                'close' => 36.84,
+            ],
+            [
+                'id' => '2026-08-29',
+                'label' => '29 Aug',
+                'x' => '2026-08-29',
+                'open' => 36.84,
+                'high' => 36.88,
+                'low' => 36.70,
+                'close' => 36.76,
+            ],
+        ],
+    ]]"
+    :x-axis="['type' => 'date', 'dateFormat' => 'medium']"
+    :style="['candlestick' => [
+        'risingColor' => '#15803D',
+        'fallingColor' => '#B91C1C',
+        'neutralColor' => '#64748B',
+        'wickWidth' => 2,
+    ]]"
+    _select="pointSelected"
+    a11y-label="Daily NIO to USD exchange rate"
+/>
+```
+
+### Radar chart
+
+Radar charts require 3 to 24 ordered axes. Each series must provide exactly one value per axis, in the same order, and every value must be between zero and that axis's maximum.
+
+```blade
+<native:radar-chart
+    class="w-full h-80"
+    :axes="[
+        ['id' => 'speed', 'label' => 'Speed', 'maximum' => 100],
+        ['id' => 'quality', 'label' => 'Quality', 'maximum' => 100],
+        ['id' => 'cost', 'label' => 'Cost', 'maximum' => 100],
+    ]"
+    :series="[[
+        'id' => 'nativephp',
+        'name' => 'NativePHP',
+        'color' => '#6366F1',
+        'values' => [
+            ['axis' => 'speed', 'value' => 88],
+            ['axis' => 'quality', 'value' => 92],
+            ['axis' => 'cost', 'value' => 74],
+        ],
+    ]]"
+    :grid-levels="4"
+    :fill-opacity="0.3"
+    :legend="['visible' => true, 'position' => 'bottom']"
+    _select="pointSelected"
+    a11y-label="NativePHP capability profile"
+/>
+```
+
+### Pie and donut charts
+
+Pie and donut charts use ordered `segments`. Every segment needs a unique `id`, a `label`, a non-negative finite `value`, and a `color`. A non-empty chart must contain at least one positive value.
+
+```blade
+<native:pie-chart
+    class="w-full h-72"
+    :segments="[
+        ['id' => 'music', 'label' => 'Music', 'value' => 58, 'color' => '#7C3AED'],
+        ['id' => 'podcasts', 'label' => 'Podcasts', 'value' => 27, 'color' => '#2563EB'],
+        ['id' => 'audiobooks', 'label' => 'Audiobooks', 'value' => 15, 'color' => '#F59E0B'],
+    ]"
+    :legend="['visible' => true, 'position' => 'bottom']"
+    _select="pointSelected"
+    a11y-label="Listening time by format"
+/>
+```
 
 ```blade
 <native:donut-chart
-    class="w-full h-80"
+    class="w-full h-72"
     :segments="[
         ['id' => 'subscriptions', 'label' => 'Subscriptions', 'value' => 48200, 'color' => '#2563EB'],
         ['id' => 'services', 'label' => 'Services', 'value' => 31750, 'color' => '#7C3AED'],
@@ -153,37 +333,23 @@ Radial charts use ordered `segments`. Segment IDs must be unique, values must be
     :inner-radius-ratio="0.62"
     :legend="['visible' => true, 'position' => 'bottom']"
     :style="['segment' => ['gap' => 2, 'cornerRadius' => 7, 'opacity' => 0.96]]"
-    _select="pointSelected"
-    locale="en-US"
     value-format="currency"
     currency-code="USD"
     :maximum-fraction-digits="0"
+    _select="pointSelected"
     a11y-label="Quarterly revenue by channel"
 />
 ```
 
-Pie fixes the inner radius at `0`. Donut defaults to `0.6` and accepts `0.2` through `0.85`. `style.segment.gap` is an angular gap from 0–12 degrees, `cornerRadius` accepts 0–20 points, and `opacity` accepts 0–1. Radial selections use the same `PointSelection` version 1 payload: the segment ID is exposed as both `series_id` and `point_id`, while its label is the series name, x value, and visible label.
+Pie fixes the inner radius at `0`. Donut defaults to `0.6` and accepts `0.2` through `0.85`.
 
-## Radar and candlestick charts
+## API guide
 
-These elements belong to Unreleased 1.1 and must not be treated as stable while their native acceptance gates remain open.
+Use this section after the first chart renders to add interaction, formatting, legends, and semantic styling.
 
-Radar charts define 3–24 ordered axes with independent positive maximums. Every series must provide exactly one value for each axis in the same order. Use `grid-levels` from 2–10 and `fill-opacity` from 0–1 to control the native polygon renderer.
+### Selection and PHP callbacks
 
-Candlestick charts accept zero or one ordered series. Every point requires finite `open`, `high`, `low`, and `close` values with a valid OHLC range. The close is used as the selection value. LTTB sampling is intentionally rejected because reducing candles could hide financial extremes. The neutral `style.candlestick` section accepts `risingColor`, `fallingColor`, `neutralColor`, and `wickWidth`; a series may override any of those values without exposing Swift or Compose paint APIs.
-
-## Selection and PHP callbacks
-
-Use the `_select` callback attribute from NativePHP's UI component contract. Selection and the tooltip update immediately on the native side; the PHP callback is a separate effect.
-
-```blade
-<native:bar-chart
-    class="w-full h-72"
-    :series="$series"
-    _select="pointSelected"
-    a11y-label="Revenue by channel"
-/>
-```
+Bind `_select` to a public method on the surrounding `NativeComponent`. Native selection and tooltips update immediately; the PHP callback receives the selected identity and value as JSON.
 
 ```php
 use Donmanueldev\NativephpCharts\PointSelection;
@@ -193,6 +359,7 @@ public ?string $selectedPointId = null;
 public function pointSelected(string $payload): void
 {
     $selection = PointSelection::fromJson($payload);
+
     $this->selectedPointId = $selection->pointId;
 }
 ```
@@ -205,11 +372,11 @@ The fluent element API uses `->onSelect('pointSelected')`. Callback payload vers
   "chart_type": "bar",
   "series_id": "online",
   "series_name": "Online",
-  "point_id": "online-jan",
+  "point_id": "online-q1",
   "point_index": 0,
   "x_type": "category",
-  "x": "January",
-  "label": "January",
+  "x": "Q1",
+  "label": "Q1",
   "value": 42000,
   "localized_value": "$42,000"
 }
@@ -217,22 +384,14 @@ The fluent element API uses `->onSelect('pointSelected')`. Callback payload vers
 
 Treat `localized_value` as presentation text. Use `value`, IDs, and `x` for application logic.
 
-## Axis and formatting
+### Axes and formatting
 
-The existing v0.2 scalar formatter props remain supported. The structured axis API adds typed x values while `y-axis` can override the scalar y formatter. Fluent configuration uses last-call-wins semantics for conflicting scalar and structured y options; partial non-conflicting calls are merged.
+Cartesian charts accept structured `x-axis` and `y-axis` maps. Scalar formatting props remain supported; a structured y-axis value overrides the corresponding scalar value.
 
 ```blade
 <native:line-chart
     class="w-full h-80"
-    :series="[[
-        'id' => 'balance',
-        'name' => 'Balance',
-        'color' => '#7C3AED',
-        'points' => [
-            ['id' => 'balance-aug-01', 'x' => '2026-08-01', 'label' => '1 Aug', 'value' => 1050.25],
-            ['id' => 'balance-aug-15', 'x' => '2026-08-15', 'label' => '15 Aug', 'value' => 1288.40],
-        ],
-    ]]"
+    :series="$balanceSeries"
     :x-axis="[
         'type' => 'date',
         'dateFormat' => 'medium',
@@ -240,128 +399,116 @@ The existing v0.2 scalar formatter props remain supported. The structured axis A
     ]"
     :y-axis="[
         'valueFormat' => 'currency',
-        'currencyCode' => 'USD',
-        'minimumFractionDigits' => 2,
+        'currencyCode' => 'NIO',
         'maximumFractionDigits' => 2,
     ]"
-    locale="en-US"
+    locale="es-NI"
     a11y-label="Account balance over time"
 />
 ```
 
-X-axis types:
-
-| Type | Point `x` |
+| X-axis type | Point `x` value |
 | --- | --- |
-| `category` | Optional; defaults to `label` |
-| `number` | Finite integer or float; integers must fit `±9,007,199,254,740,991` |
+| `category` | Optional string; defaults to `label` |
+| `number` | Finite integer or float |
 | `date` | Strict `YYYY-MM-DD` |
 | `datetime` | RFC 3339 with `Z` or an explicit offset |
 
-Line, area, bar, and candlestick charts default to a category x-axis. Scatter defaults to a number x-axis. The `x-axis` map accepts `type`, `title`, `minimum`, `maximum`, `baseline`, `interval`, `dateFormat`, `timezone`, `visible`, and `labelCount`; the `y-axis` map accepts `title`, `minimum`, `maximum`, `baseline`, `interval`, `valueFormat`, `currencyCode`, `minimumFractionDigits`, `maximumFractionDigits`, `visible`, `labelCount`, and `beginAtZero`. Snake-case aliases are also accepted. Axis `labelCount` must be between 2 and 12. Axis visibility controls the corresponding axis, while `style.axis.visible` remains the shared visual fallback.
+`x-axis` accepts `type`, `title`, `minimum`, `maximum`, `baseline`, `interval`, `dateFormat`, `timezone`, `visible`, and `labelCount`. `y-axis` accepts `title`, `minimum`, `maximum`, `baseline`, `interval`, `valueFormat`, `currencyCode`, `minimumFractionDigits`, `maximumFractionDigits`, `visible`, `labelCount`, and `beginAtZero`.
 
-Integer chart values use the same exact cross-platform range as numeric x values, so PHP, JSON, Swift, and Kotlin preserve them without precision loss. Date formats are `short`, `medium`, `long`, and `full`; datetime axes also support `time` for compact, locale-aware time-only labels. Valid datetime fractional seconds are preserved. Timezones use IANA identifiers such as `America/Managua`. Currency accepts normalized three-letter codes such as `USD` and `NIO`; platform formatters determine display support. Percentage values are fractions: `0.92` renders as `92%`.
+Date formats are `short`, `medium`, `long`, and `full`; datetime axes also accept `time`. Timezones use IANA identifiers such as `America/Managua`. Currency uses a three-letter code such as `USD` or `NIO`. Axis `labelCount` must be between 2 and 12.
 
-## Public properties
+### Legends and styles
 
-| Blade property | Default | Description |
-| --- | --- | --- |
-| `series` | `[]` | Ordered, uniquely identified series and points. |
-| `show-grid` | `true` | Shows chart grid lines. |
-| `show-points` | `true` | Shows line/area symbols. On bars it preserves the v0.2 axis-visibility fallback unless an axis/style override is supplied. |
-| `begin-at-zero` | `true` | Includes zero in line/bar y domains. Area charts retain zero as their fill baseline. |
-| `animated` | `true` | Enables native reveal and update animation. |
-| `empty-label` | `No data` | Visible and accessible empty state. |
-| `a11y-label` | `Chart` | Purpose announced by assistive technology. |
-| `locale` | Device locale | BCP-47 locale such as `es-NI`. |
-| `value-format` | `number` | `number`, `currency`, or `percent`. |
-| `currency-code` | None | Required normalized three-letter code for currency formatting. |
-| `minimum-fraction-digits` | Formatter default | Integer from 0 to 8. |
-| `maximum-fraction-digits` | Formatter default | Integer from 0 to 8. |
-| `x-axis` | Category; number for scatter | Type, title, visibility, label count, explicit domain, baseline, interval, date format, and timezone. |
-| `y-axis` | Scalar formatter props | Title, visibility, label count, explicit domain, baseline, interval, and value formatting. |
-| `annotations` | `[]` | Ordered semantic `line` and `band` annotations on the x or y axis. |
-| `interaction` | Tap, x crosshair, single tooltip | Selection mode, logical crosshair, and tooltip aggregation. |
-| `viewport` | Disabled | Explicit numeric/date x range with independently enabled pan and zoom. |
-| `sampling` | `none` | Opt-in `lttb` sampling with an explicit point threshold. |
-| `legend` | Visible for multiple series | Position, alignment, and semantic style. |
-| `_select` | None | PHP method receiving selection JSON. |
-| `_viewport_change` | None | PHP method receiving a versioned viewport JSON payload after a gesture settles. |
-| `style` | `[]` | Platform-neutral visual configuration. |
-| `area-mode` | `overlay` | Area only: `overlay` or `stacked`. |
-| `mode` | `grouped` | Bar only: `grouped` or `stacked`. |
-| `orientation` | `vertical` | Bar only: `vertical` or `horizontal`. |
-| `segments` | `[]` | Pie/donut only: ordered, uniquely identified radial segments. |
-| `inner-radius-ratio` | `0` pie / `0.6` donut | Donut cutout ratio from `0.2` through `0.85`. |
-| `axes` | `[]` | Radar only: 3–24 ordered axes with unique IDs, labels, and positive maximums. |
-| `grid-levels` | `5` | Radar only: polygon grid levels from 2 through 10. |
-| `fill-opacity` | `0.22` | Radar only: series fill opacity from 0 through 1. |
+`legend` accepts `visible` (`true`, `false`, or automatic when omitted), `position` (`top`, `bottom`, `leading`, or `trailing`), `alignment` (`start`, `center`, or `end`), and a nested `style` map.
 
-Each Cartesian series may define its own `style`. Line and area series also accept `fill_to`; points may provide both `error_min` and `error_max`. Scrub and one-finger pan are mutually exclusive so gesture ownership stays deterministic; pinch zoom remains available. Sampling never runs unless `mode` is explicitly `lttb`. Blade uses kebab case. The fluent PHP API uses camelCase methods such as `showGrid()`, `xAxis()`, `yAxis()`, `annotations()`, `interaction()`, `viewport()`, `sampling()`, `onSelect()`, `onViewportChange()`, `areaMode()`, `mode()`, `orientation()`, `axes()`, `gridLevels()`, and `fillOpacity()`.
-
-## Style
-
-The neutral style map supports these sections:
-
-- `line`: `color`, `width`, `interpolation` (`linear|smooth|step_before|step_after`), and `dash`.
-- `area`: `opacity`, `gradient` (native vertical gradient by default; set `false` for a solid fill).
-- `bar`: `radius`, `width` (points on iOS, density-independent pixels on Android; automatic width remains the default).
-- `candlestick`: `risingColor`, `fallingColor`, `neutralColor`, `wickWidth` (points on iOS and density-independent pixels on Android).
-- `points`: `visible`, `color`, `size`.
-- `grid`: `visible`, `color`, `width`.
-- `axis`: `visible`, `color`, `labelColor`, `font`, `fontSize`, `labelCount`.
-- `segment` (pie/donut): `gap`, `cornerRadius`, `opacity`.
-
-Colors accept `#RGB`, `#RRGGBB`, CSS-alpha `#RRGGBBAA`, `black`, `white`, and `transparent`. Axis fonts accept NativePHP font aliases and fall back to the system font when unresolved.
-
-`axis.labelCount` applies to Cartesian axes. Radar rejects it instead of accepting a renderer no-op; its spatial axis labels are derived from the declared radar axes.
-
-## Accessibility and performance
-
-- Always provide a localized `a11y-label` describing the chart's purpose.
-- Stable point IDs keep selection and updates deterministic even when labels repeat.
-- Large accessibility descriptions are bounded instead of concatenating an unbounded dataset.
-- Native renderers decode configuration once per update and reuse domains and formatters.
-- The package does not silently remove or sample points. Opt-in LTTB sampling preserves endpoints, stable IDs, and original indexes for line, area, and scatter datasets.
-- Native rendering is not a promise of unlimited data. Validate 10, 100, 1,000, and 10,000-point cases against your target devices and interaction needs.
-
-## Updating from v0.2
-
-Existing single-series calls remain valid. Scalar formatting props remain authoritative unless the corresponding structured `y-axis` value is supplied. Add explicit point IDs before enabling selection or frequent insert/reorder updates.
-
-After updating, confirm registration, validate the manifest, regenerate stale native shells if required, and rebuild the selected platform:
-
-```bash
-composer update donmanueldev/nativephp-charts
-php artisan native:plugin:list
-php artisan native:plugin:validate
+```blade
+:legend="[
+    'visible' => true,
+    'position' => 'bottom',
+    'alignment' => 'center',
+    'style' => [
+        'font' => 'accent',
+        'fontSize' => 12,
+        'labelColor' => '#475569',
+        'markerSize' => 9,
+    ],
+]"
 ```
 
-## Testing and evidence
+The platform-neutral `style` map supports:
+
+- `line`: `color`, `width`, `interpolation` (`linear`, `smooth`, `step_before`, `step_after`), and an even-length `dash` list.
+- `area`: `opacity` and `gradient`.
+- `bar`: `radius` and optional `width`.
+- `candlestick`: `risingColor`, `fallingColor`, `neutralColor`, and `wickWidth`.
+- `points`: `visible`, `color`, and `size`.
+- `grid`: `visible`, `color`, and `width`.
+- `axis`: `visible`, `color`, `labelColor`, `font`, `fontSize`, and `labelCount`.
+- `segment`: `gap`, `cornerRadius`, and `opacity` for pie and donut charts.
+
+Colors accept `#RGB`, `#RRGGBB`, CSS-alpha `#RRGGBBAA`, `black`, `white`, and `transparent`. Axis and legend fonts accept bundled NativePHP font tokens or configured aliases and fall back to the system font when unresolved.
+
+### Public properties
+
+| Blade property | Default | Applies to | Description |
+| --- | --- | --- | --- |
+| `series` | `[]` | Cartesian, radar | Ordered series containing points or radar axis values. |
+| `segments` | `[]` | Pie, donut | Ordered, uniquely identified radial segments. |
+| `axes` | `[]` | Radar | Ordered axis definitions with unique IDs, labels, and positive maximums. |
+| `show-grid` | `true` | Cartesian | Shows chart grid lines. |
+| `show-points` | `true` | Line, area; legacy bar fallback | Shows point symbols; on bars it preserves the legacy axis fallback. |
+| `begin-at-zero` | `true` | Line, bar | Includes zero in the y domain. Area retains zero as its fill baseline. |
+| `animated` | `true` | All | Enables native reveal and update animation. |
+| `empty-label` | `No data` | All | Visible and accessible empty state. |
+| `a11y-label` | `Chart` | All | Purpose announced by assistive technology. Supply an application-specific label. |
+| `locale` | Device locale | All | BCP-47 locale such as `es-NI` or `en-US`. |
+| `value-format` | `number` | All | `number`, `currency`, or `percent`. |
+| `currency-code` | None | All | Required three-letter code when the value format is currency. |
+| `minimum-fraction-digits` | Formatter default | All | Integer from 0 to 8. |
+| `maximum-fraction-digits` | Formatter default | All | Integer from 0 to 8. |
+| `x-axis` | Category; number for scatter | Cartesian | Structured x-axis configuration. |
+| `y-axis` | Scalar formatter props | Cartesian | Structured y-axis and value formatting. |
+| `legend` | Visible for multiple items | All | Visibility, position, alignment, and semantic style. |
+| `_select` | None | All | PHP method receiving selection JSON. |
+| `style` | `[]` | All | Chart-specific, platform-neutral visual configuration. |
+| `area-mode` | `overlay` | Area | `overlay` or `stacked`. |
+| `inner-radius-ratio` | `0.6` | Donut | Cutout ratio from `0.2` through `0.85`. |
+| `grid-levels` | `5` | Radar | Polygon grid level count from 2 through 10. |
+| `fill-opacity` | `0.22` | Radar | Series fill opacity from 0 through 1. |
+
+Blade uses kebab case. The fluent PHP API uses camelCase methods such as `series()`, `segments()`, `axes()`, `showGrid()`, `xAxis()`, `yAxis()`, `legend()`, `style()`, `onSelect()`, `areaMode()`, `innerRadiusRatio()`, `gridLevels()`, and `fillOpacity()`.
+
+## Validation and quality
+
+### Validation rules
+
+- Collections must be ordered PHP lists, not associative maps.
+- Series IDs must be unique within a chart; point IDs must be unique within their series.
+- Numeric values must be finite. Exact cross-platform integers are limited to `±9,007,199,254,740,991`.
+- Segment values must be non-negative, and a populated pie or donut needs at least one positive segment.
+- Candlestick points require finite OHLC values and a valid high-low range; only one series is accepted.
+- Radar charts require 3 to 24 ordered axes and one in-range value per axis for every series.
+- `minimumFractionDigits` cannot exceed `maximumFractionDigits`; each accepts 0 through 8.
+- Explicit axis minimums must not exceed maximums. Intervals must be positive.
+- Category x-axes do not accept an explicit numeric/date domain.
+- Unknown axis, legend, style, series, point, and segment options are rejected instead of silently ignored.
+
+### Accessibility and performance
+
+- Always provide a localized `a11y-label` describing the chart's purpose.
+- Use stable IDs so selection remains deterministic across updates and reordering.
+- Native renderers bound large accessibility summaries instead of reading an unbounded dataset.
+- Native rendering is not a promise of unlimited data. Validate realistic and worst-case datasets on every target device.
+- Simulator and host tests do not replace VoiceOver, TalkBack, text scaling, gesture, and performance checks on physical devices.
+
+### Testing and evidence
 
 ```bash
 composer test
-swift test
 ```
 
-PHP tests prove normalization, serialization, compatibility, and callback registration. The package-owned Swift harness compiles the iOS renderers and exercises native geometry, interaction, formatting, and accessibility helpers. Neither gate proves rendered geometry or gestures in a simulator, emulator, or physical device, so those results must be recorded separately.
-
-### 1.1 native acceptance matrix
-
-The following matrix is the release gate for 1.1. A checked CI build is necessary but not sufficient. Record the current Android emulator, iOS simulator, Android device, and iOS device result for every row before changing this README, `nativephp.json`, or the release status to stable.
-
-| Chart | Required native fixture evidence | Current release state |
-| --- | --- | --- |
-| Line | Empty, single/constant, mixed-sign, dense, long labels, selection, tooltip, callback, pan and pinch viewport | Pending device evidence |
-| Area | Overlay and stacked multi-series, zero baseline, clipping, selection, tooltip, callback, dark appearance | Pending device evidence |
-| Bar | Grouped and stacked, vertical and horizontal, extreme-bar selection, clipping, pan and pinch | Pending device evidence |
-| Scatter | Number, date, and datetime x values, dense points, error ranges, selection, tooltip, callback | Pending device evidence |
-| Pie | Empty and populated composition, long labels, segment selection, tooltip, callback, text scale | Pending device evidence |
-| Donut | Empty and populated composition, inner-radius bounds, long labels, selection, tooltip, callback | Pending device evidence |
-| Radar | Three and 24 axes, dense labels, polygon selection, tooltip, callback, text scale | Pending device evidence |
-| Candlestick | Empty and OHLC data, wick/body/extreme selection, tooltip, callback, date viewport and clipping | Pending device evidence |
-
-For every populated fixture, run both `es-NI` with `NIO` and `en-US` with `USD`, use stable IDs across a data update, test light and dark appearance, and exercise VoiceOver or TalkBack at the platform's enlarged text setting. Treat a missing cell as a failed release gate, not as an implicit pass.
+PHP tests prove normalization, serialization, compatibility, and callback registration. Native compilation, simulator/emulator rendering, interaction, accessibility, and physical-device performance remain separate acceptance gates.
 
 ## Platform and frontend scope
 
