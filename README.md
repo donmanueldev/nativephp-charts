@@ -344,9 +344,7 @@ composer test
 swift test
 ```
 
-PHP tests prove normalization, serialization, compatibility, and callback registration. The package-owned Swift harness compiles the iOS renderers and exercises native geometry, interaction, formatting, and accessibility helpers. The Android integration job compiles the generated shell from a clean consuming application. Neither gate proves rendered geometry or gestures in a simulator, emulator, or physical device, so those results must be recorded separately.
-
-The `Android native integration` CI job creates an ephemeral Laravel application, installs this checkout as a NativePHP plugin, regenerates the Android shell, and runs `:app:assembleDebug`. Its Gradle log is uploaded as a workflow artifact. This gate catches Kotlin, Compose, generated-shell, and plugin-registration failures; it does not replace interaction or accessibility acceptance on hardware.
+PHP tests prove normalization, serialization, compatibility, and callback registration. The package-owned Swift harness compiles the iOS renderers and exercises native geometry, interaction, formatting, and accessibility helpers. Neither gate proves rendered geometry or gestures in a simulator, emulator, or physical device, so those results must be recorded separately.
 
 ### 1.1 native acceptance matrix
 
