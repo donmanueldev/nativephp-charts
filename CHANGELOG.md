@@ -4,8 +4,25 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-01
+
+### Added
+
+- Native candlestick charts with validated OHLC data, semantic candle styling, selection, and accessibility summaries.
+- Native radar charts with ordered axes, multiple series, grid and fill controls, selection, and accessibility summaries.
+- Platform-neutral viewport, annotation, sampling, and interaction contracts for Cartesian charts.
+- Interactive documentation with installation guidance, Blade examples, and native iOS and Android captures.
+
+### Changed
+
+- Expanded Cartesian styling and interaction depth across the Swift and Jetpack Compose renderers.
+- Improved native rendering efficiency by precomputing repeated chart geometry.
+- Reorganized the README around installation, a complete first-chart workflow, chart examples, and API reference.
+
 ### Fixed
 
+- Hardened radar and candlestick geometry, clipping, selection, and label handling across both platforms.
+- Applied viewport constraints consistently to horizontal bars and their selection geometry.
 - Datetime annotation bands now retain fractional-second ordering, matching the documented datetime axis contract.
 
 ## [1.0.0] - 2026-08-28
@@ -48,6 +65,8 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 - Initial native line chart component for NativePHP Mobile.
 
+[Unreleased]: https://github.com/donmanueldev/nativephp-charts/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/donmanueldev/nativephp-charts/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/donmanueldev/nativephp-charts/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/donmanueldev/nativephp-charts/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/donmanueldev/nativephp-charts/releases/tag/v0.1.0

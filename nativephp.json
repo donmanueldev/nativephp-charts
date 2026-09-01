@@ -1,6 +1,6 @@
 {
     "name": "donmanueldev/nativephp-charts",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Native charts for NativePHP Mobile, rendered with Swift Charts and Jetpack Compose Canvas.",
     "namespace": "NativePHPCharts",
     "platforms": [
