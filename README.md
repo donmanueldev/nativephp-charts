@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/assets/brand/nativephp-charts-lockup.svg" width="420" alt="NativePHP Charts">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/nativephp-charts-lockup-dark.svg">
+    <img src="docs/assets/brand/nativephp-charts-lockup.svg" width="420" alt="NativePHP Charts">
+  </picture>
 </p>
 
 # NativePHP Charts
