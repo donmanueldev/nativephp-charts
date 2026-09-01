@@ -1,6 +1,5 @@
 package com.donmanueldev.plugins.nativephp_charts.ui
 
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.nativephp.mobile.ui.nativerender.ColorParser
@@ -9,19 +8,19 @@ import org.json.JSONObject
 
 internal object NativePHPChartsDecoder {
     fun decode(input: NativePHPChartsWireInput, kind: NativePHPChartsKind): NativePHPChartsConfiguration {
-        val styleRoot = input.styleJson.asObject("style_json")
+        val styleRoot = input.styleJson.asObject()
         val legacyAxis = styleRoot.optJSONObject("axis")
 
         return NativePHPChartsConfiguration(
             kind = kind,
             series = decodeSeries(input.seriesJson),
             style = decodeStyle(styleRoot, kind),
-            xAxis = decodeXAxis(input.xAxisJson.asObject("x_axis_json"), legacyAxis),
-            yAxis = decodeYAxis(input.yAxisJson.asObject("y_axis_json"), legacyAxis, input),
-            legend = decodeLegend(input.legendJson.asObject("legend_json")),
+            xAxis = decodeXAxis(input.xAxisJson.asObject(), legacyAxis),
+            yAxis = decodeYAxis(input.yAxisJson.asObject(), legacyAxis, input),
+            legend = decodeLegend(input.legendJson.asObject()),
             annotations = decodeAnnotations(input.annotationsJson),
-            interaction = decodeInteraction(input.interactionJson.asObject("interaction_json")),
-            viewport = decodeViewport(input.viewportJson.asObject("viewport_json")),
+            interaction = decodeInteraction(input.interactionJson.asObject()),
+            viewport = decodeViewport(input.viewportJson.asObject()),
             areaMode = input.areaMode,
             barMode = input.barMode,
             barOrientation = input.barOrientation,
@@ -43,7 +42,6 @@ internal object NativePHPChartsDecoder {
             for (seriesIndex in 0 until root.length()) {
                 val item = root.optJSONObject(seriesIndex)
                 if (item == null) {
-                    Log.w(LOG_TAG, "Ignoring non-object chart series at index $seriesIndex")
                     continue
                 }
                 val id = item.optString("id", "series-$seriesIndex")
@@ -57,12 +55,10 @@ internal object NativePHPChartsDecoder {
                             for (pointIndex in 0 until points.length()) {
                                 val point = points.optJSONObject(pointIndex)
                                 if (point == null) {
-                                    Log.w(LOG_TAG, "Ignoring non-object chart point at series $seriesIndex, index $pointIndex")
                                     continue
                                 }
                                 val value = point.optDouble("value", Double.NaN)
                                 if (!value.isFinite()) {
-                                    Log.w(LOG_TAG, "Ignoring non-finite chart point at series $seriesIndex, index $pointIndex")
                                     continue
                                 }
                                 add(
@@ -89,8 +85,7 @@ internal object NativePHPChartsDecoder {
                 )
             }
         }
-    } catch (exception: Exception) {
-        Log.w(LOG_TAG, "Unable to decode series_json; rendering the empty state", exception)
+    } catch (_: Exception) {
         emptyList()
     }
 
@@ -257,8 +252,7 @@ internal object NativePHPChartsDecoder {
                 )
             }
         }
-    } catch (exception: Exception) {
-        Log.w(LOG_TAG, "Unable to decode annotations_json; ignoring annotations", exception)
+    } catch (_: Exception) {
         emptyList()
     }
 
@@ -279,12 +273,9 @@ internal object NativePHPChartsDecoder {
     )
 }
 
-private const val LOG_TAG = "NativePHPCharts"
-
-private fun String.asObject(property: String): JSONObject = try {
+private fun String.asObject(): JSONObject = try {
     JSONObject(this)
-} catch (exception: Exception) {
-    Log.w(LOG_TAG, "Unable to decode $property; using defaults", exception)
+} catch (_: Exception) {
     JSONObject()
 }
 

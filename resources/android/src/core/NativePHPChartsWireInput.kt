@@ -1,6 +1,5 @@
 package com.donmanueldev.plugins.nativephp_charts.ui
 
-import android.util.Log
 import android.util.LruCache
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 import java.io.File
@@ -79,8 +78,7 @@ internal data class NativePHPChartsWireInput(
 
             return try {
                 File(path).readText(Charsets.UTF_8).also { seriesFileCache.put(path, it) }
-            } catch (exception: Exception) {
-                Log.w("NativePHPCharts", "Unable to read the externalized series payload", exception)
+            } catch (_: Exception) {
                 "[]"
             }
         }

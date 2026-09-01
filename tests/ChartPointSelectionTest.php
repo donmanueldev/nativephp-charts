@@ -87,6 +87,9 @@ it('rejects malformed or incompatible selection payloads', function (string $jso
     'invalid numeric x' => [json_encode([
         'version' => 1, 'chart_type' => 'bar', 'x_type' => 'number', 'x' => '1', 'value' => 1,
     ]), 'finite integer or float'],
+    'boolean numeric x' => [json_encode([
+        'version' => 1, 'chart_type' => 'line', 'x_type' => 'number', 'x' => true, 'value' => 1,
+    ]), 'finite integer or float'],
 ]);
 
 it('decodes scatter and radial selections with the shared version 1 payload', function (string $chartType) {

@@ -577,10 +577,10 @@ private fun radarPath(points: List<Offset>, interpolation: String): Path = Path(
 
 private fun decodeRadarConfiguration(node: NativeUINode): NativePHPChartsRadarConfiguration {
     val props = node.props
-    val axes = radarArray(props.getString("axes_json", "[]"), "axes_json") { item, _ ->
+    val axes = radarArray(props.getString("axes_json", "[]")) { item, _ ->
         NativePHPChartsRadarAxis(item.getString("id"), item.getString("label"), item.getDouble("maximum"))
     }
-    val series = radarArray(props.getString("series_json", "[]"), "series_json") { item, _ ->
+    val series = radarArray(props.getString("series_json", "[]")) { item, _ ->
         NativePHPChartsRadarSeries(
             id = item.getString("id"),
             name = item.getString("name"),
@@ -651,10 +651,8 @@ private fun radarObject(json: String): JSONObject = runCatching { JSONObject(jso
 
 private fun <Value : Any> radarArray(
     json: String,
-    property: String,
     transform: (JSONObject, Int) -> Value?,
 ): List<Value> = runCatching { radarArray(JSONArray(json), transform) }.getOrElse {
-    android.util.Log.w("NativePHPCharts", "Unable to decode $property; rendering the empty state", it)
     emptyList()
 }
 

@@ -13,6 +13,7 @@ internal object NativePHPChartsSelection {
     ) {
         if (configuration.onSelect == 0) return
         val point = datum.point
+        val x = point.nativePHPChartsSelectionX(configuration.xAxis.type) ?: return
         val payload = JSONObject()
             .put("version", 1)
             .put("chart_type", configuration.kind.name.lowercase())
@@ -21,13 +22,23 @@ internal object NativePHPChartsSelection {
             .put("point_id", point.id)
             .put("point_index", point.index)
             .put("x_type", configuration.xAxis.type.name.lowercase())
-            .put("x", point.x)
+            .put("x", x)
             .put("label", point.label)
             .put("value", point.value)
             .put("localized_value", formatting.value(point.value))
             .toString()
         NativeUIBridge.sendTextChangeEvent(configuration.onSelect, node.id, payload)
     }
+}
+
+internal fun NativePHPChartsPoint.nativePHPChartsSelectionX(
+    type: NativePHPChartsXType,
+): Any? = when (type) {
+    NativePHPChartsXType.Category -> (x as? String)?.takeIf(String::isNotBlank) ?: label
+    NativePHPChartsXType.Number -> (x as? Number)?.takeIf { it.toDouble().isFinite() }
+    NativePHPChartsXType.Date,
+    NativePHPChartsXType.Datetime,
+    -> x as? String
 }
 
 internal fun NativePHPChartsPoint.nativePHPChartsAccessibleValue(
