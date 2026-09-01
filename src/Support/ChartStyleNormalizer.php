@@ -6,13 +6,14 @@ use InvalidArgumentException;
 
 final class ChartStyleNormalizer
 {
-    /** @return array<string, array<string, bool|float|int|string>> */
+    /** @return array<string, array<string, mixed>> */
     public static function normalize(array $style, string $chartType, string $chartName): array
     {
         $allowed = [
-            'line' => ['color', 'width', 'interpolation'],
+            'line' => ['color', 'width', 'interpolation', 'dash'],
             'area' => ['opacity', 'gradient'],
             'bar' => ['radius', 'corner_radius', 'cornerRadius', 'width'],
+            'candlestick' => ['rising_color', 'risingColor', 'falling_color', 'fallingColor', 'neutral_color', 'neutralColor', 'wick_width', 'wickWidth'],
             'segment' => ['gap', 'corner_radius', 'cornerRadius', 'opacity'],
             'points' => ['visible', 'color', 'size'],
             'grid' => ['visible', 'color', 'width'],
@@ -23,6 +24,8 @@ final class ChartStyleNormalizer
             'area' => ['line', 'area', 'points', 'grid', 'axis'],
             'bar' => ['bar', 'grid', 'axis'],
             'scatter' => ['points', 'grid', 'axis'],
+            'candlestick' => ['bar', 'candlestick', 'grid', 'axis'],
+            'radar' => ['line', 'area', 'points', 'grid', 'axis'],
             'pie', 'donut' => ['segment'],
             default => throw new InvalidArgumentException("The chart type '{$chartType}' is not supported."),
         };
@@ -36,7 +39,7 @@ final class ChartStyleNormalizer
             }
 
             foreach ($values as $key => $value) {
-                if (! is_string($key) || ! in_array($key, $allowed[$section], true)) {
+                if (! is_string($key) || ! in_array($key, self::allowedOptions($allowed[$section], $chartType, $section), true)) {
                     throw new InvalidArgumentException("The {$chartName} style option '{$section}.{$key}' is not supported.");
                 }
             }
@@ -45,6 +48,7 @@ final class ChartStyleNormalizer
                 'line' => self::line($values, $chartName),
                 'area' => self::area($values, $chartName),
                 'bar' => self::bar($values, $chartName),
+                'candlestick' => self::candlestick($values, $chartName),
                 'segment' => self::segment($values, $chartName),
                 'points' => self::points($values, $chartName),
                 'grid' => self::grid($values, $chartName),
@@ -65,11 +69,24 @@ final class ChartStyleNormalizer
             $normalized['width'] = self::positiveNumber($style['width'], $chartName, 'line.width', 16.0);
         }
         if (array_key_exists('interpolation', $style)) {
-            if (! is_string($style['interpolation']) || ! in_array($style['interpolation'], ['linear', 'smooth'], true)) {
-                throw new InvalidArgumentException("The {$chartName} style line.interpolation must be linear or smooth.");
+            if (! is_string($style['interpolation']) || ! in_array($style['interpolation'], ['linear', 'smooth', 'step_before', 'step_after'], true)) {
+                throw new InvalidArgumentException("The {$chartName} style line.interpolation must be linear, smooth, step_before, or step_after.");
             }
 
             $normalized['interpolation'] = $style['interpolation'];
+        }
+        if (array_key_exists('dash', $style)) {
+            if (! is_array($style['dash']) || ! array_is_list($style['dash']) || count($style['dash']) < 2 || count($style['dash']) > 8 || count($style['dash']) % 2 !== 0) {
+                throw new InvalidArgumentException("The {$chartName} style line.dash must be a list of 2, 4, 6, or 8 numbers.");
+            }
+
+            $normalized['dash'] = array_map(function (mixed $value) use ($chartName): float {
+                if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value) || $value <= 0 || $value > 128) {
+                    throw new InvalidArgumentException("The {$chartName} style line.dash values must be greater than zero and no more than 128.");
+                }
+
+                return (float) $value;
+            }, $style['dash']);
         }
 
         return $normalized;
@@ -130,6 +147,30 @@ final class ChartStyleNormalizer
 
         if (array_key_exists('opacity', $style)) {
             $normalized['opacity'] = self::numberInRange($style['opacity'], $chartName, 'segment.opacity', 0, 1);
+        }
+
+        return $normalized;
+    }
+
+    private static function candlestick(array $style, string $chartName): array
+    {
+        $normalized = [];
+        foreach ([
+            'rising_color' => ['rising_color', 'risingColor'],
+            'falling_color' => ['falling_color', 'fallingColor'],
+            'neutral_color' => ['neutral_color', 'neutralColor'],
+        ] as $normalizedKey => $aliases) {
+            foreach ($aliases as $alias) {
+                if (array_key_exists($alias, $style)) {
+                    $normalized[$normalizedKey] = self::color($style[$alias], $chartName, "candlestick.{$alias}");
+                    break;
+                }
+            }
+        }
+
+        $wickWidth = $style['wick_width'] ?? $style['wickWidth'] ?? null;
+        if ($wickWidth !== null) {
+            $normalized['wick_width'] = self::positiveNumber($wickWidth, $chartName, 'candlestick.wickWidth', 8.0);
         }
 
         return $normalized;
@@ -247,5 +288,17 @@ final class ChartStyleNormalizer
         }
 
         return (float) $value;
+    }
+
+    /** @param list<string> $options
+     * @return list<string>
+     */
+    private static function allowedOptions(array $options, string $chartType, string $section): array
+    {
+        if ($chartType === 'radar' && $section === 'axis') {
+            return array_values(array_diff($options, ['label_count', 'labelCount']));
+        }
+
+        return $options;
     }
 }

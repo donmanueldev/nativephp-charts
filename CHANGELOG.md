@@ -6,7 +6,7 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 ### Fixed
 
-- Kept Laravel view tooling development-only so consuming NativePHP applications install no redundant runtime dependencies.
+- Datetime annotation bands now retain fractional-second ordering, matching the documented datetime axis contract.
 
 ## [1.0.0] - 2026-08-28
 

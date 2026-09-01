@@ -1,12 +1,18 @@
 import Foundation
 
 struct NativePHPChartsWireInput: Equatable {
+    nonisolated(unsafe) private static let seriesFileCache = NSCache<NSString, NSString>()
+
     let contractVersion: Int
     let seriesJSON: String
     let styleJSON: String
     let xAxisJSON: String
     let yAxisJSON: String
     let legendJSON: String
+    let annotationsJSON: String
+    let interactionJSON: String
+    let viewportJSON: String
+    let samplingJSON: String
     let locale: String
     let valueFormat: String
     let currencyCode: String
@@ -19,15 +25,22 @@ struct NativePHPChartsWireInput: Equatable {
     let emptyLabel: String
     let accessibilityLabel: String
     let onSelect: Int
+    let onViewportChange: Int
     let areaMode: String
+    let barMode: String
+    let barOrientation: String
 
     init(node: NativeUINode) {
         contractVersion = node.props.getInt("contract_version", default: 0)
-        seriesJSON = node.props.getString("series_json", default: "[]")
+        seriesJSON = Self.resolveSeriesJSON(node: node)
         styleJSON = node.props.getString("style_json", default: "{}")
         xAxisJSON = node.props.getString("x_axis_json", default: "{}")
         yAxisJSON = node.props.getString("y_axis_json", default: "{}")
         legendJSON = node.props.getString("legend_json", default: "{}")
+        annotationsJSON = node.props.getString("annotations_json", default: "[]")
+        interactionJSON = node.props.getString("interaction_json", default: "{}")
+        viewportJSON = node.props.getString("viewport_json", default: "{}")
+        samplingJSON = node.props.getString("sampling_json", default: "{}")
         locale = node.props.getString("locale", default: "")
         valueFormat = node.props.getString("value_format", default: "number")
         currencyCode = node.props.getString("currency_code", default: "")
@@ -40,7 +53,30 @@ struct NativePHPChartsWireInput: Equatable {
         emptyLabel = node.props.getString("empty_label", default: "No data")
         accessibilityLabel = node.props.getString("a11y_label", default: "Chart")
         onSelect = node.props.getInt("on_select", default: 0)
+        onViewportChange = node.props.getInt("on_viewport_change", default: 0)
         areaMode = node.props.getString("area_mode", default: "overlay")
+        barMode = node.props.getString("bar_mode", default: "grouped")
+        barOrientation = node.props.getString("bar_orientation", default: "vertical")
+    }
+
+    private static func resolveSeriesJSON(node: NativeUINode) -> String {
+        let inline = node.props.getString("series_json", default: "[]")
+        let transport = node.props.getString("series_transport", default: "inline-v1")
+        let path = node.props.getString("series_json_file", default: "")
+        guard transport == "file-v1", !path.isEmpty else { return inline }
+
+        if let cached = seriesFileCache.object(forKey: path as NSString) {
+            return cached as String
+        }
+
+        guard let data = FileManager.default.contents(atPath: path),
+              let value = String(data: data, encoding: .utf8)
+        else {
+            return "[]"
+        }
+
+        seriesFileCache.setObject(value as NSString, forKey: path as NSString)
+        return value
     }
 }
 
@@ -52,9 +88,14 @@ struct NativePHPChartsAxisConfiguration: Decodable {
     let labelCount: Int?
     let visible: Bool?
     let beginAtZero: Bool?
+    let title: String?
+    let minimum: NativePHPChartsWireValue?
+    let maximum: NativePHPChartsWireValue?
+    let baseline: NativePHPChartsWireValue?
+    let interval: Double?
 
     enum CodingKeys: String, CodingKey {
-        case type, format, timezone, visible
+        case type, format, timezone, visible, title, minimum, maximum, baseline, interval
         case dateFormat = "date_format"
         case labelCount = "label_count"
         case beginAtZero = "begin_at_zero"
@@ -71,7 +112,12 @@ struct NativePHPChartsAxisConfiguration: Decodable {
         timezone: String = "",
         labelCount: Int? = nil,
         visible: Bool? = nil,
-        beginAtZero: Bool? = nil
+        beginAtZero: Bool? = nil,
+        title: String? = nil,
+        minimum: NativePHPChartsWireValue? = nil,
+        maximum: NativePHPChartsWireValue? = nil,
+        baseline: NativePHPChartsWireValue? = nil,
+        interval: Double? = nil
     ) {
         self.type = type
         self.format = format
@@ -80,6 +126,11 @@ struct NativePHPChartsAxisConfiguration: Decodable {
         self.labelCount = labelCount
         self.visible = visible
         self.beginAtZero = beginAtZero
+        self.title = title
+        self.minimum = minimum
+        self.maximum = maximum
+        self.baseline = baseline
+        self.interval = interval
     }
 
     init(from decoder: Decoder) throws {
@@ -90,6 +141,11 @@ struct NativePHPChartsAxisConfiguration: Decodable {
         labelCount = try container.decodeIfPresent(Int.self, forKey: .labelCount)
         visible = try container.decodeIfPresent(Bool.self, forKey: .visible)
         beginAtZero = try container.decodeIfPresent(Bool.self, forKey: .beginAtZero)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        minimum = try container.decodeIfPresent(NativePHPChartsWireValue.self, forKey: .minimum)
+        maximum = try container.decodeIfPresent(NativePHPChartsWireValue.self, forKey: .maximum)
+        baseline = try container.decodeIfPresent(NativePHPChartsWireValue.self, forKey: .baseline)
+        interval = try container.decodeIfPresent(Double.self, forKey: .interval)
 
         if let nested = try container.decodeIfPresent(NativePHPChartsNumberFormat.self, forKey: .format) {
             format = nested
@@ -111,6 +167,25 @@ struct NativePHPChartsAxisConfiguration: Decodable {
         }
 
         return (try? JSONDecoder().decode(NativePHPChartsAxisConfiguration.self, from: data)) ?? fallback
+    }
+
+    func plotValue(_ value: NativePHPChartsWireValue?, formatter: NativePHPChartsFormatter) -> Double? {
+        guard let value else { return nil }
+
+        switch type {
+        case .category:
+            return nil
+        case .number:
+            return value.numberValue
+        case .date, .datetime:
+            return formatter.date(from: value, type: type)?.timeIntervalSince1970
+        }
+    }
+
+    var plotInterval: Double? {
+        guard let interval else { return nil }
+
+        return type == .date ? interval * 86_400 : interval
     }
 }
 
@@ -205,10 +280,14 @@ struct NativePHPChartsLegendConfiguration: Decodable {
 struct NativePHPChartsSelectionConfiguration: Decodable {
     let enabled: Bool
     let mode: String
+    let crosshair: String
+    let tooltip: String
 
-    init(enabled: Bool = true, mode: String = "nearest_point") {
+    init(enabled: Bool = true, mode: String = "tap", crosshair: String = "x", tooltip: String = "single") {
         self.enabled = enabled
         self.mode = mode
+        self.crosshair = crosshair
+        self.tooltip = tooltip
     }
 
     static func decode(_ json: String) -> NativePHPChartsSelectionConfiguration {
@@ -222,9 +301,70 @@ struct NativePHPChartsSelectionConfiguration: Decodable {
     }
 }
 
+struct NativePHPChartsViewportConfiguration: Decodable {
+    let enabled: Bool
+    let pan: Bool
+    let zoom: Bool
+    let minimum: NativePHPChartsWireValue?
+    let maximum: NativePHPChartsWireValue?
+    let minimumSpan: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case enabled, pan, zoom, minimum, maximum
+        case minimumSpan = "minimum_span"
+    }
+
+    init(enabled: Bool = false, pan: Bool = true, zoom: Bool = true, minimum: NativePHPChartsWireValue? = nil, maximum: NativePHPChartsWireValue? = nil, minimumSpan: Double? = nil) {
+        self.enabled = enabled
+        self.pan = pan
+        self.zoom = zoom
+        self.minimum = minimum
+        self.maximum = maximum
+        self.minimumSpan = minimumSpan
+    }
+
+    static func decode(_ json: String) -> NativePHPChartsViewportConfiguration {
+        guard let data = json.data(using: .utf8),
+              let value = try? JSONDecoder().decode(NativePHPChartsViewportConfiguration.self, from: data)
+        else {
+            return NativePHPChartsViewportConfiguration()
+        }
+
+        return value
+    }
+}
+
+struct NativePHPChartsAnnotation: Decodable, Identifiable {
+    let id: String
+    let type: String
+    let axis: String
+    let color: String
+    let label: String?
+    let value: NativePHPChartsWireValue?
+    let from: NativePHPChartsWireValue?
+    let to: NativePHPChartsWireValue?
+    let width: CGFloat?
+    let opacity: Double?
+
+    static func decode(_ json: String) -> [NativePHPChartsAnnotation] {
+        guard let data = json.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([NativePHPChartsAnnotation].self, from: data)) ?? []
+    }
+}
+
 enum NativePHPChartsAreaMode: String {
     case overlay
     case stacked
+}
+
+enum NativePHPChartsBarMode: String {
+    case grouped
+    case stacked
+}
+
+enum NativePHPChartsBarOrientation: String {
+    case vertical
+    case horizontal
 }
 
 struct NativePHPChartsConfiguration {
@@ -232,6 +372,8 @@ struct NativePHPChartsConfiguration {
     let yAxis: NativePHPChartsAxisConfiguration
     let legend: NativePHPChartsLegendConfiguration
     let selection: NativePHPChartsSelectionConfiguration
+    let viewport: NativePHPChartsViewportConfiguration
+    let annotations: [NativePHPChartsAnnotation]
     let style: NativePHPChartsStyle
     let showGrid: Bool
     let showPoints: Bool
@@ -240,7 +382,10 @@ struct NativePHPChartsConfiguration {
     let emptyLabel: String
     let accessibilityLabel: String
     let onSelect: Int
+    let onViewportChange: Int
     let areaMode: NativePHPChartsAreaMode
+    let barMode: NativePHPChartsBarMode
+    let barOrientation: NativePHPChartsBarOrientation
 
     static func decode(_ input: NativePHPChartsWireInput, kind: NativePHPChartsKind) -> NativePHPChartsConfiguration {
         let legacyYFormat = NativePHPChartsNumberFormat(
@@ -262,7 +407,9 @@ struct NativePHPChartsConfiguration {
             xAxis: xAxis,
             yAxis: yAxis,
             legend: NativePHPChartsLegendConfiguration.decode(input.legendJSON),
-            selection: NativePHPChartsSelectionConfiguration(),
+            selection: NativePHPChartsSelectionConfiguration.decode(input.interactionJSON),
+            viewport: NativePHPChartsViewportConfiguration.decode(input.viewportJSON),
+            annotations: NativePHPChartsAnnotation.decode(input.annotationsJSON),
             style: NativePHPChartsStyle.decode(input.styleJSON),
             showGrid: input.showGrid,
             showPoints: input.showPoints,
@@ -271,7 +418,10 @@ struct NativePHPChartsConfiguration {
             emptyLabel: input.emptyLabel,
             accessibilityLabel: input.accessibilityLabel,
             onSelect: input.onSelect,
-            areaMode: NativePHPChartsAreaMode(rawValue: input.areaMode) ?? .overlay
+            onViewportChange: input.onViewportChange,
+            areaMode: NativePHPChartsAreaMode(rawValue: input.areaMode) ?? .overlay,
+            barMode: NativePHPChartsBarMode(rawValue: input.barMode) ?? .grouped,
+            barOrientation: NativePHPChartsBarOrientation(rawValue: input.barOrientation) ?? .vertical
         )
     }
 }
@@ -294,6 +444,11 @@ struct NativePHPChartsSnapshot {
         self.configuration = configuration
         self.formatter = formatter
         self.data = data
-        domain = NativePHPChartsDomain(data: data, configuration: configuration, kind: kind)
+        domain = NativePHPChartsDomain(
+            data: data,
+            configuration: configuration,
+            formatter: formatter,
+            kind: kind
+        )
     }
 }

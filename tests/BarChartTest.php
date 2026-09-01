@@ -33,6 +33,27 @@ it('supports bar-specific style without accepting line-only options', function (
         ->toThrow(InvalidArgumentException::class, 'bar.width');
 });
 
+it('supports grouped or stacked bars in vertical or horizontal orientation', function () {
+    $props = BarChart::make()
+        ->mode('stacked')
+        ->orientation('horizontal')
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect($props)->toMatchArray([
+        'bar_mode' => 'stacked',
+        'bar_orientation' => 'horizontal',
+    ]);
+
+    $fromAttributes = BarChart::make();
+    $fromAttributes->applyAttributes(['mode' => 'stacked', 'orientation' => 'horizontal']);
+
+    expect($fromAttributes->toArray(new CallbackRegistry)['props'])->toMatchArray($props)
+        ->and(fn () => BarChart::make()->mode('overlay'))
+        ->toThrow(InvalidArgumentException::class, 'grouped or stacked')
+        ->and(fn () => BarChart::make()->orientation('radial'))
+        ->toThrow(InvalidArgumentException::class, 'vertical or horizontal');
+});
+
 it('reports bar-specific validation messages', function () {
     expect(fn () => BarChart::make()->series([[
         'id' => 'orders',

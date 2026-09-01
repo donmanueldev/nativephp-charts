@@ -40,7 +40,7 @@ final readonly class PointSelection
         }
 
         $chartType = self::string($payload, 'chart_type');
-        if (! in_array($chartType, ['line', 'area', 'bar', 'scatter', 'pie', 'donut'], true)) {
+        if (! in_array($chartType, ['line', 'area', 'bar', 'scatter', 'pie', 'donut', 'radar', 'candlestick'], true)) {
             throw new InvalidArgumentException("The point selection chart type '{$chartType}' is not supported.");
         }
 

@@ -1,7 +1,7 @@
 {
     "name": "donmanueldev/nativephp-charts",
     "version": "1.0.0",
-    "description": "Native line, area, bar, scatter, pie, and donut charts for NativePHP Mobile.",
+    "description": "Native charts for NativePHP Mobile, rendered with Swift Charts and Jetpack Compose Canvas.",
     "namespace": "NativePHPCharts",
     "platforms": [
         "android",
@@ -54,6 +54,22 @@
             "blade": "Donmanueldev\\NativephpCharts\\Components\\DonutChart",
             "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsDonutChartRenderer",
             "ios_renderer": "NativePHPChartsDonutChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "candlestick_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\CandlestickChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\CandlestickChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsCandlestickChartRenderer",
+            "ios_renderer": "NativePHPChartsCandlestickChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "radar_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\RadarChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\RadarChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsRadarChartRenderer",
+            "ios_renderer": "NativePHPChartsRadarChartRenderer",
             "self_closing": true
         }
     ],

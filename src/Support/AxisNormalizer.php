@@ -2,17 +2,22 @@
 
 namespace Donmanueldev\NativephpCharts\Support;
 
+use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 
 final class AxisNormalizer
 {
-    /** @return array<string, bool|int|string> */
+    /** @return array<string, bool|float|int|string> */
     public static function x(array $axis, string $chartName, array $defaults = []): array
     {
         self::rejectUnknownKeys(
             $axis,
-            ['type', 'date_format', 'dateFormat', 'timezone', 'timeZone', 'visible', 'label_count', 'labelCount'],
+            [
+                'type', 'date_format', 'dateFormat', 'timezone', 'timeZone',
+                'visible', 'label_count', 'labelCount',
+                'title', 'minimum', 'maximum', 'baseline', 'interval',
+            ],
             $chartName,
             'x axis',
         );
@@ -39,11 +44,13 @@ final class AxisNormalizer
 
         $normalized = ['type' => $type, 'date_format' => $dateFormat, 'timezone' => $timezone];
         self::appendVisibilityAndLabelCount($normalized, $axis, $defaults, $chartName, 'x axis');
+        self::appendTitle($normalized, $axis, $defaults, $chartName, 'x axis');
+        self::appendXAxisDomain($normalized, $axis, $defaults, $type, $chartName);
 
         return $normalized;
     }
 
-    /** @return array<string, bool|int|string> */
+    /** @return array<string, bool|float|int|string> */
     public static function y(array $axis, string $chartName, array $defaults = [], bool $validateComplete = true): array
     {
         self::rejectUnknownKeys(
@@ -54,6 +61,7 @@ final class AxisNormalizer
                 'minimum_fraction_digits', 'minimumFractionDigits',
                 'maximum_fraction_digits', 'maximumFractionDigits',
                 'visible', 'label_count', 'labelCount', 'begin_at_zero', 'beginAtZero',
+                'title', 'minimum', 'maximum', 'baseline', 'interval',
             ],
             $chartName,
             'y axis',
@@ -113,6 +121,8 @@ final class AxisNormalizer
             'maximum_fraction_digits' => $maximum,
         ];
         self::appendVisibilityAndLabelCount($normalized, $axis, $defaults, $chartName, 'y axis');
+        self::appendTitle($normalized, $axis, $defaults, $chartName, 'y axis');
+        self::appendNumericDomain($normalized, $axis, $defaults, $chartName, 'y axis');
 
         $beginAtZero = $axis['begin_at_zero'] ?? $axis['beginAtZero'] ?? $defaults['begin_at_zero'] ?? null;
         if ($beginAtZero !== null) {
@@ -122,7 +132,7 @@ final class AxisNormalizer
         return $normalized;
     }
 
-    /** @param array<string, bool|int|string> $normalized */
+    /** @param array<string, bool|float|int|string> $normalized */
     private static function appendVisibilityAndLabelCount(
         array &$normalized,
         array $axis,
@@ -143,6 +153,144 @@ final class AxisNormalizer
 
             $normalized['label_count'] = $labelCount;
         }
+    }
+
+    /** @param array<string, bool|float|int|string> $normalized */
+    private static function appendTitle(
+        array &$normalized,
+        array $axis,
+        array $defaults,
+        string $chartName,
+        string $axisName,
+    ): void {
+        $title = $axis['title'] ?? $defaults['title'] ?? null;
+        if ($title === null) {
+            return;
+        }
+
+        if (! is_string($title) || trim($title) === '') {
+            throw new InvalidArgumentException("The {$chartName} {$axisName} title must be a non-empty string.");
+        }
+
+        $normalized['title'] = trim($title);
+    }
+
+    /** @param array<string, bool|float|int|string> $normalized */
+    private static function appendXAxisDomain(
+        array &$normalized,
+        array $axis,
+        array $defaults,
+        string $type,
+        string $chartName,
+    ): void {
+        $domainKeys = ['minimum', 'maximum', 'baseline', 'interval'];
+        $hasDomain = array_any($domainKeys, fn (string $key): bool => array_key_exists($key, $axis) || array_key_exists($key, $defaults));
+
+        if (! $hasDomain) {
+            return;
+        }
+
+        if ($type === 'category') {
+            throw new InvalidArgumentException("The {$chartName} category x axis does not support an explicit domain.");
+        }
+
+        foreach (['minimum', 'maximum', 'baseline'] as $key) {
+            if (array_key_exists($key, $axis) || array_key_exists($key, $defaults)) {
+                $normalized[$key] = ChartDataNormalizer::normalizeTypedX(
+                    $axis[$key] ?? $defaults[$key],
+                    $type,
+                    $chartName,
+                    "x axis {$key}",
+                );
+            }
+        }
+
+        self::appendInterval($normalized, $axis, $defaults, $chartName, 'x axis');
+        self::validateDomain($normalized, $type, $chartName, 'x axis');
+    }
+
+    /** @param array<string, bool|float|int|string> $normalized */
+    private static function appendNumericDomain(
+        array &$normalized,
+        array $axis,
+        array $defaults,
+        string $chartName,
+        string $axisName,
+    ): void {
+        foreach (['minimum', 'maximum', 'baseline'] as $key) {
+            if (array_key_exists($key, $axis) || array_key_exists($key, $defaults)) {
+                $value = $axis[$key] ?? $defaults[$key];
+                if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value)) {
+                    throw new InvalidArgumentException("The {$chartName} {$axisName} {$key} must be a finite integer or float.");
+                }
+
+                ChartDataNormalizer::assertExactNumber($value, $chartName, "{$axisName} {$key}");
+                $normalized[$key] = $value;
+            }
+        }
+
+        self::appendInterval($normalized, $axis, $defaults, $chartName, $axisName);
+        self::validateDomain($normalized, 'number', $chartName, $axisName);
+    }
+
+    /** @param array<string, bool|float|int|string> $normalized */
+    private static function appendInterval(
+        array &$normalized,
+        array $axis,
+        array $defaults,
+        string $chartName,
+        string $axisName,
+    ): void {
+        if (! array_key_exists('interval', $axis) && ! array_key_exists('interval', $defaults)) {
+            return;
+        }
+
+        $interval = $axis['interval'] ?? $defaults['interval'];
+        if ((! is_int($interval) && ! is_float($interval)) || ! is_finite((float) $interval) || $interval <= 0) {
+            throw new InvalidArgumentException("The {$chartName} {$axisName} interval must be greater than zero.");
+        }
+
+        ChartDataNormalizer::assertExactNumber($interval, $chartName, "{$axisName} interval");
+        $normalized['interval'] = (float) $interval;
+    }
+
+    /** @param array<string, bool|float|int|string> $normalized */
+    private static function validateDomain(array $normalized, string $type, string $chartName, string $axisName): void
+    {
+        if (
+            array_key_exists('minimum', $normalized)
+            && array_key_exists('maximum', $normalized)
+            && self::compareDomainValues($normalized['minimum'], $normalized['maximum'], $type) >= 0
+        ) {
+            throw new InvalidArgumentException("The {$chartName} {$axisName} minimum must be less than maximum.");
+        }
+
+        if (! array_key_exists('baseline', $normalized)) {
+            return;
+        }
+
+        $belowMinimum = array_key_exists('minimum', $normalized)
+            && self::compareDomainValues($normalized['baseline'], $normalized['minimum'], $type) < 0;
+        $aboveMaximum = array_key_exists('maximum', $normalized)
+            && self::compareDomainValues($normalized['baseline'], $normalized['maximum'], $type) > 0;
+
+        if ($belowMinimum || $aboveMaximum) {
+            throw new InvalidArgumentException("The {$chartName} {$axisName} baseline must be within the explicit domain.");
+        }
+    }
+
+    private static function compareDomainValues(float|int|string $left, float|int|string $right, string $type): int
+    {
+        if ($type === 'number') {
+            return (float) $left <=> (float) $right;
+        }
+
+        if ($type === 'date') {
+            return $left <=> $right;
+        }
+
+        return (new DateTimeImmutable((string) $left))->format('U.u')
+            <=> (new DateTimeImmutable((string) $right))->format('U.u');
     }
 
     private static function strictBoolean(mixed $value, string $chartName, string $property): bool

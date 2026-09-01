@@ -1,6 +1,5 @@
 package com.donmanueldev.plugins.nativephp_charts.ui
 
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import org.json.JSONArray
 import org.json.JSONObject
@@ -15,7 +14,7 @@ internal object NativePHPChartsRadialDecoder {
         input: NativePHPChartsRadialWireInput,
         kind: NativePHPChartsRadialKind,
     ): NativePHPChartsRadialConfiguration {
-        val styleRoot = radialObject(input.styleJson, "style_json")
+        val styleRoot = radialObject(input.styleJson)
         val segmentStyle = styleRoot.optJSONObject("segment") ?: JSONObject()
         val innerRadiusRatio = when (kind) {
             NativePHPChartsRadialKind.Pie -> 0f
@@ -29,7 +28,7 @@ internal object NativePHPChartsRadialDecoder {
                 cornerRadius = segmentStyle.optDouble("corner_radius", 0.0).toFloat().coerceIn(0f, 20f),
                 opacity = segmentStyle.optDouble("opacity", 1.0).toFloat().coerceIn(0f, 1f),
             ),
-            legend = decodeRadialLegend(radialObject(input.legendJson, "legend_json")),
+            legend = decodeRadialLegend(radialObject(input.legendJson)),
             locale = input.locale,
             valueFormat = input.valueFormat,
             currencyCode = input.currencyCode,
@@ -49,12 +48,10 @@ internal object NativePHPChartsRadialDecoder {
             for (index in 0 until root.length()) {
                 val item = root.optJSONObject(index)
                 if (item == null) {
-                    Log.w(RADIAL_LOG_TAG, "Ignoring non-object radial segment at index $index")
                     continue
                 }
                 val value = item.optDouble("value", Double.NaN)
                 if (!value.isFinite() || value < 0.0) {
-                    Log.w(RADIAL_LOG_TAG, "Ignoring invalid radial segment value at index $index")
                     continue
                 }
                 val id = item.optString("id", "segment-$index")
@@ -69,8 +66,7 @@ internal object NativePHPChartsRadialDecoder {
                 )
             }
         }
-    } catch (exception: Exception) {
-        Log.w(RADIAL_LOG_TAG, "Unable to decode segments_json; rendering the empty state", exception)
+    } catch (_: Exception) {
         emptyList()
     }
 
@@ -92,11 +88,8 @@ internal object NativePHPChartsRadialDecoder {
     }
 }
 
-private const val RADIAL_LOG_TAG = "NativePHPCharts"
-
-private fun radialObject(json: String, property: String): JSONObject = try {
+private fun radialObject(json: String): JSONObject = try {
     JSONObject(json)
-} catch (exception: Exception) {
-    Log.w(RADIAL_LOG_TAG, "Unable to decode $property; using defaults", exception)
+} catch (_: Exception) {
     JSONObject()
 }
