@@ -102,7 +102,7 @@ jobs:
           composer create-project laravel/laravel "$fixture" --prefer-dist --no-progress
           cd "$fixture"
           composer config repositories.nativephp-charts path "$GITHUB_WORKSPACE"
-          composer require nativephp/mobile:^4.0 nativephp/mobile-ui:^0.3 donmanueldev/nativephp-charts:*@dev --no-progress
+          composer require nativephp/mobile:^4.0 nativephp/mobile-ui:^0.3 donmanueldev/nativephp-charts:*@dev --with-all-dependencies --no-progress
           php artisan vendor:publish --tag=nativephp-plugins-provider --no-interaction
           php artisan native:plugin:register donmanueldev/nativephp-charts --no-interaction
           printf '\nNATIVEPHP_APP_ID=com.donmanueldev.nativephpchartsci\n' >> .env

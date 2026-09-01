@@ -24,6 +24,13 @@ struct NativePHPChartsCandlestickGeometry: Equatable {
 
     var wickBounds: ClosedRange<Double> { low...high }
     var bodyBounds: ClosedRange<Double> { min(open, close)...max(open, close) }
+
+    var renderedBodyBounds: ClosedRange<Double> {
+        guard open == close else { return bodyBounds }
+
+        let halfHeight = max((wickBounds.upperBound - wickBounds.lowerBound) * 0.02, 0.000_001)
+        return (open - halfHeight)...(open + halfHeight)
+    }
     var anchor: NativePHPChartsPlottedPosition { NativePHPChartsPlottedPosition(x: x, y: close) }
 
     init?(
@@ -181,8 +188,8 @@ struct NativePHPChartsMarks: ChartContent {
 
             BarMark(
                 x: .value("X", geometry.x),
-                yStart: .value("Open", animated(geometry.open)),
-                yEnd: .value("Close", animated(geometry.close)),
+                yStart: .value("Open", animated(geometry.renderedBodyBounds.lowerBound)),
+                yEnd: .value("Close", animated(geometry.renderedBodyBounds.upperBound)),
                 width: geometry.bodyWidth.markDimension
             )
             .foregroundStyle(color)
@@ -271,7 +278,7 @@ struct NativePHPChartsMarks: ChartContent {
             BarMark(
                 xStart: .value("Start", animated(geometry.valueBounds.lowerBound)),
                 xEnd: .value(series.name, animated(geometry.valueBounds.upperBound)),
-                y: .value("Y", geometry.category),
+                y: .value("Y", -geometry.category),
                 height: barStyle(for: series).width.map(MarkDimension.fixed) ?? .automatic
             )
             .foregroundStyle(resolvedColor(for: series))

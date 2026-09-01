@@ -81,6 +81,10 @@ final class ChartDataNormalizer
                     throw new InvalidArgumentException("The {$chartName} style for series '{$id}' must be an array.");
                 }
 
+                if (array_intersect(array_keys($item['style']), ['grid', 'axis']) !== []) {
+                    throw new InvalidArgumentException("The {$chartName} series style for '{$id}' cannot configure grid or axis options.");
+                }
+
                 $normalizedSeries['style'] = ChartStyleNormalizer::normalize($item['style'], $chartType, $chartName);
             }
             if (array_key_exists('fill_to', $item)) {

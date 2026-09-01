@@ -147,6 +147,7 @@ private struct NativePHPChartsRadarPlot: View {
     @Binding var selectedID: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var axisFontScale = 1
     @State private var revealProgress: CGFloat = 0
 
     var body: some View {
@@ -259,7 +260,7 @@ private struct NativePHPChartsRadarPlot: View {
                     let labelPoint = point(index: index, ratio: 1.17, center: center, radius: radius)
                     let labelColor = snapshot.style.color(snapshot.style.axis.labelColor, fallback: .secondary)
                     context.draw(
-                        context.resolve(Text(displayLabel).font(snapshot.style.axisFont(scale: 1)).foregroundStyle(labelColor)),
+                        context.resolve(Text(displayLabel).font(snapshot.style.axisFont(scale: axisFontScale)).foregroundStyle(labelColor)),
                         at: labelPoint
                     )
                 }

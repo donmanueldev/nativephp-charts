@@ -24,7 +24,7 @@ internal data class NativePHPChartsRadarSelection(
     val value: NativePHPChartsRadarValue,
     val index: Int,
 ) {
-    val id: String get() = "${series.id}:${axis.id}"
+    val id: String get() = "${series.id.encodeToByteArray().size}:${series.id}${axis.id}"
 }
 
 internal data class NativePHPChartsRadarStyle(

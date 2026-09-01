@@ -128,6 +128,21 @@ final class NativePHPChartsRadarBehaviorTests: XCTestCase {
         )
     }
 
+    func testSelectionIdentifiersRemainDistinctWhenIdsContainColons() {
+        let first = NativePHPChartsRadarSelection(
+            series: .init(id: "a", name: "A", colorValue: "#000", values: []),
+            axis: .init(id: "b:c", label: "B", maximum: 1),
+            value: .init(axis: "b:c", value: 1), index: 0
+        )
+        let second = NativePHPChartsRadarSelection(
+            series: .init(id: "a:b", name: "AB", colorValue: "#000", values: []),
+            axis: .init(id: "c", label: "C", maximum: 1),
+            value: .init(axis: "c", value: 1), index: 0
+        )
+
+        XCTAssertNotEqual(first.id, second.id)
+    }
+
     func testDenseAxisLabelsUseStableMarkersWithoutChangingFullSemanticLabels() {
         XCTAssertEqual(
             NativePHPChartsRadarAxisLabelLayout.displayLabel(label: "Fulfilment reliability", index: 0, axisCount: 3),

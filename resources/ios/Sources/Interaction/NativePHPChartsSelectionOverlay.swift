@@ -335,12 +335,17 @@ struct NativePHPChartsSelectionOverlay: View {
 
     private func plottedPosition(for point: NativePHPChartsPoint) -> NativePHPChartsPlottedPosition {
         if kind == .bar {
-            return snapshot.domain.barGeometry(
+            let geometry = snapshot.domain.barGeometry(
                 for: point,
                 data: snapshot.data,
                 mode: snapshot.configuration.barMode,
                 orientation: snapshot.configuration.barOrientation
-            ).anchor
+            )
+            let anchor = geometry.anchor
+
+            return geometry.orientation == .horizontal
+                ? NativePHPChartsPlottedPosition(x: anchor.x, y: -anchor.y)
+                : anchor
         }
 
         if kind == .candlestick,

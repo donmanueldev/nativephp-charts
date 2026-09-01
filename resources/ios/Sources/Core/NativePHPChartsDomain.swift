@@ -32,8 +32,9 @@ struct NativePHPChartsDomain {
         }
 
         let includesZero = configuration.beginAtZero || kind == .area
+        let baseline = configuration.yAxis.baseline?.numberValue
         let automaticY = NativePHPChartsDomain.makeYDomain(
-            values: values,
+            values: baseline.map { values + [$0] } ?? values,
             beginAtZero: includesZero
         )
         let yDomain = NativePHPChartsDomain.explicitDomain(
@@ -42,7 +43,7 @@ struct NativePHPChartsDomain {
             maximum: configuration.yAxis.maximum?.numberValue
         )
         y = yDomain
-        baseline = configuration.yAxis.baseline?.numberValue ?? NativePHPChartsDomain.makeBaseline(
+        self.baseline = baseline ?? NativePHPChartsDomain.makeBaseline(
             values: values,
             includesZero: includesZero,
             domain: yDomain

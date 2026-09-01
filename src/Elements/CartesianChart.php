@@ -330,6 +330,9 @@ abstract class CartesianChart extends ChartElement
         if ($this->sampling['mode'] === 'lttb' && ! in_array($this->chartType(), ['line', 'area', 'scatter'], true)) {
             throw new InvalidArgumentException("The {$this->chartName()} does not support LTTB sampling because reducing its points would change the chart's meaning.");
         }
+        if ($this->sampling['mode'] === 'lttb' && $this->samplingChangesRelationalGeometry()) {
+            throw new InvalidArgumentException("The {$this->chartName()} cannot combine LTTB sampling with related series.");
+        }
         if ($this->interaction['mode'] === 'scrub' && $this->viewport['enabled'] && $this->viewport['pan']) {
             throw new InvalidArgumentException("The {$this->chartName()} scrub interaction cannot be combined with one-finger viewport panning.");
         }
@@ -348,5 +351,14 @@ abstract class CartesianChart extends ChartElement
             'viewport_json' => WireEncoder::encode($this->viewport, $this->chartName(), emptyAsObject: true),
             'sampling_json' => WireEncoder::encode($this->sampling, $this->chartName(), emptyAsObject: true),
         ];
+    }
+
+    private function samplingChangesRelationalGeometry(): bool
+    {
+        if (array_filter($this->series, fn (array $series): bool => array_key_exists('fill_to', $series)) !== []) {
+            return true;
+        }
+
+        return $this->chartType() === 'area' && ($this->specificProps()['area_mode'] ?? null) === 'stacked';
     }
 }

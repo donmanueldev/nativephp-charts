@@ -33,7 +33,7 @@ struct NativePHPChartsRadarSelection: Hashable, Identifiable {
     let value: NativePHPChartsRadarValue
     let index: Int
 
-    var id: String { "\(series.id):\(axis.id)" }
+    var id: String { "\(series.id.utf8.count):\(series.id)\(axis.id)" }
 }
 
 struct NativePHPChartsRadarWireInput: Equatable {

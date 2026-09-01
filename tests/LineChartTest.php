@@ -1,5 +1,6 @@
 <?php
 
+use Donmanueldev\NativephpCharts\Elements\AreaChart;
 use Donmanueldev\NativephpCharts\Elements\LineChart;
 use Native\Mobile\Edge\CallbackRegistry;
 
@@ -354,6 +355,41 @@ it('samples category axes by their declared order instead of parsing labels as d
         ->toBe(['point-0', 'point-3', 'point-4'])
         ->and($sampledIds(['2020-01-01', '2020-01-02', '2030-01-01', '2030-01-02', '2030-01-03']))
         ->toBe(['point-0', 'point-3', 'point-4']);
+});
+
+it('rejects sampling when related series require matching x positions', function () {
+    $series = [
+        ['id' => 'lower', 'name' => 'Lower', 'color' => '#0F766E', 'points' => [['id' => 'a', 'label' => 'A', 'value' => 1]]],
+        ['id' => 'upper', 'name' => 'Upper', 'color' => '#6366F1', 'fill_to' => 'lower', 'points' => [['id' => 'b', 'label' => 'A', 'value' => 2]]],
+    ];
+
+    expect(fn () => LineChart::make()->series($series)->sampling(['mode' => 'lttb'])->toArray(new CallbackRegistry))
+        ->toThrow(InvalidArgumentException::class, 'cannot combine LTTB sampling with related series');
+});
+
+it('rejects sampling for stacked areas', function () {
+    expect(fn () => AreaChart::make()
+        ->areaMode('stacked')
+        ->sampling(['mode' => 'lttb'])
+        ->toArray(new CallbackRegistry))
+        ->toThrow(InvalidArgumentException::class, 'cannot combine LTTB sampling with related series');
+});
+
+it('accepts category annotation bands in their plotted order', function () {
+    $annotations = json_decode(LineChart::make()->annotations([[
+        'id' => 'period', 'type' => 'band', 'axis' => 'x', 'from' => 'Sep', 'to' => 'Oct',
+    ]])->toArray(new CallbackRegistry)['props']['annotations_json'], true, flags: JSON_THROW_ON_ERROR);
+
+    expect($annotations[0]['from'])->toBe('Sep')
+        ->and($annotations[0]['to'])->toBe('Oct');
+});
+
+it('rejects grid and axis styling scoped to a series', function () {
+    expect(fn () => LineChart::make()->series([[
+        'id' => 'signal', 'name' => 'Signal', 'color' => '#2563EB',
+        'style' => ['grid' => ['visible' => false]],
+        'points' => [],
+    ]]))->toThrow(InvalidArgumentException::class, 'cannot configure grid or axis options');
 });
 
 it('normalizes benchmark corpus sizes without silently sampling', function (int $pointCount) {

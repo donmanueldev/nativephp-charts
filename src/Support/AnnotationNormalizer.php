@@ -67,8 +67,11 @@ final class AnnotationNormalizer
 
                 $from = self::axisValue($annotation['from'], $axis, $xType, $chartName, $id);
                 $to = self::axisValue($annotation['to'], $axis, $xType, $chartName, $id);
-                if (self::compare($from, $to, $axis === 'x' ? $xType : 'number') >= 0) {
-                    throw new InvalidArgumentException("The {$chartName} band annotation '{$id}' from must be less than to.");
+                if ($axis !== 'x' || $xType !== 'category') {
+                    $comparisonType = $axis === 'x' ? $xType : 'number';
+                    if (self::compare($from, $to, $comparisonType) >= 0) {
+                        throw new InvalidArgumentException("The {$chartName} band annotation '{$id}' from must be less than to.");
+                    }
                 }
 
                 $item['from'] = $from;

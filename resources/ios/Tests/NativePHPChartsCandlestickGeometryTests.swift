@@ -43,6 +43,15 @@ final class NativePHPChartsCandlestickGeometryTests: XCTestCase {
         )
     }
 
+    func testNeutralCandlesReserveAVIsibleBodyInsideTheirWick() throws {
+        let point = makePoint(open: 10, high: 14, low: 8, close: 10)
+        let geometry = try XCTUnwrap(NativePHPChartsCandlestickGeometry(point: point, x: 1, style: .init()))
+
+        XCTAssertEqual(geometry.bodyBounds, 10...10)
+        XCTAssertLessThan(geometry.renderedBodyBounds.lowerBound, 10)
+        XCTAssertGreaterThan(geometry.renderedBodyBounds.upperBound, 10)
+    }
+
     func testBodyAndWickDistancesSelectTheVisibleCandleInsteadOfOnlyItsClose() {
         XCTAssertEqual(
             NativePHPChartsSelection.rectangleDistance(
