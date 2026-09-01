@@ -1,31 +1,65 @@
 const menuToggle = document.querySelector('[data-menu-toggle]');
 const navigation = document.querySelector('[data-navigation]');
 
-const closeMenu = () => {
+const menuLinks = Array.from(navigation?.querySelectorAll('a') ?? []);
+
+const closeMenu = ({ restoreFocus = false } = {}) => {
   if (!menuToggle || !navigation) {
     return;
   }
 
+  const wasOpen = menuToggle.getAttribute('aria-expanded') === 'true';
+
   menuToggle.setAttribute('aria-expanded', 'false');
   navigation.removeAttribute('data-open');
   document.body.classList.remove('menu-open');
+
+  if (restoreFocus && wasOpen) {
+    menuToggle.focus();
+  }
 };
 
 menuToggle?.addEventListener('click', () => {
   const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
 
-  menuToggle.setAttribute('aria-expanded', String(!isOpen));
-  navigation?.toggleAttribute('data-open', !isOpen);
-  document.body.classList.toggle('menu-open', !isOpen);
+  if (isOpen) {
+    closeMenu();
+    return;
+  }
+
+  menuToggle.setAttribute('aria-expanded', 'true');
+  navigation?.setAttribute('data-open', 'true');
+  document.body.classList.add('menu-open');
+  window.requestAnimationFrame(() => menuLinks[0]?.focus());
 });
 
-navigation?.querySelectorAll('a').forEach((link) => {
+menuLinks.forEach((link) => {
   link.addEventListener('click', closeMenu);
 });
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
-    closeMenu();
+    closeMenu({ restoreFocus: true });
+    return;
+  }
+
+  if (
+    event.key !== 'Tab'
+    || menuToggle?.getAttribute('aria-expanded') !== 'true'
+    || menuLinks.length === 0
+  ) {
+    return;
+  }
+
+  const firstLink = menuLinks[0];
+  const lastLink = menuLinks[menuLinks.length - 1];
+
+  if (event.shiftKey && document.activeElement === firstLink) {
+    event.preventDefault();
+    lastLink.focus();
+  } else if (!event.shiftKey && document.activeElement === lastLink) {
+    event.preventDefault();
+    firstLink.focus();
   }
 });
 
@@ -38,6 +72,8 @@ window.addEventListener('resize', () => {
 const tabs = Array.from(document.querySelectorAll('[data-code-tab]'));
 const panels = Array.from(document.querySelectorAll('[data-code-panel]'));
 const demoPanels = Array.from(document.querySelectorAll('[data-demo-panel]'));
+const apiShowcase = document.querySelector('.api-showcase');
+const apiPreview = document.querySelector('.api-preview');
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const loadDemoMedia = (video, shouldLoadVideo) => {
@@ -60,6 +96,14 @@ const loadDemoMedia = (video, shouldLoadVideo) => {
 };
 
 const syncDemo = (selectedName) => {
+  const selectedPanel = demoPanels.find((panel) => panel.dataset.demoPanel === selectedName);
+
+  if (apiShowcase && apiPreview) {
+    const hasPreview = Boolean(selectedPanel);
+    apiShowcase.dataset.hasPreview = String(hasPreview);
+    apiPreview.hidden = !hasPreview;
+  }
+
   demoPanels.forEach((panel) => {
     panel.hidden = panel.dataset.demoPanel !== selectedName;
     const isSelected = !panel.hidden;

@@ -5,11 +5,14 @@
   --paper: #ffffff;
   --paper-muted: #f4f3f1;
   --paper-warm: #fff5ee;
+  --surface: #151515;
   --ember: #ed3f16;
+  --ember-action: #c8320f;
   --ember-dark: #c92f0d;
   --ember-light: #ff9b67;
   --text: #151515;
   --muted: #67635f;
+  --muted-on-dark: #b8b4af;
   --line: #dedbd7;
   --line-dark: #2a2a2a;
   --shadow: 0 24px 70px rgb(0 0 0 / 14%);
@@ -157,7 +160,7 @@ button {
 .primary-navigation .nav-cta {
   padding: 10px 18px;
   border-radius: var(--radius-small);
-  background: var(--ember);
+  background: var(--ember-action);
   color: var(--paper);
 }
 
@@ -235,6 +238,16 @@ button {
   padding-bottom: 34px;
 }
 
+.hero-copy > .status-note {
+  margin: 0 0 22px;
+  color: var(--ember-light);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
 .hero h1,
 .section-heading h2,
 .accessibility h2,
@@ -286,7 +299,7 @@ button {
 }
 
 .button-primary {
-  background: var(--ember);
+  background: var(--ember-action);
   color: var(--paper);
 }
 
@@ -412,12 +425,14 @@ button {
     z-index: 45;
     top: 76px;
     right: 0;
-    bottom: 0;
+    bottom: auto;
     left: 0;
     display: none;
+    height: calc(100dvh - 76px);
     align-items: stretch;
     flex-direction: column;
     gap: 0;
+    overflow-y: auto;
     padding: 30px 20px;
     background: var(--ink);
   }
@@ -496,12 +511,20 @@ button {
   }
 
   .hero-layout {
-    gap: 26px;
-    padding-top: 60px;
+    gap: 8px;
+    padding-top: 42px;
   }
 
   .hero h1 {
-    font-size: clamp(46px, 14vw, 66px);
+    font-size: clamp(44px, 13vw, 60px);
+  }
+
+  .hero-copy {
+    padding-bottom: 0;
+  }
+
+  .hero-copy > .status-note {
+    margin-bottom: 14px;
   }
 
   .hero-copy > p {
@@ -514,6 +537,11 @@ button {
     display: grid;
   }
 
+  .hero-actions {
+    gap: 10px;
+    margin-top: 26px;
+  }
+
   .button {
     width: 100%;
   }
@@ -521,7 +549,8 @@ button {
   .compatibility {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 7px 14px;
+    gap: 5px 14px;
+    margin-top: 24px;
   }
 
   .compatibility li + li::before {
@@ -529,7 +558,7 @@ button {
   }
 
   .hero-devices {
-    min-height: 440px;
+    min-height: 390px;
   }
 
   .device {
