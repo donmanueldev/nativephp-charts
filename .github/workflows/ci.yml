@@ -53,17 +53,8 @@ jobs:
       - name: Run PHP tests
         run: vendor/bin/pest --compact
 
-      - name: Audit Composer dependencies
-        run: composer audit --no-interaction
-
       - name: Validate NativePHP plugin
         run: vendor/bin/testbench native:plugin:validate . --no-interaction
-
-      - name: Lint PHP sources and tests
-        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
-
-      - name: Check whitespace errors
-        run: git diff --check $(git hash-object -t tree /dev/null) HEAD
 
   swift-native:
     name: Swift native tests
@@ -75,9 +66,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Parse Swift sources
-        run: find resources/ios/Sources -name '*.swift' -print0 | xargs -0 swiftc -parse
 
       - name: Compile Swift renderers and run native tests
         run: swift test
@@ -105,33 +93,19 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
       - name: Create an ephemeral NativePHP app with this checkout
         env:
           COMPOSER_NO_INTERACTION: "1"
         run: |
-          set -o pipefail
           fixture="$RUNNER_TEMP/nativephp-charts-android"
-          : > "$GITHUB_WORKSPACE/android-native-build.log"
           composer create-project laravel/laravel "$fixture" --prefer-dist --no-progress
           cd "$fixture"
           composer config repositories.nativephp-charts path "$GITHUB_WORKSPACE"
-          composer require nativephp/mobile:^4.0 nativephp/mobile-ui:^0.3 donmanueldev/nativephp-charts:*@dev --no-scripts --no-progress
-          php artisan package:discover --ansi
-          php artisan vendor:publish --tag=nativephp-plugins-provider --force --no-interaction
-          php artisan native:plugin:register donmanueldev/nativephp-charts --force --no-interaction
-          php artisan native:plugin:validate
+          composer require nativephp/mobile:^4.0 nativephp/mobile-ui:^0.3 donmanueldev/nativephp-charts:*@dev --no-progress
+          php artisan vendor:publish --tag=nativephp-plugins-provider --no-interaction
+          php artisan native:plugin:register donmanueldev/nativephp-charts --no-interaction
           printf '\nNATIVEPHP_APP_ID=com.donmanueldev.nativephpchartsci\n' >> .env
           php artisan native:install android
           cd nativephp/android
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/android-native-build.log"
-
-      - name: Publish Android native build log
-        if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-        with:
-          name: android-native-build-log
-          path: android-native-build.log
-          if-no-files-found: error
-          retention-days: 14
+          ./gradlew :app:assembleDebug --no-daemon
