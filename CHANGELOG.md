@@ -2,6 +2,12 @@
 
 All notable changes to NativePHP Charts are documented here. The project follows Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- Datetime annotation bands now retain fractional-second ordering, matching the documented datetime axis contract.
+
 ## [1.0.0] - 2026-08-28
 
 ### Added

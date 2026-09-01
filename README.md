@@ -8,12 +8,12 @@ Native line, area, bar, scatter, pie, and donut charts for [NativePHP Mobile](ht
 
 > NativePHP Charts is an independent community plugin. It is not an official NativePHP package.
 
-> The current branch is the Unreleased 1.1 development line. Radar, candlestick, stacked layouts, annotations, sampling, and viewport interaction are not part of the stable 1.0 contract until the chart-by-chart native acceptance matrix is complete. The published manifest remains at `1.0.0` until that final gate passes.
+> **Release status:** `1.0.x` is the production contract for line, area, bar, scatter, pie, and donut charts. This branch also contains 1.1 acceptance work. Radar, candlestick, annotations, sampling, and viewport interaction remain source-only until every required native acceptance cell is recorded. Do not deploy those APIs from a development checkout as a stable release.
 
 ## Features
 
-- Stable 1.0 `<native:line-chart>`, `<native:area-chart>`, `<native:bar-chart>`, `<native:scatter-chart>`, `<native:pie-chart>`, and `<native:donut-chart>` EDGE elements.
-- Unreleased 1.1 radar, candlestick, annotations, stacked layouts, sampling, and viewport interaction, available from source for acceptance testing only.
+- Production 1.0 `<native:line-chart>`, `<native:area-chart>`, `<native:bar-chart>`, `<native:scatter-chart>`, `<native:pie-chart>`, and `<native:donut-chart>` EDGE elements.
+- Source-only 1.1 radar, candlestick, annotations, sampling, and viewport interaction for acceptance testing; not a release promise.
 - Multiple ordered series, native legends and tooltips, stable selection, and PHP callbacks.
 - Category, number, date, and datetime axes with explicit domains, intervals, baselines, titles, and locale-aware formatting.
 - Positive, negative, mixed-sign, decimal, constant, and single-point domains.

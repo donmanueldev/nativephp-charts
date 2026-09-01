@@ -2,6 +2,7 @@
 
 namespace Donmanueldev\NativephpCharts\Support;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 
 final class AnnotationNormalizer
@@ -140,6 +141,6 @@ final class AnnotationNormalizer
             return $left <=> $right;
         }
 
-        return strtotime((string) $left) <=> strtotime((string) $right);
+        return new DateTimeImmutable((string) $left) <=> new DateTimeImmutable((string) $right);
     }
 }

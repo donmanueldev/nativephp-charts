@@ -459,6 +459,26 @@ it('rejects invalid annotation ranges', function () {
     ]))->toThrow(InvalidArgumentException::class, 'from must be less than to');
 });
 
+it('accepts datetime annotation bands with fractional-second bounds', function () {
+    $annotations = json_decode(LineChart::make()
+        ->xAxis(['type' => 'datetime'])
+        ->annotations([
+            [
+                'id' => 'deployment',
+                'type' => 'band',
+                'axis' => 'x',
+                'from' => '2026-08-31T09:00:00.100Z',
+                'to' => '2026-08-31T09:00:00.400Z',
+            ],
+        ])
+        ->toArray(new CallbackRegistry)['props']['annotations_json'], true, flags: JSON_THROW_ON_ERROR);
+
+    expect($annotations[0])->toMatchArray([
+        'from' => '2026-08-31T09:00:00.100+00:00',
+        'to' => '2026-08-31T09:00:00.400+00:00',
+    ]);
+});
+
 it('rejects invalid per-series depth contracts', function (Closure $configure, string $message) {
     expect(fn () => $configure(LineChart::make()))->toThrow(InvalidArgumentException::class, $message);
 })->with([
