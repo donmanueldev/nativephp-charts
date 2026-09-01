@@ -13,6 +13,7 @@ internal object NativePHPChartsSelection {
     ) {
         if (configuration.onSelect == 0) return
         val point = datum.point
+        val x = point.nativePHPChartsSelectionX(configuration.xAxis.type) ?: return
         val payload = JSONObject()
             .put("version", 1)
             .put("chart_type", configuration.kind.name.lowercase())
@@ -21,7 +22,7 @@ internal object NativePHPChartsSelection {
             .put("point_id", point.id)
             .put("point_index", point.index)
             .put("x_type", configuration.xAxis.type.name.lowercase())
-            .put("x", point.x)
+            .put("x", x)
             .put("label", point.label)
             .put("value", point.value)
             .put("localized_value", formatting.value(point.value))
@@ -30,10 +31,37 @@ internal object NativePHPChartsSelection {
     }
 }
 
+internal fun NativePHPChartsPoint.nativePHPChartsSelectionX(
+    type: NativePHPChartsXType,
+): Any? = when (type) {
+    NativePHPChartsXType.Category -> (x as? String)?.takeIf(String::isNotBlank) ?: label
+    NativePHPChartsXType.Number -> (x as? Number)?.takeIf { it.toDouble().isFinite() }
+    NativePHPChartsXType.Date,
+    NativePHPChartsXType.Datetime,
+    -> x as? String
+}
+
+internal fun NativePHPChartsPoint.nativePHPChartsAccessibleValue(
+    formatting: NativePHPChartsFormatting,
+): String = nativePHPChartsOHLCValue(this, formatting::value) ?: formatting.value(value)
+
+internal fun nativePHPChartsOHLCValue(
+    point: NativePHPChartsPoint,
+    format: (Double) -> String,
+): String? {
+    val open = point.open ?: return null
+    val high = point.high ?: return null
+    val low = point.low ?: return null
+    val close = point.close ?: return null
+    return "O ${format(open)}, H ${format(high)}, L ${format(low)}, C ${format(close)}"
+}
+
 internal fun NativePHPChartsConfiguration.accessibilitySummary(formatting: NativePHPChartsFormatting): String {
     val totalPoints = series.sumOf { it.points.size }
     val preview = series.take(3).joinToString(". ") { item ->
-        val points = item.points.take(5).joinToString { point -> "${formatting.x(point)}: ${formatting.value(point.value)}" }
+        val points = item.points.take(5).joinToString { point ->
+            "${formatting.x(point)}: ${point.nativePHPChartsAccessibleValue(formatting)}"
+        }
         "${item.name}. $points"
     }
     val remainder = (totalPoints - series.take(3).sumOf { minOf(it.points.size, 5) }).coerceAtLeast(0)

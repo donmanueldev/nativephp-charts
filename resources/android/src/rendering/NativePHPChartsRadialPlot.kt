@@ -102,15 +102,15 @@ internal fun NativePHPChartsRadialPlot(
                 customActions = listOfNotNull(
                     previous?.let { datum ->
                         CustomAccessibilityAction(
-                            "${datum.segment.label}, ${formatting.value(datum.segment.value)}",
+                            "${layout.data.indexOf(datum) + 1}/${layout.data.size}, ${datum.segment.label}, ${formatting.value(datum.segment.value)}",
                         ) { moveSelection(-1) }
                     },
                     next?.let { datum ->
                         CustomAccessibilityAction(
-                            "${datum.segment.label}, ${formatting.value(datum.segment.value)}",
+                            "${layout.data.indexOf(datum) + 1}/${layout.data.size}, ${datum.segment.label}, ${formatting.value(datum.segment.value)}",
                         ) { moveSelection(1) }
                     },
-                ).distinctBy { it.label }
+                )
             }
             .pointerInput(layout, configuration.onSelect) {
                 detectTapGestures { location -> layout.segmentAt(location)?.let(::select) }

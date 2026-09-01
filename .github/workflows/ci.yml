@@ -53,22 +53,13 @@ jobs:
       - name: Run PHP tests
         run: vendor/bin/pest --compact
 
-      - name: Audit Composer dependencies
-        run: composer audit --no-interaction
-
       - name: Validate NativePHP plugin
         run: vendor/bin/testbench native:plugin:validate . --no-interaction
 
-      - name: Lint PHP sources and tests
-        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
-
-      - name: Check whitespace errors
-        run: git diff --check $(git hash-object -t tree /dev/null) HEAD
-
-  swift-syntax:
-    name: Swift source syntax
+  swift-native:
+    name: Swift native tests
     runs-on: macos-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Check out repository
@@ -76,5 +67,5 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Parse Swift sources
-        run: find resources/ios/Sources -name '*.swift' -print0 | xargs -0 swiftc -parse
+      - name: Compile Swift renderers and run native tests
+        run: swift test

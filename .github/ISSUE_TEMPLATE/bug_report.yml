@@ -84,6 +84,8 @@ body:
         - ScatterChart
         - PieChart
         - DonutChart
+        - RadarChart (Unreleased 1.1)
+        - CandlestickChart (Unreleased 1.1)
         - Multiple components
     validations:
       required: true

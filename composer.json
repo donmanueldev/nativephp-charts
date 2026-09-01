@@ -1,6 +1,6 @@
 {
     "name": "donmanueldev/nativephp-charts",
-    "description": "Native line, area, bar, scatter, pie, and donut charts for NativePHP Mobile.",
+    "description": "Native charts for NativePHP Mobile, rendered with Swift Charts and Jetpack Compose Canvas.",
     "type": "nativephp-ui-plugin",
     "license": "MIT",
     "authors": [

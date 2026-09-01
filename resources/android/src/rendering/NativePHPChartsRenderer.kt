@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 
@@ -24,7 +24,9 @@ internal fun NativePHPChartsRender(node: NativeUINode, modifier: Modifier, kind:
     if (!configuration.hasData) {
         Box(
             modifier = modifier
-                .semantics { contentDescription = "${configuration.accessibilityLabel}: ${configuration.emptyLabel}" }
+                .clearAndSetSemantics {
+                    contentDescription = "${configuration.accessibilityLabel}: ${configuration.emptyLabel}"
+                }
                 .fillMaxSize(),
         ) {
             Text(configuration.emptyLabel, modifier = Modifier.padding(16.dp))

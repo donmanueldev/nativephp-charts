@@ -88,6 +88,7 @@ struct NativePHPChartsRenderer: View {
         case .area: "chart.xyaxis.line"
         case .bar: "chart.bar"
         case .scatter: "chart.dots.scatter"
+        case .candlestick: "chart.xyaxis.line"
         }
     }
 }

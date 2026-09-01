@@ -1,0 +1,5 @@
+/Package.swift export-ignore
+/.build export-ignore
+/resources/ios/.build export-ignore
+/resources/ios/Tests export-ignore
+/resources/ios/TestSupport export-ignore

@@ -14,9 +14,11 @@ Beautiful native line, area, bar, scatter, pie, and donut charts for [NativePHP 
 
 > NativePHP Charts is an independent community plugin. It is not an official NativePHP package.
 
+> **Release status:** `1.0.x` is the production contract for line, area, bar, scatter, pie, and donut charts. Radar, candlestick, annotations, sampling, and viewport interaction remain source-only until their native acceptance evidence is complete.
+
 ## Features
 
-- Native `<native:line-chart>`, `<native:area-chart>`, `<native:bar-chart>`, `<native:scatter-chart>`, `<native:pie-chart>`, and `<native:donut-chart>` EDGE elements.
+- Production 1.0 `<native:line-chart>`, `<native:area-chart>`, `<native:bar-chart>`, `<native:scatter-chart>`, `<native:pie-chart>`, and `<native:donut-chart>` EDGE elements.
 - Multiple ordered series, native legends and tooltips, stable selection, and PHP callbacks.
 - Category, number, date, and datetime axes with locale-aware formatting.
 - Platform-neutral styles, native animations, dark appearance, VoiceOver, and TalkBack summaries.

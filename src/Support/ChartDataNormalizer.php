@@ -12,12 +12,13 @@ final class ChartDataNormalizer
 
     /**
      * @param  array<int, mixed>  $series
-     * @return list<array{id: string, name: string, color: string, points: list<array{id: string, label: string, value: int|float, x: int|float|string}>}>
+     * @return list<array<string, mixed>>
      */
     public static function normalize(
         array $series,
         string $xType,
         string $chartName,
+        string $chartType,
         bool $allowDeferredTypedX = false,
     ): array {
         if (! array_is_list($series)) {
@@ -63,6 +64,7 @@ final class ChartDataNormalizer
                     $xType,
                     $chartName,
                     $allowDeferredTypedX,
+                    $chartType,
                 );
                 if (array_key_exists($normalizedPoint['id'], $pointIds)) {
                     throw new InvalidArgumentException(
@@ -73,13 +75,45 @@ final class ChartDataNormalizer
                 $points[] = $normalizedPoint;
             }
 
-            $normalized[] = ['id' => $id, 'name' => $name, 'color' => $color, 'points' => $points];
+            $normalizedSeries = ['id' => $id, 'name' => $name, 'color' => $color, 'points' => $points];
+            if (array_key_exists('style', $item)) {
+                if (! is_array($item['style'])) {
+                    throw new InvalidArgumentException("The {$chartName} style for series '{$id}' must be an array.");
+                }
+
+                if (array_intersect(array_keys($item['style']), ['grid', 'axis']) !== []) {
+                    throw new InvalidArgumentException("The {$chartName} series style for '{$id}' cannot configure grid or axis options.");
+                }
+
+                $normalizedSeries['style'] = ChartStyleNormalizer::normalize($item['style'], $chartType, $chartName);
+            }
+            if (array_key_exists('fill_to', $item)) {
+                if (! in_array($chartType, ['line', 'area'], true)) {
+                    throw new InvalidArgumentException("The {$chartName} fill_to option is only supported by line and area charts.");
+                }
+
+                $normalizedSeries['fill_to'] = self::requiredString($item, 'fill_to', "series '{$id}'", $chartName);
+            }
+
+            $normalized[] = $normalizedSeries;
+        }
+
+        foreach ($normalized as $item) {
+            if (! array_key_exists('fill_to', $item)) {
+                continue;
+            }
+
+            if ($item['fill_to'] === $item['id'] || ! array_key_exists($item['fill_to'], $seriesIds)) {
+                throw new InvalidArgumentException(
+                    "The {$chartName} fill target '{$item['fill_to']}' must reference another series."
+                );
+            }
         }
 
         return $normalized;
     }
 
-    /** @return array{id: string, label: string, value: int|float, x: int|float|string} */
+    /** @return array<string, float|int|string> */
     private static function point(
         mixed $point,
         string $seriesId,
@@ -87,6 +121,7 @@ final class ChartDataNormalizer
         string $xType,
         string $chartName,
         bool $allowDeferredTypedX,
+        string $chartType,
     ): array {
         if (! is_array($point)) {
             throw new InvalidArgumentException(
@@ -95,6 +130,12 @@ final class ChartDataNormalizer
         }
 
         $label = self::requiredString($point, 'label', "point at index {$index} for series '{$seriesId}'", $chartName);
+
+        $candle = null;
+        if ($chartType === 'candlestick') {
+            $candle = self::candlestick($point, $seriesId, $index, $chartName);
+            $point['value'] = $candle['close'];
+        }
 
         if (! array_key_exists('value', $point) || ! is_int($point['value']) && ! is_float($point['value'])) {
             throw new InvalidArgumentException(
@@ -108,13 +149,13 @@ final class ChartDataNormalizer
             );
         }
 
-        self::assertExactInteger($point['value'], $chartName, "value at index {$index} for series '{$seriesId}'");
+        self::assertExactNumber($point['value'], $chartName, "value at index {$index} for series '{$seriesId}'");
 
         $id = array_key_exists('id', $point)
             ? self::requiredString($point, 'id', "point at index {$index} for series '{$seriesId}'", $chartName)
             : self::compatibilityId($seriesId, $label, $index);
 
-        return [
+        $normalized = [
             'id' => $id,
             'label' => $label,
             'value' => $point['value'],
@@ -128,6 +169,67 @@ final class ChartDataNormalizer
                 $allowDeferredTypedX,
             ),
         ];
+
+        if ($candle !== null) {
+            return [...$normalized, ...$candle, 'error_min' => $candle['low'], 'error_max' => $candle['high']];
+        }
+
+        $hasMinimumError = array_key_exists('error_min', $point);
+        $hasMaximumError = array_key_exists('error_max', $point);
+        if ($hasMinimumError !== $hasMaximumError) {
+            throw new InvalidArgumentException(
+                "The {$chartName} error range at index {$index} for series '{$seriesId}' must define both error_min and error_max."
+            );
+        }
+
+        if ($hasMinimumError) {
+            $errorMinimum = self::normalizeNumber(
+                $point['error_min'],
+                $chartName,
+                "error_min at index {$index} for series '{$seriesId}'",
+            );
+            $errorMaximum = self::normalizeNumber(
+                $point['error_max'],
+                $chartName,
+                "error_max at index {$index} for series '{$seriesId}'",
+            );
+            if ($errorMinimum > $point['value'] || $errorMaximum < $point['value'] || $errorMinimum >= $errorMaximum) {
+                throw new InvalidArgumentException(
+                    "The {$chartName} error range at index {$index} for series '{$seriesId}' must contain its value."
+                );
+            }
+
+            $normalized['error_min'] = $errorMinimum;
+            $normalized['error_max'] = $errorMaximum;
+        }
+
+        return $normalized;
+    }
+
+    /** @return array{open: float|int, high: float|int, low: float|int, close: float|int} */
+    private static function candlestick(array $point, string $seriesId, int $index, string $chartName): array
+    {
+        $values = [];
+        foreach (['open', 'high', 'low', 'close'] as $key) {
+            if (! array_key_exists($key, $point)) {
+                throw new InvalidArgumentException("The {$chartName} {$key} at index {$index} for series '{$seriesId}' is required.");
+            }
+            $values[$key] = self::normalizeNumber(
+                $point[$key],
+                $chartName,
+                "{$key} at index {$index} for series '{$seriesId}'",
+            );
+        }
+
+        if (
+            $values['low'] > min($values['open'], $values['close'])
+            || $values['high'] < max($values['open'], $values['close'])
+            || $values['low'] >= $values['high']
+        ) {
+            throw new InvalidArgumentException("The {$chartName} OHLC range at index {$index} for series '{$seriesId}' is invalid.");
+        }
+
+        return $values;
     }
 
     private static function xValue(
@@ -175,7 +277,7 @@ final class ChartDataNormalizer
                 throw new InvalidArgumentException("The {$chartName} x value for {$context} must be a finite integer or float.");
             }
 
-            self::assertExactInteger($value, $chartName, "x value for {$context}");
+            self::assertExactNumber($value, $chartName, "x value for {$context}");
 
             return $value;
         }
@@ -236,13 +338,24 @@ final class ChartDataNormalizer
         return 'compat-'.substr(hash('sha256', $seriesId."\0".$label."\0".$index), 0, 16);
     }
 
-    private static function assertExactInteger(int|float $value, string $chartName, string $context): void
+    public static function assertExactNumber(int|float $value, string $chartName, string $context): void
     {
         if (is_int($value) && abs($value) > self::MAX_EXACT_INTEGER) {
             throw new InvalidArgumentException(
                 "The {$chartName} {$context} must be within the exact cross-platform integer range."
             );
         }
+    }
+
+    private static function normalizeNumber(mixed $value, string $chartName, string $context): int|float
+    {
+        if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value)) {
+            throw new InvalidArgumentException("The {$chartName} {$context} must be a finite integer or float.");
+        }
+
+        self::assertExactNumber($value, $chartName, $context);
+
+        return $value;
     }
 
     private static function formatDateTime(DateTimeInterface $datetime, ?string $source = null): string
