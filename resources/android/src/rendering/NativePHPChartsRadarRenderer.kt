@@ -59,94 +59,10 @@ import com.nativephp.mobile.ui.nativerender.NativeUINode
 import com.nativephp.plugins.native_ui.ui.NativeUIFontResolver
 import org.json.JSONArray
 import org.json.JSONObject
-import java.text.NumberFormat
-import java.util.Currency
-import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
-
-internal data class NativePHPChartsRadarAxis(val id: String, val label: String, val maximum: Double)
-internal data class NativePHPChartsRadarValue(val axis: String, val value: Double)
-internal data class NativePHPChartsRadarSeries(
-    val id: String,
-    val name: String,
-    val color: Color,
-    val values: List<NativePHPChartsRadarValue>,
-)
-
-internal data class NativePHPChartsRadarSelection(
-    val series: NativePHPChartsRadarSeries,
-    val axis: NativePHPChartsRadarAxis,
-    val value: NativePHPChartsRadarValue,
-    val index: Int,
-) {
-    val id: String get() = "${series.id}:${axis.id}"
-}
-
-internal data class NativePHPChartsRadarStyle(
-    val lineColor: String?,
-    val lineWidth: Float,
-    val interpolation: String,
-    val dash: List<Float>,
-    val areaOpacity: Float,
-    val areaGradient: Boolean,
-    val pointsVisible: Boolean,
-    val pointColor: String?,
-    val pointSize: Float,
-    val gridVisible: Boolean,
-    val gridColor: String?,
-    val gridWidth: Float,
-    val axisVisible: Boolean,
-    val axisColor: String?,
-    val axisLabelColor: String?,
-    val axisFont: String?,
-    val axisFontSize: Float,
-)
-
-internal data class NativePHPChartsRadarConfiguration(
-    val axes: List<NativePHPChartsRadarAxis>,
-    val series: List<NativePHPChartsRadarSeries>,
-    val style: NativePHPChartsRadarStyle,
-    val legend: NativePHPChartsLegend,
-    val locale: String,
-    val valueFormat: String,
-    val currencyCode: String,
-    val minimumFractionDigits: Int,
-    val maximumFractionDigits: Int,
-    val animated: Boolean,
-    val emptyLabel: String,
-    val accessibilityLabel: String,
-    val onSelect: Int,
-    val gridLevels: Int,
-) {
-    val selections: List<NativePHPChartsRadarSelection> = series.flatMap { item ->
-        item.values.mapIndexedNotNull { index, value ->
-            axes.getOrNull(index)?.takeIf { it.id == value.axis }?.let {
-                NativePHPChartsRadarSelection(item, it, value, index)
-            }
-        }
-    }
-    val hasData: Boolean get() = axes.size >= 3 && selections.isNotEmpty()
-    val legendVisible: Boolean get() = legend.visible ?: (series.size > 1)
-    val animationKey: Int get() = 31 * axes.hashCode() + series.hashCode()
-}
-
-internal class NativePHPChartsRadarFormatting(configuration: NativePHPChartsRadarConfiguration) {
-    private val formatter: NumberFormat = when (configuration.valueFormat) {
-        "currency" -> NumberFormat.getCurrencyInstance(configuration.resolvedLocale()).apply {
-            runCatching { Currency.getInstance(configuration.currencyCode) }.getOrNull()?.let { currency = it }
-        }
-        "percent" -> NumberFormat.getPercentInstance(configuration.resolvedLocale())
-        else -> NumberFormat.getNumberInstance(configuration.resolvedLocale())
-    }.apply {
-        if (configuration.minimumFractionDigits >= 0) minimumFractionDigits = configuration.minimumFractionDigits
-        if (configuration.maximumFractionDigits >= 0) maximumFractionDigits = configuration.maximumFractionDigits
-    }
-
-    fun value(value: Double): String = formatter.format(value)
-}
 
 internal data class NativePHPChartsRadarNavigation(
     val previous: NativePHPChartsRadarSelection?,
@@ -730,9 +646,6 @@ private fun decodeRadarConfiguration(node: NativeUINode): NativePHPChartsRadarCo
         gridLevels = props.getInt("grid_levels", 5).coerceIn(2, 10),
     )
 }
-
-private fun NativePHPChartsRadarConfiguration.resolvedLocale(): Locale =
-    if (locale.isBlank()) Locale.getDefault() else Locale.forLanguageTag(locale)
 
 private fun radarObject(json: String): JSONObject = runCatching { JSONObject(json) }.getOrDefault(JSONObject())
 
