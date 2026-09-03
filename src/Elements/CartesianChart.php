@@ -86,16 +86,13 @@ abstract class CartesianChart extends ChartElement
         $hasSeries = array_key_exists('series', $attrs);
 
         if ($hasSeries && $hasXAxis) {
-            $this->rawSeries = [];
-            $this->series = [];
-            $this->applyArrayAttributes($attrs, ['x-axis', 'xAxis'], 'xAxis');
-        }
-
-        if ($hasSeries) {
-            $this->arrayAttribute($attrs['series'], 'series', fn (array $value) => $this->series($value));
-        }
-
-        if (! $hasSeries || ! $hasXAxis) {
+            $axisKey = array_key_exists('x-axis', $attrs) ? 'x-axis' : 'xAxis';
+            $this->arrayAttribute($attrs[$axisKey], $axisKey, function (array $axis) use ($attrs): void {
+                $this->arrayAttribute($attrs['series'], 'series', fn (array $series) => $this->replaceCartesianData($axis, $series));
+            });
+        } elseif ($hasSeries) {
+            $this->arrayAttribute($attrs['series'], 'series', fn (array $series) => $this->series($series));
+        } else {
             $this->applyArrayAttributes($attrs, ['x-axis', 'xAxis'], 'xAxis');
         }
 
@@ -118,14 +115,16 @@ abstract class CartesianChart extends ChartElement
     /** @param array<int, mixed> $series */
     public function series(array $series): static
     {
-        $this->rawSeries = $series;
-        $this->series = ChartDataNormalizer::normalize(
+        $normalizedSeries = ChartDataNormalizer::normalize(
             $series,
             $this->xAxis['type'],
             $this->chartName(),
             $this->chartType(),
             allowDeferredTypedX: ! $this->xAxisWasConfigured,
         );
+
+        $this->rawSeries = $series;
+        $this->series = $normalizedSeries;
         $this->seriesRequiresFinalNormalization = ! $this->xAxisWasConfigured;
         $this->invalidateCartesianWireSnapshot();
 
@@ -135,24 +134,29 @@ abstract class CartesianChart extends ChartElement
     /** @param array<string, mixed> $axis */
     public function xAxis(array $axis): static
     {
-        $this->xAxis = AxisNormalizer::x($axis, $this->chartName(), $this->xAxis);
-        $this->xAxisWasConfigured = true;
-        $this->series = ChartDataNormalizer::normalize(
+        $normalizedAxis = AxisNormalizer::x($axis, $this->chartName(), $this->xAxis);
+        $normalizedSeries = ChartDataNormalizer::normalize(
             $this->rawSeries,
-            $this->xAxis['type'],
+            $normalizedAxis['type'],
             $this->chartName(),
             $this->chartType(),
         );
-        $this->annotations = AnnotationNormalizer::normalize(
+        $normalizedAnnotations = AnnotationNormalizer::normalize(
             $this->rawAnnotations,
-            $this->xAxis['type'],
+            $normalizedAxis['type'],
             $this->chartName(),
         );
-        $this->viewport = ViewportNormalizer::normalize(
+        $normalizedViewport = ViewportNormalizer::normalize(
             $this->rawViewport,
-            $this->xAxis['type'],
+            $normalizedAxis['type'],
             $this->chartName(),
         );
+
+        $this->xAxis = $normalizedAxis;
+        $this->xAxisWasConfigured = true;
+        $this->series = $normalizedSeries;
+        $this->annotations = $normalizedAnnotations;
+        $this->viewport = $normalizedViewport;
         $this->seriesRequiresFinalNormalization = false;
         $this->invalidateCartesianWireSnapshot();
 
@@ -175,12 +179,14 @@ abstract class CartesianChart extends ChartElement
     /** @param array<int, mixed> $annotations */
     public function annotations(array $annotations): static
     {
-        $this->rawAnnotations = $annotations;
-        $this->annotations = AnnotationNormalizer::normalize(
+        $normalizedAnnotations = AnnotationNormalizer::normalize(
             $annotations,
             $this->xAxis['type'],
             $this->chartName(),
         );
+
+        $this->rawAnnotations = $annotations;
+        $this->annotations = $normalizedAnnotations;
         $this->invalidateCartesianWireSnapshot();
 
         return $this;
@@ -198,8 +204,10 @@ abstract class CartesianChart extends ChartElement
     /** @param array<string, mixed> $viewport */
     public function viewport(array $viewport): static
     {
+        $normalizedViewport = ViewportNormalizer::normalize($viewport, $this->xAxis['type'], $this->chartName());
+
         $this->rawViewport = $viewport;
-        $this->viewport = ViewportNormalizer::normalize($viewport, $this->xAxis['type'], $this->chartName());
+        $this->viewport = $normalizedViewport;
         $this->invalidateCartesianWireSnapshot();
 
         return $this;
@@ -299,6 +307,40 @@ abstract class CartesianChart extends ChartElement
         $this->invalidateCommonWireSnapshot();
     }
 
+    /**
+     * @param  array<string, mixed>  $axis
+     * @param  array<int, mixed>  $series
+     */
+    private function replaceCartesianData(array $axis, array $series): void
+    {
+        $normalizedAxis = AxisNormalizer::x($axis, $this->chartName(), $this->xAxis);
+        $normalizedSeries = ChartDataNormalizer::normalize(
+            $series,
+            $normalizedAxis['type'],
+            $this->chartName(),
+            $this->chartType(),
+        );
+        $normalizedAnnotations = AnnotationNormalizer::normalize(
+            $this->rawAnnotations,
+            $normalizedAxis['type'],
+            $this->chartName(),
+        );
+        $normalizedViewport = ViewportNormalizer::normalize(
+            $this->rawViewport,
+            $normalizedAxis['type'],
+            $this->chartName(),
+        );
+
+        $this->xAxis = $normalizedAxis;
+        $this->xAxisWasConfigured = true;
+        $this->rawSeries = $series;
+        $this->series = $normalizedSeries;
+        $this->annotations = $normalizedAnnotations;
+        $this->viewport = $normalizedViewport;
+        $this->seriesRequiresFinalNormalization = false;
+        $this->invalidateCartesianWireSnapshot();
+    }
+
     /** @return array<string, bool|float|int|string> */
     protected function specificProps(): array
     {
@@ -313,9 +355,11 @@ abstract class CartesianChart extends ChartElement
     /** @return array<string, string> */
     private function cartesianWireSnapshot(): array
     {
-        if ($this->cartesianWireSnapshot !== null) {
+        if ($this->cartesianWireSnapshot !== null && $this->hasAvailableSeriesPayload($this->cartesianWireSnapshot)) {
             return $this->cartesianWireSnapshot;
         }
+
+        $this->cartesianWireSnapshot = null;
 
         if ($this->seriesRequiresFinalNormalization) {
             $this->series = ChartDataNormalizer::normalize(
@@ -360,5 +404,15 @@ abstract class CartesianChart extends ChartElement
         }
 
         return $this->chartType() === 'area' && ($this->specificProps()['area_mode'] ?? null) === 'stacked';
+    }
+
+    /** @param array<string, string> $snapshot */
+    private function hasAvailableSeriesPayload(array $snapshot): bool
+    {
+        if (($snapshot['series_transport'] ?? null) !== 'file-v1') {
+            return true;
+        }
+
+        return isset($snapshot['series_json_file']) && is_readable($snapshot['series_json_file']);
     }
 }

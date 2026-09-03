@@ -42,6 +42,16 @@ it('maps stacking from Blade attributes and rejects unsupported modes', function
         ->toThrow(InvalidArgumentException::class, 'overlay or stacked');
 });
 
+it('invalidates an LTTB snapshot before switching to stacked mode', function () {
+    $chart = AreaChart::make()->sampling(['mode' => 'lttb', 'threshold' => 3]);
+
+    $chart->toArray(new CallbackRegistry);
+    $chart->areaMode('stacked');
+
+    expect(fn () => $chart->toArray(new CallbackRegistry))
+        ->toThrow(InvalidArgumentException::class, 'cannot combine LTTB sampling with related series');
+});
+
 it('exposes the self-closing area chart Blade component type', function () {
     $method = new ReflectionMethod(AreaChartComponent::class, 'elementType');
 

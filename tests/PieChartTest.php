@@ -92,6 +92,19 @@ it('rejects malformed segment collections', function (Closure $configure, string
     ]]), 'exact cross-platform integer range'],
 ]);
 
+it('retains normalized segments after a rejected replacement', function () {
+    $chart = PieChart::make()->segments([
+        ['id' => 'web', 'label' => 'Web', 'value' => 70, 'color' => '#AbC'],
+        ['id' => 'store', 'label' => 'Store', 'value' => 30, 'color' => '#FFFFFF'],
+    ]);
+    $before = $chart->toArray(new CallbackRegistry)['props'];
+
+    expect(fn () => $chart->segments([
+        ['id' => 'web', 'label' => 'Web', 'value' => -1, 'color' => '#AABBCC'],
+    ]))->toThrow(InvalidArgumentException::class, 'greater than or equal to zero')
+        ->and($chart->toArray(new CallbackRegistry)['props'])->toBe($before);
+});
+
 it('rejects unsupported or out-of-range radial styles', function (array $style, string $message) {
     expect(fn () => PieChart::make()->style($style))->toThrow(InvalidArgumentException::class, $message);
 })->with([

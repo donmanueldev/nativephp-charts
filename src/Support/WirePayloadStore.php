@@ -39,8 +39,10 @@ final class WirePayloadStore
         $path = $directory.'/series-'.hash('sha256', $json).'.json';
         if (! is_file($path)) {
             self::writeAtomically($path, $json, $chartName);
-            self::removeOldPayloads($directory, $path);
+        } else {
+            @touch($path);
         }
+        self::removeOldPayloads($directory, $path);
 
         return [
             'series_json' => '[]',

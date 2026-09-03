@@ -27,8 +27,18 @@ class RadarChart extends ChartElement
     public function applyAttributes(array $attrs): void
     {
         $this->applyCommonAttributes($attrs);
-        $this->applyArrayAttributes($attrs, ['axes'], 'axes');
-        $this->applyArrayAttributes($attrs, ['series'], 'series');
+
+        $hasAxes = array_key_exists('axes', $attrs);
+        $hasSeries = array_key_exists('series', $attrs);
+        if ($hasAxes && $hasSeries) {
+            $this->arrayAttribute($attrs['axes'], 'axes', function (array $axes) use ($attrs): void {
+                $this->arrayAttribute($attrs['series'], 'series', fn (array $series) => $this->replaceData($axes, $series));
+            });
+        } else {
+            $this->applyArrayAttributes($attrs, ['axes'], 'axes');
+            $this->applyArrayAttributes($attrs, ['series'], 'series');
+        }
+
         $this->applyIntegerAttributes($attrs, ['grid-levels', 'gridLevels'], 'gridLevels');
         foreach (['fill-opacity', 'fillOpacity'] as $key) {
             if (array_key_exists($key, $attrs)) {
@@ -39,16 +49,21 @@ class RadarChart extends ChartElement
 
     public function axes(array $axes): static
     {
-        $this->axes = RadarDataNormalizer::axes($axes);
-        $this->series = RadarDataNormalizer::series($this->rawSeries, $this->axes);
+        $normalizedAxes = RadarDataNormalizer::axes($axes);
+        $normalizedSeries = RadarDataNormalizer::series($this->rawSeries, $normalizedAxes);
+
+        $this->axes = $normalizedAxes;
+        $this->series = $normalizedSeries;
 
         return $this;
     }
 
     public function series(array $series): static
     {
+        $normalizedSeries = $this->axes === [] ? [] : RadarDataNormalizer::series($series, $this->axes);
+
         $this->rawSeries = $series;
-        $this->series = $this->axes === [] ? [] : RadarDataNormalizer::series($series, $this->axes);
+        $this->series = $normalizedSeries;
 
         return $this;
     }
@@ -83,7 +98,6 @@ class RadarChart extends ChartElement
         if ($this->axes === []) {
             throw new InvalidArgumentException('The radar chart requires at least three axes.');
         }
-        $this->series = RadarDataNormalizer::series($this->rawSeries, $this->axes);
 
         return [
             ...$this->resolveCommonProps($registry),
@@ -97,5 +111,19 @@ class RadarChart extends ChartElement
     protected function legendItemCount(): int
     {
         return count($this->series);
+    }
+
+    /**
+     * @param  array<int, mixed>  $axes
+     * @param  array<int, mixed>  $series
+     */
+    private function replaceData(array $axes, array $series): void
+    {
+        $normalizedAxes = RadarDataNormalizer::axes($axes);
+        $normalizedSeries = RadarDataNormalizer::series($series, $normalizedAxes);
+
+        $this->axes = $normalizedAxes;
+        $this->rawSeries = $series;
+        $this->series = $normalizedSeries;
     }
 }

@@ -32,6 +32,7 @@ final class RadarDataNormalizer
             if (! is_array($axis)) {
                 throw new InvalidArgumentException("The radar chart axis at index {$index} must be an array.");
             }
+            self::rejectUnknownKeys($axis, ['id', 'label', 'maximum'], "axis at index {$index}");
             $id = self::text($axis['id'] ?? null, "axis at index {$index} id");
             if (isset($ids[$id])) {
                 throw new InvalidArgumentException("The radar chart axis id '{$id}' must be unique.");
@@ -67,6 +68,7 @@ final class RadarDataNormalizer
             if (! is_array($item)) {
                 throw new InvalidArgumentException("The radar chart series at index {$index} must be an array.");
             }
+            self::rejectUnknownKeys($item, ['id', 'name', 'color', 'values'], "series at index {$index}");
             $id = self::text($item['id'] ?? null, "series at index {$index} id");
             if (isset($seriesIds[$id])) {
                 throw new InvalidArgumentException("The radar chart series id '{$id}' must be unique.");
@@ -82,6 +84,7 @@ final class RadarDataNormalizer
                 if (! is_array($value)) {
                     throw new InvalidArgumentException("The radar chart value at index {$valueIndex} for series '{$id}' must be an array.");
                 }
+                self::rejectUnknownKeys($value, ['axis', 'value'], "value at index {$valueIndex} for series '{$id}'");
                 $axis = self::text($value['axis'] ?? null, "value at index {$valueIndex} axis");
                 if (! isset($axisById[$axis]) || isset($seen[$axis])) {
                     throw new InvalidArgumentException("The radar chart series '{$id}' must reference each declared axis exactly once.");
@@ -125,5 +128,18 @@ final class RadarDataNormalizer
         ChartDataNormalizer::assertExactNumber($value, 'radar chart', $context);
 
         return $value;
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $values
+     * @param  list<string>  $allowed
+     */
+    private static function rejectUnknownKeys(array $values, array $allowed, string $context): void
+    {
+        foreach ($values as $key => $value) {
+            if (! is_string($key) || ! in_array($key, $allowed, true)) {
+                throw new InvalidArgumentException("The radar chart {$context} option '{$key}' is not supported.");
+            }
+        }
     }
 }

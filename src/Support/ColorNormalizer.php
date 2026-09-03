@@ -31,7 +31,7 @@ final class ColorNormalizer
         }
 
         if (preg_match('/^#[\dA-Fa-f]{3}$/', $color) === 1) {
-            return sprintf('#%1$s%1$s%2$s%2$s%3$s%3$s', $color[1], $color[2], $color[3]);
+            return strtoupper(sprintf('#%1$s%1$s%2$s%2$s%3$s%3$s', $color[1], $color[2], $color[3]));
         }
 
         if (preg_match('/^#[\dA-Fa-f]{6}$/', $color) === 1) {

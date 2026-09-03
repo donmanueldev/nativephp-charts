@@ -52,6 +52,14 @@ final class AnnotationNormalizer
             if (! is_string($type) || ! in_array($type, ['line', 'band'], true)) {
                 throw new InvalidArgumentException("The {$chartName} annotation '{$id}' type must be line or band.");
             }
+            self::rejectUnknownKeys(
+                $annotation,
+                $type === 'line'
+                    ? ['id', 'type', 'axis', 'value', 'label', 'color', 'width']
+                    : ['id', 'type', 'axis', 'from', 'to', 'label', 'color', 'opacity'],
+                $chartName,
+                $id,
+            );
 
             $axis = $annotation['axis'] ?? null;
             if (! is_string($axis) || ! in_array($axis, ['x', 'y'], true)) {
@@ -167,5 +175,18 @@ final class AnnotationNormalizer
         }
 
         return new DateTimeImmutable((string) $left) <=> new DateTimeImmutable((string) $right);
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $annotation
+     * @param  list<string>  $allowed
+     */
+    private static function rejectUnknownKeys(array $annotation, array $allowed, string $chartName, string $id): void
+    {
+        foreach ($annotation as $key => $value) {
+            if (! is_string($key) || ! in_array($key, $allowed, true)) {
+                throw new InvalidArgumentException("The {$chartName} annotation '{$id}' option '{$key}' is not supported.");
+            }
+        }
     }
 }

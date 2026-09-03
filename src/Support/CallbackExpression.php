@@ -45,11 +45,16 @@ final class CallbackExpression
         $arguments = trim(substr($expression, $open + 1, -1));
         if ($arguments !== '') {
             try {
-                $decoded = json_decode('['.str_replace("'", '"', $arguments).']', true, flags: JSON_THROW_ON_ERROR);
+                $decoded = json_decode('['.$arguments.']', true, flags: JSON_THROW_ON_ERROR);
+                $arguments = substr(json_encode($decoded, JSON_HEX_APOS | JSON_THROW_ON_ERROR), 1, -1);
             } catch (JsonException) {
-                throw new InvalidArgumentException(
-                    "The {$chartName} selection callback arguments must be JSON-compatible literals."
-                );
+                try {
+                    $decoded = json_decode('['.str_replace("'", '"', $arguments).']', true, flags: JSON_THROW_ON_ERROR);
+                } catch (JsonException) {
+                    throw new InvalidArgumentException(
+                        "The {$chartName} selection callback arguments must be JSON-compatible literals."
+                    );
+                }
             }
 
             foreach ($decoded as $argument) {

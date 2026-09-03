@@ -17,6 +17,7 @@ class AreaChart extends CartesianChart
         }
 
         $this->areaMode = $mode;
+        $this->invalidateCartesianWireSnapshot();
 
         return $this;
     }

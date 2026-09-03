@@ -56,6 +56,7 @@ final class ChartDataNormalizer
             if (! is_array($item)) {
                 throw new InvalidArgumentException("The {$chartName} series at index {$index} must be an array.");
             }
+            self::rejectUnknownKeys($item, self::seriesKeys($chartType), $chartName, "series at index {$index}");
 
             $id = self::requiredString($item, 'id', "series at index {$index}", $chartName);
             if (array_key_exists($id, $seriesIds)) {
@@ -152,6 +153,12 @@ final class ChartDataNormalizer
                 "The {$chartName} point at index {$index} for series '{$seriesId}' must be an array."
             );
         }
+        self::rejectUnknownKeys(
+            $point,
+            self::pointKeys($chartType),
+            $chartName,
+            "point at index {$index} for series '{$seriesId}'",
+        );
 
         $label = self::requiredString($point, 'label', "point at index {$index} for series '{$seriesId}'", $chartName);
 
@@ -427,5 +434,41 @@ final class ChartDataNormalizer
         }
 
         return trim($values[$key]);
+    }
+
+    /** @return list<string> */
+    private static function seriesKeys(string $chartType): array
+    {
+        return [
+            'id',
+            'name',
+            'color',
+            'points',
+            'style',
+            ...in_array($chartType, ['line', 'area'], true) ? ['fill_to'] : [],
+        ];
+    }
+
+    /** @return list<string> */
+    private static function pointKeys(string $chartType): array
+    {
+        if ($chartType === 'candlestick') {
+            return ['id', 'label', 'x', 'open', 'high', 'low', 'close'];
+        }
+
+        return ['id', 'label', 'x', 'value', 'error_min', 'error_max'];
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $values
+     * @param  list<string>  $allowed
+     */
+    private static function rejectUnknownKeys(array $values, array $allowed, string $chartName, string $context): void
+    {
+        foreach ($values as $key => $value) {
+            if (! is_string($key) || ! in_array($key, $allowed, true)) {
+                throw new InvalidArgumentException("The {$chartName} {$context} option '{$key}' is not supported.");
+            }
+        }
     }
 }

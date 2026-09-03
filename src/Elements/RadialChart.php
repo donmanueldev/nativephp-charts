@@ -8,9 +8,6 @@ use Native\Mobile\Edge\CallbackRegistry;
 
 abstract class RadialChart extends ChartElement
 {
-    /** @var array<int, mixed> */
-    protected array $rawSegments = [];
-
     /** @var list<array{id: string, label: string, value: int|float, color: string}> */
     protected array $segments = [];
 
@@ -30,8 +27,9 @@ abstract class RadialChart extends ChartElement
     /** @param array<int, mixed> $segments */
     public function segments(array $segments): static
     {
-        $this->rawSegments = $segments;
-        $this->segments = SegmentNormalizer::normalize($segments, $this->chartName());
+        $normalizedSegments = SegmentNormalizer::normalize($segments, $this->chartName());
+
+        $this->segments = $normalizedSegments;
 
         return $this;
     }
@@ -41,8 +39,6 @@ abstract class RadialChart extends ChartElement
 
     protected function resolveProps(CallbackRegistry $registry): array
     {
-        $this->segments = SegmentNormalizer::normalize($this->rawSegments, $this->chartName());
-
         return [
             ...$this->resolveCommonProps($registry),
             'segments_json' => WireEncoder::encode($this->segments, $this->chartName()),

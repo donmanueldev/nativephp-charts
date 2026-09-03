@@ -2,6 +2,8 @@
 
 namespace Donmanueldev\NativephpCharts\Support;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 
 /**
@@ -134,8 +136,12 @@ final class SamplingNormalizer
             return (float) $x;
         }
 
-        $timestamp = strtotime((string) $x);
+        if ($xType === 'date') {
+            $date = DateTimeImmutable::createFromFormat('!Y-m-d', (string) $x, new DateTimeZone('UTC'));
 
-        return $timestamp === false ? (float) $index : (float) $timestamp;
+            return $date === false ? (float) $index : (float) $date->format('U');
+        }
+
+        return (float) (new DateTimeImmutable((string) $x))->format('U.u');
     }
 }
