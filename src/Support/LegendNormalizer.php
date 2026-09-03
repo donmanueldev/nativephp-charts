@@ -4,10 +4,21 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Canonicalizes legend visibility, placement, alignment, and typography for the wire payload.
+ */
 final class LegendNormalizer
 {
     /**
+     * Resolve `visible: auto` from the number of rendered series and normalize style aliases.
+     *
+     * An empty style is returned as an object so native decoders consistently receive a
+     * keyed configuration value instead of an empty JSON list.
+     *
+     * @param  array<string, mixed>  $legend
      * @return array{visible: bool, position: string, alignment: string, style: array<string, float|string>|object}
+     *
+     * @throws InvalidArgumentException When a legend option is unknown or invalid.
      */
     public static function normalize(array $legend, int $seriesCount, string $chartName): array
     {
@@ -45,7 +56,12 @@ final class LegendNormalizer
         ];
     }
 
-    /** @return array<string, float|string> */
+    /**
+     * Convert public camelCase aliases to the snake_case keys used by both renderers.
+     *
+     * @param  array<string, mixed>  $style
+     * @return array<string, float|string>
+     */
     private static function style(array $style, string $chartName): array
     {
         self::rejectUnknownKeys($style, ['font', 'font_size', 'fontSize', 'label_color', 'labelColor', 'marker_size', 'markerSize'], $chartName, ' style');

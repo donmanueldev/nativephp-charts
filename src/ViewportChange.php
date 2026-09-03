@@ -7,8 +7,27 @@ use Donmanueldev\NativephpCharts\Support\ChartDataNormalizer;
 use InvalidArgumentException;
 use JsonException;
 
+/**
+ * Immutable PHP representation of a completed native viewport gesture.
+ *
+ * The renderers emit one versioned callback after pan/zoom interaction settles; this
+ * decoder validates that its continuous x-axis bounds use the same canonical types as
+ * chart data. Category and y-axis viewport events are not part of version 1.
+ */
 final readonly class ViewportChange
 {
+    /**
+     * Create an event from values that have already passed the version 1 contract.
+     * Prefer `fromJson()` for native callback data or any other untrusted input.
+     *
+     * @param  int  $version  Wire contract version; currently always `1`.
+     * @param  string  $chartType  Cartesian chart family that emitted the event.
+     * @param  string  $axis  Changed axis; version 1 supports only `x`.
+     * @param  string  $reason  One of `pan`, `zoom`, or `pan_zoom`.
+     * @param  string  $xType  One of `number`, `date`, or `datetime`.
+     * @param  int|float|string  $minimum  Canonical inclusive lower viewport bound.
+     * @param  int|float|string  $maximum  Canonical inclusive upper viewport bound.
+     */
     public function __construct(
         public int $version,
         public string $chartType,
@@ -19,6 +38,14 @@ final readonly class ViewportChange
         public int|float|string $maximum,
     ) {}
 
+    /**
+     * Decode and validate a version 1 viewport-change callback payload.
+     *
+     * Expected wire keys are `version`, `chart_type`, `axis`, `reason`, `x_type`,
+     * `minimum`, and `maximum`. The decoded bounds always satisfy `minimum < maximum`.
+     *
+     * @throws InvalidArgumentException When JSON, required fields, types, or bounds are invalid.
+     */
     public static function fromJson(string $json): self
     {
         try {
@@ -73,7 +100,11 @@ final readonly class ViewportChange
         );
     }
 
-    /** @return array{version: int, chart_type: string, axis: string, reason: string, x_type: string, minimum: int|float|string, maximum: int|float|string} */
+    /**
+     * Return the canonical snake_case event payload for logging or forwarding.
+     *
+     * @return array{version: int, chart_type: string, axis: string, reason: string, x_type: string, minimum: int|float|string, maximum: int|float|string}
+     */
     public function toArray(): array
     {
         return [
@@ -102,6 +133,7 @@ final readonly class ViewportChange
         );
     }
 
+    /** Compare canonical bounds without discarding datetime microseconds. */
     private static function comparable(int|float|string $value, string $xType): float|string
     {
         return match ($xType) {

@@ -5,9 +5,29 @@ namespace Donmanueldev\NativephpCharts\Support;
 use DateTimeImmutable;
 use InvalidArgumentException;
 
+/**
+ * Normalizes line and band annotations against the chart's declared axis types.
+ *
+ * X annotations share the chart data's typed-x representation; y annotations remain
+ * numeric. This keeps annotation geometry comparable with series and viewport values.
+ */
 final class AnnotationNormalizer
 {
-    /** @return list<array<string, float|int|string>> */
+    /**
+     * Validate an ordered annotation list and return renderer-ready canonical keys.
+     *
+     * Line input: `id`, `type: line`, `axis`, `value`, and optional `label`, `color`,
+     * `width`. Band input replaces `value`/`width` with `from`, `to`, and optional
+     * `opacity`.
+     *
+     * Line annotations contain `value` and `width`; bands contain `from`, `to`, and
+     * `opacity`. IDs are unique and non-category ranges must be strictly increasing.
+     *
+     * @param  array<int, mixed>  $annotations
+     * @return list<array<string, float|int|string>>
+     *
+     * @throws InvalidArgumentException When identity, axis values, ranges, or styling are invalid.
+     */
     public static function normalize(array $annotations, string $xType, string $chartName): array
     {
         if (! array_is_list($annotations)) {
@@ -91,6 +111,7 @@ final class AnnotationNormalizer
         return $normalized;
     }
 
+    /** Normalize a value using the y-number or typed-x contract selected by the annotation axis. */
     private static function axisValue(
         mixed $value,
         string $axis,
@@ -134,6 +155,7 @@ final class AnnotationNormalizer
         return $value;
     }
 
+    /** Compare canonical number, date, datetime, or category values without changing them. */
     private static function compare(float|int|string $left, float|int|string $right, string $type): int
     {
         if ($type === 'number') {

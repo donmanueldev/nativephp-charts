@@ -4,13 +4,29 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Chooses the inline or file-backed transport for normalized series JSON.
+ *
+ * Small payloads travel directly in `series_json`. Larger payloads are addressed by
+ * their SHA-256 content hash, written atomically with owner-only permissions, and
+ * announced with the versioned `file-v1` transport understood by native decoders.
+ */
 final class WirePayloadStore
 {
     public const INLINE_BYTE_LIMIT = 48 * 1024;
 
     private const RETAINED_PAYLOADS = 64;
 
-    /** @return array{series_json: string}|array{series_json: string, series_json_file: string, series_transport: string} */
+    /**
+     * Return the wire attributes for inline JSON or a file-backed payload.
+     *
+     * File transport keeps the required `series_json` field present as an empty list;
+     * decoders that support `file-v1` read the private path instead.
+     *
+     * @return array{series_json: string}|array{series_json: string, series_json_file: string, series_transport: 'file-v1'}
+     *
+     * @throws InvalidArgumentException When a large payload cannot be stored safely.
+     */
     public static function series(string $json, string $chartName): array
     {
         if (strlen($json) <= self::INLINE_BYTE_LIMIT) {
@@ -33,6 +49,7 @@ final class WirePayloadStore
         ];
     }
 
+    /** Resolve Laravel storage when bootstrapped, with a temp-directory fallback for isolated consumers. */
     private static function directory(): string
     {
         if (function_exists('app') && method_exists(app(), 'storagePath')) {
@@ -53,6 +70,7 @@ final class WirePayloadStore
         }
     }
 
+    /** Write a complete owner-readable payload before atomically exposing its content-addressed path. */
     private static function writeAtomically(string $path, string $json, string $chartName): void
     {
         $temporaryPath = tempnam(dirname($path), 'writing-');
@@ -72,6 +90,7 @@ final class WirePayloadStore
         }
     }
 
+    /** Retain the newest bounded set of cached payloads without deleting the active file. */
     private static function removeOldPayloads(string $directory, string $currentPath): void
     {
         $paths = glob($directory.'/series-*.json') ?: [];

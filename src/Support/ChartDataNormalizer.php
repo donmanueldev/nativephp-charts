@@ -6,13 +6,37 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use InvalidArgumentException;
 
+/**
+ * Defines the canonical Cartesian series contract shared by PHP, Swift, and Kotlin.
+ *
+ * It validates stable identity, typed x values, finite/exact numeric values, optional
+ * uncertainty ranges, candlestick OHLC data, series styles, and inter-series fills.
+ * Every accepted value is safe to encode without platform-dependent coercion.
+ */
 final class ChartDataNormalizer
 {
     private const int MAX_EXACT_INTEGER = 9_007_199_254_740_991;
 
     /**
+     * Normalize ordered public series into renderer-ready maps.
+     *
+     * Each series requires `id`, `name`, `color`, and an ordered `points` list. A
+     * regular point requires `label` and `value`, plus `x` for continuous axes;
+     * candlestick points instead require `open`, `high`, `low`, and `close`.
+     *
+     * Output series always contain `id`, `name`, `color`, and canonical `points`.
+     * Output points always contain `id`, `label`, `value`, and `x`; uncertainty,
+     * candle, style, and fill keys are included only when configured.
+     *
+     * Points without an explicit `id` receive a deterministic compatibility ID based
+     * on series ID, label, and original index. `$allowDeferredTypedX` exists only for
+     * attribute application before the final x-axis type is known; final wire encoding
+     * always calls this method again with strict typed-x validation.
+     *
      * @param  array<int, mixed>  $series
      * @return list<array<string, mixed>>
+     *
+     * @throws InvalidArgumentException When series, point, style, or fill invariants are violated.
      */
     public static function normalize(
         array $series,
@@ -232,6 +256,9 @@ final class ChartDataNormalizer
         return $values;
     }
 
+    /**
+     * Resolve a point's canonical x value, using its label only for category compatibility.
+     */
     private static function xValue(
         array $point,
         string $label,
@@ -270,6 +297,15 @@ final class ChartDataNormalizer
         return self::normalizeTypedX($point['x'], $xType, $chartName, "point at index {$index} for series '{$seriesId}'");
     }
 
+    /**
+     * Normalize one x value according to the cross-platform wire type.
+     *
+     * Numbers remain numeric, dates use `YYYY-MM-DD`, and datetimes become RFC 3339
+     * strings with an explicit offset. DateTime objects and `Z` input are canonicalized
+     * without discarding supplied microseconds.
+     *
+     * @throws InvalidArgumentException When the type is unsupported or the value is invalid.
+     */
     public static function normalizeTypedX(mixed $value, string $xType, string $chartName, string $context): int|float|string
     {
         if ($xType === 'number') {
@@ -333,11 +369,19 @@ final class ChartDataNormalizer
         throw new InvalidArgumentException("The {$chartName} x axis type '{$xType}' is not supported.");
     }
 
+    /**
+     * Derive the stable legacy ID used when older point payloads omit `id`.
+     */
     private static function compatibilityId(string $seriesId, string $label, int $index): string
     {
         return 'compat-'.substr(hash('sha256', $seriesId."\0".$label."\0".$index), 0, 16);
     }
 
+    /**
+     * Reject integers that JSON-backed Swift and Kotlin consumers cannot represent exactly.
+     *
+     * @throws InvalidArgumentException When an integer exceeds the IEEE-754 safe range.
+     */
     public static function assertExactNumber(int|float $value, string $chartName, string $context): void
     {
         if (is_int($value) && abs($value) > self::MAX_EXACT_INTEGER) {
@@ -358,6 +402,9 @@ final class ChartDataNormalizer
         return $value;
     }
 
+    /**
+     * Emit a canonical RFC 3339 value while retaining meaningful fractional seconds.
+     */
     private static function formatDateTime(DateTimeInterface $datetime, ?string $source = null): string
     {
         $fraction = null;

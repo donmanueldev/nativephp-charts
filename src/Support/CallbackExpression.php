@@ -5,8 +5,23 @@ namespace Donmanueldev\NativephpCharts\Support;
 use InvalidArgumentException;
 use JsonException;
 
+/**
+ * Validates callback expressions before they cross the PHP-to-native wire boundary.
+ *
+ * The expression is preserved for NativePHP dispatch; this class does not invoke the
+ * method. Only a component method name and optional scalar, JSON-compatible literals
+ * are accepted so callback arguments cannot introduce nested wire data.
+ */
 final class CallbackExpression
 {
+    /**
+     * Return a trimmed callback expression with a validated method and arguments.
+     *
+     * Both `pointSelected` and `pointSelected('sales', 1, true)` are supported.
+     * Single quotes are accepted as a convenience when validating scalar literals.
+     *
+     * @throws InvalidArgumentException When the method name, parentheses, or arguments are invalid.
+     */
     public static function normalize(string $expression, string $chartName): string
     {
         $expression = trim($expression);
@@ -49,6 +64,7 @@ final class CallbackExpression
         return $method.'('.$arguments.')';
     }
 
+    /** Ensure the dispatch target is a plain component method name. */
     private static function validateMethod(string $method, string $chartName): void
     {
         if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', trim($method)) !== 1) {

@@ -4,9 +4,19 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Produces the complete interaction contract consumed by Cartesian renderers.
+ */
 final class InteractionNormalizer
 {
-    /** @return array{enabled: bool, mode: string, crosshair: string, tooltip: string} */
+    /**
+     * Fill interaction defaults and reject options the native contract cannot consume.
+     *
+     * @param  array<string, mixed>  $interaction
+     * @return array{enabled: bool, mode: string, crosshair: string, tooltip: string}
+     *
+     * @throws InvalidArgumentException When an option is unknown or has an unsupported value.
+     */
     public static function normalize(array $interaction, string $chartName): array
     {
         self::rejectUnknownKeys($interaction, ['enabled', 'mode', 'crosshair', 'tooltip'], $chartName);

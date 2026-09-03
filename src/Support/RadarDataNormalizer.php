@@ -4,9 +4,22 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Normalizes radar-specific axes and values into an order-stable wire contract.
+ *
+ * Unlike Cartesian series, radar values reference a declared axis and must repeat
+ * the declaration order exactly so polygon vertices align on iOS and Android.
+ */
 final class RadarDataNormalizer
 {
-    /** @return list<array{id: string, label: string, maximum: float|int}> */
+    /**
+     * Validate the 3-to-24 unique axes that define the radar domain.
+     *
+     * @param  array<int, mixed>  $axes
+     * @return list<array{id: string, label: string, maximum: float|int}>
+     *
+     * @throws InvalidArgumentException When an axis is malformed, duplicated, or has a non-positive maximum.
+     */
     public static function axes(array $axes): array
     {
         if (! array_is_list($axes) || count($axes) < 3 || count($axes) > 24) {
@@ -33,8 +46,14 @@ final class RadarDataNormalizer
         }, $axes, array_keys($axes));
     }
 
-    /** @param list<array{id: string, label: string, maximum: float|int}> $axes
+    /**
+     * Normalize series whose values cover every declared axis once and in order.
+     *
+     * @param  array<int, mixed>  $series
+     * @param  list<array{id: string, label: string, maximum: float|int}>  $axes
      * @return list<array<string, mixed>>
+     *
+     * @throws InvalidArgumentException When series identity, order, color, or axis values are invalid.
      */
     public static function series(array $series, array $axes): array
     {

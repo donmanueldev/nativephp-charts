@@ -4,13 +4,25 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Validates pie and donut segments before they are serialized to native code.
+ *
+ * Segment order is significant for drawing and selection. Identifiers are unique,
+ * values are non-negative finite numbers, and any non-empty chart must contain a
+ * positive value so the renderers always have a meaningful radial domain.
+ */
 final class SegmentNormalizer
 {
     private const int MAX_EXACT_INTEGER = 9_007_199_254_740_991;
 
     /**
+     * Each input segment requires `id`, `label`, `value`, and `color`; no other
+     * keys are accepted.
+     *
      * @param  array<int, mixed>  $segments
      * @return list<array{id: string, label: string, value: int|float, color: string}>
+     *
+     * @throws InvalidArgumentException When the ordered segment contract is violated.
      */
     public static function normalize(array $segments, string $chartName): array
     {

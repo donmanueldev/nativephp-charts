@@ -4,9 +4,19 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Validates sampling options and performs renderer-neutral series reduction.
+ */
 final class SamplingNormalizer
 {
-    /** @return array{mode: string, threshold: int} */
+    /**
+     * Produce the complete sampling configuration shared by both native renderers.
+     *
+     * @param  array<string, mixed>  $sampling
+     * @return array{mode: string, threshold: int}
+     *
+     * @throws InvalidArgumentException When the mode or threshold is unsupported.
+     */
     public static function normalize(array $sampling, string $chartName): array
     {
         $unknown = array_diff(array_keys($sampling), ['mode', 'threshold']);
@@ -27,7 +37,14 @@ final class SamplingNormalizer
         return compact('mode', 'threshold');
     }
 
-    /** @param list<array<string, mixed>> $series
+    /**
+     * Apply LTTB independently to each series while preserving its first and last point.
+     *
+     * Sampled points receive `source_index`, retaining the original point position used
+     * by native selection callbacks. Series at or below the threshold are returned intact.
+     *
+     * @param  list<array<string, mixed>>  $series
+     * @param  array{mode: string, threshold: int}  $sampling
      * @return list<array<string, mixed>>
      */
     public static function apply(array $series, array $sampling, string $xType): array
@@ -52,7 +69,10 @@ final class SamplingNormalizer
         }, $series);
     }
 
-    /** @param list<array<string, mixed>> $points
+    /**
+     * Reduce one ordered series by selecting the largest visual triangle per bucket.
+     *
+     * @param  list<array<string, mixed>>  $points
      * @return list<array<string, mixed>>
      */
     private static function largestTriangleThreeBuckets(array $points, int $threshold, string $xType): array
@@ -102,6 +122,7 @@ final class SamplingNormalizer
         return $sampled;
     }
 
+    /** Map category, numeric, date, and datetime x values to LTTB coordinates. */
     private static function x(array $point, int $index, string $xType): float
     {
         if ($xType === 'category') {

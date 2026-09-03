@@ -5,9 +5,25 @@ namespace Donmanueldev\NativephpCharts\Support;
 use DateTimeImmutable;
 use InvalidArgumentException;
 
+/**
+ * Validates the initial x-axis viewport sent to interactive Cartesian renderers.
+ *
+ * Viewports use the same typed-x normalization as data and events. Category axes are
+ * intentionally excluded because their positions are ordinal rather than continuous.
+ */
 final class ViewportNormalizer
 {
-    /** @return array<string, bool|float|int|string> */
+    /**
+     * Normalize pan/zoom flags, optional bounds, and the minimum zoom span.
+     *
+     * Bounds are all-or-nothing. Enabling the viewport additionally requires them and
+     * guarantees `minimum < maximum` in the selected numeric, date, or datetime domain.
+     *
+     * @param  array<string, mixed>  $viewport
+     * @return array<string, bool|float|int|string>
+     *
+     * @throws InvalidArgumentException When keys, flags, bounds, or span are incompatible.
+     */
     public static function normalize(array $viewport, string $xType, string $chartName): array
     {
         self::rejectUnknownKeys($viewport, ['enabled', 'minimum', 'maximum', 'pan', 'zoom', 'minimum_span', 'minimumSpan'], $chartName);
@@ -63,6 +79,7 @@ final class ViewportNormalizer
         return $normalized;
     }
 
+    /** Convert typed wire bounds to a scalar solely for ordering and span validation. */
     private static function comparable(float|int|string $value, string $xType): float
     {
         return match ($xType) {

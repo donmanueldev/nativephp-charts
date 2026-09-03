@@ -6,9 +6,29 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 
+/**
+ * Canonicalizes public axis options before Swift and Kotlin decode them.
+ *
+ * Public camelCase compatibility aliases are accepted where documented, while the
+ * returned map uses snake_case keys only. Explicit domains reuse the same numeric,
+ * date, and datetime representation as series points, annotations, and viewports.
+ */
 final class AxisNormalizer
 {
-    /** @return array<string, bool|float|int|string> */
+    /**
+     * Normalize a category, number, date, or datetime x-axis definition.
+     *
+     * Date/time formatting and timezone keys are always present in the result. A
+     * category axis rejects explicit domain values because it has no continuous scale.
+     * Input accepts `dateFormat`, `timeZone`, and `labelCount` aliases; output uses
+     * `date_format`, `timezone`, and `label_count`.
+     *
+     * @param  array<string, mixed>  $axis
+     * @param  array<string, mixed>  $defaults  Previously normalized values to retain when omitted.
+     * @return array{type: string, date_format: string, timezone: string, visible?: bool, label_count?: int, title?: string, minimum?: float|int|string, maximum?: float|int|string, baseline?: float|int|string, interval?: float}
+     *
+     * @throws InvalidArgumentException When an option, timezone, or domain is invalid.
+     */
     public static function x(array $axis, string $chartName, array $defaults = []): array
     {
         self::rejectUnknownKeys(
@@ -50,7 +70,21 @@ final class AxisNormalizer
         return $normalized;
     }
 
-    /** @return array<string, bool|float|int|string> */
+    /**
+     * Normalize numeric formatting, visibility, and domain options for the y axis.
+     *
+     * Set `$validateComplete` to false only while merging fluent configuration. The
+     * final wire snapshot must validate again so currency and fraction-digit rules are
+     * checked against the complete state.
+     * Input accepts the public camelCase aliases and legacy `format`; output always
+     * uses canonical snake_case keys.
+     *
+     * @param  array<string, mixed>  $axis
+     * @param  array<string, mixed>  $defaults  Previously normalized values to retain when omitted.
+     * @return array{value_format: string, currency_code: string, minimum_fraction_digits: int, maximum_fraction_digits: int, visible?: bool, label_count?: int, title?: string, minimum?: float|int, maximum?: float|int, baseline?: float|int, interval?: float, begin_at_zero?: bool}
+     *
+     * @throws InvalidArgumentException When formatting, visibility, or domain values are invalid.
+     */
     public static function y(array $axis, string $chartName, array $defaults = [], bool $validateComplete = true): array
     {
         self::rejectUnknownKeys(
@@ -175,7 +209,11 @@ final class AxisNormalizer
         $normalized['title'] = trim($title);
     }
 
-    /** @param array<string, bool|float|int|string> $normalized */
+    /**
+     * Normalize a continuous x domain and keep its bounds in their declared x type.
+     *
+     * @param  array<string, bool|float|int|string>  $normalized
+     */
     private static function appendXAxisDomain(
         array &$normalized,
         array $axis,
@@ -254,7 +292,11 @@ final class AxisNormalizer
         $normalized['interval'] = (float) $interval;
     }
 
-    /** @param array<string, bool|float|int|string> $normalized */
+    /**
+     * Enforce ordered bounds and keep an optional baseline inside the explicit range.
+     *
+     * @param  array<string, bool|float|int|string>  $normalized
+     */
     private static function validateDomain(array $normalized, string $type, string $chartName, string $axisName): void
     {
         if (
@@ -279,6 +321,7 @@ final class AxisNormalizer
         }
     }
 
+    /** Compare canonical domain values without losing datetime sub-second precision. */
     private static function compareDomainValues(float|int|string $left, float|int|string $right, string $type): int
     {
         if ($type === 'number') {

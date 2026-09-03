@@ -4,9 +4,29 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Validates the renderer-neutral style vocabulary for every chart family.
+ *
+ * The public contract stays semantic rather than exposing Swift Charts or Compose
+ * primitives. Compatibility aliases are converted to canonical snake_case wire keys.
+ */
 final class ChartStyleNormalizer
 {
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * Normalize only the style sections supported by the selected chart type.
+     *
+     * Possible canonical output sections are `line`, `area`, `bar`, `candlestick`,
+     * `segment`, `points`, `grid`, and `axis`; the selected chart family determines
+     * which subset is legal.
+     *
+     * Empty or omitted sections stay absent, allowing native defaults to apply. Radar
+     * deliberately rejects axis label counts because a radial axis is not tick-based.
+     *
+     * @param  array<string, mixed>  $style
+     * @return array<string, array<string, mixed>>
+     *
+     * @throws InvalidArgumentException When a section, option, or value is unsupported.
+     */
     public static function normalize(array $style, string $chartType, string $chartName): array
     {
         $allowed = [
@@ -290,7 +310,10 @@ final class ChartStyleNormalizer
         return (float) $value;
     }
 
-    /** @param list<string> $options
+    /**
+     * Remove options whose geometry has no meaning for a particular chart family.
+     *
+     * @param  list<string>  $options
      * @return list<string>
      */
     private static function allowedOptions(array $options, string $chartType, string $section): array

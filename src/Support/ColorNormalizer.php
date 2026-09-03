@@ -4,8 +4,19 @@ namespace Donmanueldev\NativephpCharts\Support;
 
 use InvalidArgumentException;
 
+/**
+ * Converts the public CSS color grammar into the canonical native wire format.
+ *
+ * Native renderers receive uppercase `#RRGGBB` or `#AARRGGBB`. CSS-alpha input is
+ * deliberately reordered from `#RRGGBBAA` so both platforms consume the same value.
+ */
 final class ColorNormalizer
 {
+    /**
+     * Normalize a named color, short hex, RGB hex, or CSS-alpha hex color.
+     *
+     * @throws InvalidArgumentException When the value is not part of the supported color grammar.
+     */
     public static function normalize(mixed $color, string $chartName, string $context): string
     {
         if (! is_string($color)) {
