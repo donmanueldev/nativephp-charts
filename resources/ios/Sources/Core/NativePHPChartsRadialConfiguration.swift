@@ -5,6 +5,11 @@ enum NativePHPChartsRadialKind: String {
     case donut
 }
 
+/// Captures the pie/donut EDGE payload before radial-specific normalization.
+///
+/// Missing fields retain cross-version defaults. PHP is the authoritative validator, while
+/// the native configuration still clamps visual ratios so a stale shell cannot create
+/// degenerate geometry.
 struct NativePHPChartsRadialWireInput: Equatable {
     let contractVersion: Int
     let segmentsJSON: String
@@ -97,6 +102,7 @@ struct NativePHPChartsRadialStyle: Decodable {
     }
 }
 
+/// Resolves shared legend/style options and the chart-kind-specific inner radius invariant.
 struct NativePHPChartsRadialConfiguration {
     let legend: NativePHPChartsLegendConfiguration
     let style: NativePHPChartsRadialStyle
@@ -123,6 +129,7 @@ struct NativePHPChartsRadialConfiguration {
     }
 }
 
+/// Immutable radial configuration, formatter, and cumulative angular data for one node revision.
 struct NativePHPChartsRadialSnapshot {
     let configuration: NativePHPChartsRadialConfiguration
     let formatter: NativePHPChartsRadialFormatter

@@ -6,6 +6,11 @@ internal enum class NativePHPChartsKind { Line, Area, Bar, Scatter, Candlestick 
 
 internal enum class NativePHPChartsXType { Category, Number, Date, Datetime }
 
+/**
+ * A decoded point that retains its PHP identity and original source position.
+ * [index] is `source_index`, not necessarily its position after filtering or
+ * sampling, so selection callbacks remain stable across renderer reductions.
+ */
 internal data class NativePHPChartsPoint(
     val id: String,
     val label: String,
@@ -141,6 +146,14 @@ internal data class NativePHPChartsStyle(
     val axisLabelColor: String? = null,
 )
 
+/**
+ * Immutable Cartesian configuration shared by layout, drawing, interaction, and
+ * accessibility. Nullable style/visibility fields mean “no explicit override”;
+ * their precedence is resolved at the point where the platform fallback is known.
+ *
+ * X-axis viewport bounds remain in wire form until [NativePHPChartsFormatting]
+ * converts them with the configured x type, timezone, and locale semantics.
+ */
 internal data class NativePHPChartsConfiguration(
     val kind: NativePHPChartsKind,
     val series: List<NativePHPChartsSeries>,

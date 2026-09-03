@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Lays out radial segment metadata with the same overflow policy as Cartesian legends.
 struct NativePHPChartsRadialLegend: View {
     let data: NativePHPChartsRadialDataSet
     let formatter: NativePHPChartsRadialFormatter

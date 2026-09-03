@@ -8,6 +8,10 @@ private struct NativePHPChartsWireSegment: Decodable {
     let color: String
 }
 
+/// A radial segment in the cumulative value domain `[0, total]`.
+///
+/// Bounds are value-space angles, not degrees; drawing and hit testing independently map the
+/// same bounds into degrees so visible sectors and tap targets cannot drift apart.
 struct NativePHPChartsRadialSegment: Identifiable, Hashable {
     let id: String
     let label: String
@@ -26,6 +30,7 @@ struct NativePHPChartsRadialSegment: Identifiable, Hashable {
     }
 }
 
+/// Valid radial segments plus indexes for id and angular hit testing.
 struct NativePHPChartsRadialDataSet {
     let segments: [NativePHPChartsRadialSegment]
     let total: Double
@@ -55,6 +60,10 @@ struct NativePHPChartsRadialDataSet {
         return segmentsByID[id]
     }
 
+    /// Finds the selectable positive segment containing a cumulative angle value.
+    ///
+    /// Zero-value segments stay in legend/source order but are excluded from the binary search
+    /// because they have no visible angular area.
     func segment(containing angleValue: Double) -> NativePHPChartsRadialSegment? {
         guard !selectableSegments.isEmpty, angleValue.isFinite else { return nil }
 
@@ -74,6 +83,10 @@ struct NativePHPChartsRadialDataSet {
         return selectableSegments[min(lower, selectableSegments.count - 1)]
     }
 
+    /// Decodes the normalized segment list and constructs cumulative bounds in source order.
+    ///
+    /// Duplicate ids, non-finite values, negative values, and overflowing totals are ignored
+    /// defensively. PHP rejects those cases before transport; malformed JSON becomes empty state.
     static func decode(_ json: String) -> NativePHPChartsRadialDataSet {
         guard let data = json.data(using: .utf8),
               let decoded = try? JSONDecoder().decode([NativePHPChartsWireSegment].self, from: data)

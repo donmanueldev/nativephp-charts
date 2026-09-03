@@ -5,6 +5,13 @@ import androidx.compose.ui.geometry.Rect
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Canvas-space hit index shared by tap, scrub, and accessibility selection.
+ *
+ * Data is sorted by mark center x so candidates can be bounded with binary search.
+ * The search expands by the widest bar/candle, uses exact rectangles or candle
+ * wick/body distance where available, and rejects marks outside the plot.
+ */
 internal class NativePHPChartsHitIndex private constructor(
     private val dataSortedByX: List<NativePHPChartsDatum>,
     private val maximumMarkHalfWidth: Float,

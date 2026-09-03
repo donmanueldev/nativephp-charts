@@ -1,5 +1,10 @@
 import Foundation
 
+/// Resolves the logical domains and baseline used by marks, axes, and selection geometry.
+///
+/// Stacks accumulate positive and negative values independently. Area charts always include
+/// zero as their fill baseline; other chart types may use an explicit baseline or the nearest
+/// automatic domain edge when zero is outside a non-zero-based domain.
 struct NativePHPChartsDomain {
     let x: ClosedRange<Double>
     let y: ClosedRange<Double>
@@ -138,6 +143,11 @@ struct NativePHPChartsPlottedPosition: Equatable {
     let y: Double
 }
 
+/// Renderer-neutral bar geometry shared by `BarMark` construction and hit testing.
+///
+/// `category` is the possibly offset group position. `valueBounds` is the complete visible
+/// segment, and `anchor` is its midpoint for crosshairs and tooltips. Horizontal orientation
+/// swaps those logical category/value roles onto Swift Charts' physical y/x axes.
 struct NativePHPChartsBarGeometry: Equatable {
     let category: Double
     let valueBounds: ClosedRange<Double>
@@ -172,6 +182,7 @@ struct NativePHPChartsBarGeometry: Equatable {
     }
 }
 
+/// Precomputes stack segments by logical x, with separate accumulators around zero.
 struct NativePHPChartsStackedGeometry {
     let ranges: [ClosedRange<Double>]
     private let boundsBySelectionID: [String: ClosedRange<Double>]
@@ -206,6 +217,10 @@ struct NativePHPChartsStackedGeometry {
     }
 }
 
+/// Assigns deterministic within-category slots and the edge padding they require.
+///
+/// The same selection id lookup is used for vertical and horizontal bars; orientation is a
+/// later physical-axis concern and must not change group spacing.
 struct NativePHPChartsGroupedBarGeometry {
     private let positions: [String: Double]
     private let xValues: [Double]

@@ -1,5 +1,10 @@
 import Foundation
 
+/// Converts between wire x values, logical plot coordinates, and localized presentation.
+///
+/// Date-only strings are interpreted as wall-clock dates in the configured IANA timezone;
+/// datetimes remain ISO-8601 instants. Callback bounds are converted back to the declared
+/// x-axis type so PHP never needs to understand Swift Charts' Unix-second coordinates.
 final class NativePHPChartsFormatter {
     private let xAxis: NativePHPChartsAxisConfiguration
     private let locale: Locale
@@ -84,6 +89,7 @@ final class NativePHPChartsFormatter {
         }
     }
 
+    /// Serializes a logical plot x value using the public callback contract's axis type.
     func xWire(_ plotX: Double) -> NativePHPChartsWireValue {
         switch xAxis.type {
         case .category, .number:

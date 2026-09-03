@@ -11,6 +11,7 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+/** One visible segment's final Canvas-space angles and reusable path. */
 internal data class NativePHPChartsRadialDatum(
     val segment: NativePHPChartsRadialSegment,
     val startAngle: Float,
@@ -18,12 +19,20 @@ internal data class NativePHPChartsRadialDatum(
     val path: Path,
 )
 
+/**
+ * Pie/donut geometry in Canvas pixels. Angles use Compose convention: zero points
+ * right and positive sweeps move clockwise because screen y increases downward.
+ */
 internal data class NativePHPChartsRadialLayout(
     val center: Offset,
     val outerRadius: Float,
     val innerRadius: Float,
     val data: List<NativePHPChartsRadialDatum>,
 ) {
+    /**
+     * Hit-tests the exact annulus and visible post-gap sweeps. Donut taps inside
+     * the hole and all taps outside the outer radius intentionally select nothing.
+     */
     fun segmentAt(location: Offset): NativePHPChartsRadialDatum? {
         val dx = location.x - center.x
         val dy = location.y - center.y
@@ -37,7 +46,13 @@ internal data class NativePHPChartsRadialLayout(
     }
 }
 
+/** Resolves normalized segment values and dp styling into radial Canvas geometry. */
 internal object NativePHPChartsRadialLayoutEngine {
+    /**
+     * Starts the first segment at 12 o'clock, preserves wire order clockwise, and
+     * removes half the configured angular gap from each edge without consuming
+     * the segment's value-proportional position in the full circle.
+     */
     fun build(
         configuration: NativePHPChartsRadialConfiguration,
         size: IntSize,
@@ -70,6 +85,12 @@ internal object NativePHPChartsRadialLayoutEngine {
     }
 }
 
+/**
+ * Builds the pie or donut mark from the angles and radii used by hit testing.
+ * Visual corner rounding does not shrink the selectable sector. Requested corner
+ * radius is bounded by ring thickness and available arc length; degenerate radii
+ * or sweeps return an empty path.
+ */
 internal fun nativePHPChartsRadialPath(
     center: Offset,
     outerRadius: Float,

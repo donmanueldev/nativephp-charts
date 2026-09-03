@@ -13,6 +13,10 @@ enum NativePHPChartsCandlestickBodyWidth: Equatable {
     }
 }
 
+/// The complete candle geometry consumed by both marks and interaction hit testing.
+///
+/// The selection anchor is the close value. Neutral candles expand only their rendered body
+/// so an open-equals-close candle remains visible without changing its contractual OHLC data.
 struct NativePHPChartsCandlestickGeometry: Equatable {
     let x: Double
     let open: Double
@@ -125,6 +129,11 @@ struct NativePHPChartsAnnotations: ChartContent {
     }
 }
 
+/// Translates normalized logical geometry into Swift Charts marks.
+///
+/// Horizontal bars intentionally render categories as negative physical-y values to preserve
+/// source order from top to bottom. Viewport filtering applies only to connected paths and
+/// retains boundary-crossing endpoints in `NativePHPChartsDataSet.visiblePoints`.
 struct NativePHPChartsMarks: ChartContent {
     let kind: NativePHPChartsKind
     let snapshot: NativePHPChartsSnapshot

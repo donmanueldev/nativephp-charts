@@ -1,5 +1,6 @@
 import Foundation
 
+/// Adapts radial identity to the shared version-one point-selection payload.
 enum NativePHPChartsRadialSelection {
     static func payload(
         kind: NativePHPChartsRadialKind,

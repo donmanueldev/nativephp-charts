@@ -25,6 +25,13 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntSize
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 
+/**
+ * Draws pie/donut geometry and owns its stable-id selection state.
+ *
+ * Pointer taps use the layout's annular hit test. Accessibility click/previous/
+ * next actions use the same selection function, so every confirmed path updates
+ * visual state and emits at most one `_select` callback when it is bound.
+ */
 @Composable
 internal fun NativePHPChartsRadialPlot(
     node: NativeUINode,

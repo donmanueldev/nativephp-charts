@@ -7,7 +7,26 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Resolves normalized Cartesian state into one immutable Canvas-space snapshot.
+ *
+ * The plot uses Compose coordinates: origin at the top-left, x increasing right,
+ * and y increasing down. Logical x normally maps to physical x and logical value
+ * to physical y. Horizontal bars transpose those physical axes while keeping the
+ * logical wire contract unchanged. Drawing and hit testing must consume the
+ * returned geometry rather than independently repeating these transforms.
+ */
 internal object NativePHPChartsLayoutEngine {
+    /**
+     * Measures plot insets, domains, marks, ticks, annotations, and the hit index.
+     *
+     * [viewportOverride] replaces only the numeric/temporal logical x domain. All
+     * marks are still mapped, including off-plot neighbors needed to clip connected
+     * paths correctly; drawing clips the plot and hit testing ignores invisible
+     * marks. Invalid explicit y bounds fall back to the padded automatic domain.
+     * Axis visibility resolves structured axis, global style, then the legacy
+     * scalar fallback; for bars only, legacy `showPoints` historically controls it.
+     */
     fun build(
         configuration: NativePHPChartsConfiguration,
         formatting: NativePHPChartsFormatting,

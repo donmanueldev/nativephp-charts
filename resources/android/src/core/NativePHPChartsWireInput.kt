@@ -4,6 +4,15 @@ import android.util.LruCache
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 import java.io.File
 
+/**
+ * Raw Cartesian contract captured from a single [NativeUINode] render.
+ *
+ * This type intentionally keeps structured props as JSON strings. Parsing and
+ * render-safe fallback decisions belong to [NativePHPChartsDecoder], while this
+ * boundary is responsible only for NativePHP prop defaults, callback ids, and
+ * resolving the optional file-backed series transport. [contractVersion] is
+ * retained as wire metadata even though the current decoder consumes one shape.
+ */
 internal data class NativePHPChartsWireInput(
     val contractVersion: Int,
     val seriesJson: String,
@@ -35,6 +44,10 @@ internal data class NativePHPChartsWireInput(
     companion object {
         private val seriesFileCache = LruCache<String, String>(8)
 
+        /**
+         * Snapshots the wire props so Compose can key decoding with value equality.
+         * Missing scalar props receive the legacy-compatible defaults used by PHP.
+         */
         fun from(node: NativeUINode): NativePHPChartsWireInput {
             val props = node.props
 
@@ -76,6 +89,8 @@ internal data class NativePHPChartsWireInput(
 
             seriesFileCache.get(path)?.let { return it }
 
+            // A stale or unreadable payload must render the normal empty state,
+            // never retain data from a different path or crash composition.
             return try {
                 File(path).readText(Charsets.UTF_8).also { seriesFileCache.put(path, it) }
             } catch (_: Exception) {

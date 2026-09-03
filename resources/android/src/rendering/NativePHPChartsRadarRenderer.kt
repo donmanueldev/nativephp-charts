@@ -69,6 +69,7 @@ internal data class NativePHPChartsRadarNavigation(
     val next: NativePHPChartsRadarSelection?,
 )
 
+/** Resolves non-wrapping accessibility neighbors in stable series/axis order. */
 internal fun nativePHPChartsRadarNavigation(
     selections: List<NativePHPChartsRadarSelection>,
     selectedId: String?,
@@ -109,6 +110,7 @@ internal fun nativePHPChartsRadarAbbreviateAxisLabel(label: String, maximumLengt
     return normalized.take(maximumLength - 1).trimEnd() + "…"
 }
 
+/** Finds the nearest radar vertex within a Canvas-pixel threshold. */
 internal fun nativePHPChartsRadarNearestSelection(
     selections: List<Pair<NativePHPChartsRadarSelection, Offset>>,
     location: Offset,
@@ -126,6 +128,7 @@ internal fun nativePHPChartsRadarSelectedIdAfterTap(
     threshold: Float,
 ): String? = nativePHPChartsRadarNearestSelection(selections, location, threshold)?.id
 
+/** Builds the common version-1 selection shape without localizing raw values. */
 internal fun nativePHPChartsRadarSelectionPayload(
     selection: NativePHPChartsRadarSelection,
     localizedValue: String,
@@ -151,6 +154,13 @@ internal data class NativePHPChartsRadarTooltipLayout(
     val drawsText: Boolean,
 )
 
+/**
+ * Fits a tooltip inside the Canvas and sanitizes non-finite measurements.
+ *
+ * The bubble may still be returned with [NativePHPChartsRadarTooltipLayout.drawsText]
+ * false when a tiny Canvas can contain the bounded background but not the full
+ * requested text metrics; drawing then avoids clipped or misleading text.
+ */
 internal fun nativePHPChartsRadarTooltipLayout(
     canvas: Size,
     anchor: Offset,
@@ -195,6 +205,13 @@ internal fun nativePHPChartsRadarTooltipLayout(
     )
 }
 
+/**
+ * Radar renderer boundary from NativePHP props to normalized Compose state.
+ *
+ * The explicit wire key lists every prop that can affect decoding, keeping
+ * recomposition deterministic. Invalid JSON object roots fall back to defaults;
+ * a malformed axes or series collection fails that collection to the empty state.
+ */
 @Composable
 internal fun NativePHPChartsRadarRender(node: NativeUINode, modifier: Modifier) {
     val props = node.props
@@ -238,6 +255,14 @@ internal fun NativePHPChartsRadarRender(node: NativeUINode, modifier: Modifier) 
     }
 }
 
+/**
+ * Draws radar marks and owns selection for pointer and accessibility input.
+ *
+ * Vertices use Canvas pixels and the first axis starts at 12 o'clock. Selection
+ * dispatches only through the local `select` function, so a hit, accessibility
+ * click, or adjacent action sends at most one callback and only when `_select`
+ * is bound.
+ */
 @Composable
 private fun NativePHPChartsRadarPlot(
     node: NativeUINode,
@@ -507,6 +532,10 @@ private fun NativePHPChartsRadarLegendItem(
     }
 }
 
+/**
+ * Canvas-space radar frame. Positive axis indices proceed clockwise from the top
+ * because Compose y coordinates increase downward; animation scales radius only.
+ */
 private data class NativePHPChartsRadarGeometry(val center: Offset, val radius: Float, val count: Int) {
     fun point(index: Int, ratio: Double, progress: Float): Offset {
         val angle = -PI / 2 + (2 * PI * index / count)
@@ -575,6 +604,11 @@ private fun radarPath(points: List<Offset>, interpolation: String): Path = Path(
     close()
 }
 
+/**
+ * Decodes the radar-specific wire contract into one renderer snapshot.
+ * Collection decoding is fail-soft, visual fallbacks mirror the public defaults,
+ * opacity is bounded to 0...1, and grid levels are bounded to 2...10.
+ */
 private fun decodeRadarConfiguration(node: NativeUINode): NativePHPChartsRadarConfiguration {
     val props = node.props
     val axes = radarArray(props.getString("axes_json", "[]")) { item, _ ->

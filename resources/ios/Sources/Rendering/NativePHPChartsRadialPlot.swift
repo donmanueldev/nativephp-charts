@@ -1,6 +1,7 @@
 import Charts
 import SwiftUI
 
+/// Renders radial value-space bounds and owns committed segment selection.
 struct NativePHPChartsRadialPlot: View {
     let nodeID: Int
     let kind: NativePHPChartsRadialKind
@@ -64,6 +65,10 @@ struct NativePHPChartsRadialPlot: View {
         CGFloat(snapshot.configuration.innerRadiusRatio)
     }
 
+    /// Converts the visual gap from degrees back into the data set's cumulative value space.
+    ///
+    /// `SectorMark` requires a half-open range so adjacent segment boundaries do not overlap.
+    /// The gap is capped below half the raw sector width, preserving a selectable interior.
     private func angularRange(for segment: NativePHPChartsRadialSegment) -> Range<Double> {
         let rawDegrees = segment.value / snapshot.data.total * 360
         let gapDegrees = min(Double(snapshot.configuration.style.gap), rawDegrees * 0.45)
@@ -97,6 +102,9 @@ struct NativePHPChartsRadialPlot: View {
         return selectedSegmentID == segment.id ? opacity : opacity * 0.62
     }
 
+    /// Updates selection and emits only a newly selected, non-nil segment to PHP.
+    ///
+    /// Re-selecting the same segment or tapping outside the plot does not duplicate callbacks.
     private func select(_ segment: NativePHPChartsRadialSegment?) {
         let previousID = selectedSegmentID
         selectedSegmentID = segment?.id

@@ -2,6 +2,12 @@ package com.donmanueldev.plugins.nativephp_charts.ui
 
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 
+/**
+ * Raw pie/donut props copied from the NativePHP node before JSON decoding.
+ *
+ * Structured payloads remain opaque here so [NativePHPChartsRadialDecoder] is
+ * the single place that applies radial defaults, filtering, and clamping.
+ */
 internal data class NativePHPChartsRadialWireInput(
     val segmentsJson: String,
     val styleJson: String,
@@ -18,6 +24,7 @@ internal data class NativePHPChartsRadialWireInput(
     val innerRadiusRatio: Float,
 ) {
     companion object {
+        /** Captures stable values, including the zero callback id used for an unbound `_select`. */
         fun from(node: NativeUINode): NativePHPChartsRadialWireInput {
             val props = node.props
             return NativePHPChartsRadialWireInput(

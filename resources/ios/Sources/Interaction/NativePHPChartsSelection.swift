@@ -2,6 +2,11 @@ import Charts
 import Foundation
 import SwiftUI
 
+/// Stable version-one event sent to the PHP `_select` callback.
+///
+/// `pointIndex` is the original source index, even when sampling reduced the rendered data.
+/// `x` preserves the public wire scalar and `localizedValue` is display-only; consumers should
+/// use the raw numeric `value` for application logic.
 struct NativePHPChartsSelectionPayload: Encodable {
     let version = 1
     let chartType: String
@@ -38,6 +43,10 @@ struct NativePHPChartsSelectionPayload: Encodable {
     }
 }
 
+/// Stable version-one x-domain event sent after a viewport gesture commits.
+///
+/// Bounds use the configured x-axis wire type rather than renderer coordinates. The payload
+/// is emitted once at gesture end, never for the intermediate preview frames.
 struct NativePHPChartsViewportPayload: Encodable {
     let version = 1
     let chartType: String
@@ -61,6 +70,7 @@ struct NativePHPChartsViewportPayload: Encodable {
     }
 }
 
+/// Maps touch locations to the visible geometry while keeping coordinate conversions explicit.
 enum NativePHPChartsSelection {
     enum CandidateAxis: Equatable {
         case x
@@ -74,6 +84,11 @@ enum NativePHPChartsSelection {
         kind == .bar && barOrientation == .horizontal ? .y : .x
     }
 
+    /// Chooses a candidate in two stages: candidate-axis range, then exact pixel distance.
+    ///
+    /// `location` and `plotFrame` are overlay coordinates. The plot-frame origin is removed
+    /// before querying `ChartProxy`, whose positions and custom distance closure are plot-local.
+    /// A 44-point final radius provides the minimum touch target for every mark family.
     static func closestPoint(
         to location: CGPoint,
         proxy: ChartProxy,
@@ -132,6 +147,7 @@ enum NativePHPChartsSelection {
         44 + (bodyWidth / 2)
     }
 
+    /// Converts a logical plot position back into overlay coordinates for UI adornments.
     static func position(
         x: Double,
         y: Double,
@@ -161,6 +177,7 @@ enum NativePHPChartsSelection {
         return hypot(x - location.x, y - location.y)
     }
 
+    /// Measures against the full rendered bar segment instead of only its midpoint.
     static func barDistance(
         geometry: NativePHPChartsBarGeometry,
         to location: CGPoint,
@@ -193,6 +210,7 @@ enum NativePHPChartsSelection {
         return segmentDistance(from: location, start: start, end: end)
     }
 
+    /// Measures against both the visible candle body and wick in plot-local coordinates.
     static func candlestickDistance(
         geometry: NativePHPChartsCandlestickGeometry,
         bodyWidth: CGFloat,

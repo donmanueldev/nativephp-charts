@@ -4,7 +4,13 @@ import com.nativephp.mobile.ui.nativerender.NativeUIBridge
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 import org.json.JSONObject
 
+/** Serializes confirmed Cartesian selections back across the NativePHP bridge. */
 internal object NativePHPChartsSelection {
+    /**
+     * Emits the versioned callback payload only when `_select` is bound and the
+     * point has a representable x value for its configured type. The source index
+     * and raw numeric value are preserved; only `localized_value` is formatted.
+     */
     fun dispatch(
         node: NativeUINode,
         configuration: NativePHPChartsConfiguration,

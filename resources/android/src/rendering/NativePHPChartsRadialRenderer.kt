@@ -15,6 +15,10 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 
+/**
+ * Pie/donut renderer boundary from raw node props to decoded state, accessible
+ * empty-state handling, legend placement, and the radial Canvas plot.
+ */
 @Composable
 internal fun NativePHPChartsRadialRender(
     node: NativeUINode,

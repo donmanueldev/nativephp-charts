@@ -1,6 +1,10 @@
 import Charts
 import SwiftUI
 
+/// Mirrors radial rendering geometry to turn a plot-local tap into a segment selection.
+///
+/// Angles begin at twelve o'clock and advance clockwise. Hit testing applies the same reveal
+/// progress, donut hole, selected outer radius, and capped gap as `NativePHPChartsRadialPlot`.
 struct NativePHPChartsRadialSelectionOverlay: View {
     let snapshot: NativePHPChartsRadialSnapshot
     let selectedSegmentID: String?

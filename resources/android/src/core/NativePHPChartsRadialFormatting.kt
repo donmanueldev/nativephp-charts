@@ -4,6 +4,11 @@ import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
 
+/**
+ * Formats radial values with the requested locale and fraction bounds. A blank
+ * locale uses the device locale, and an invalid currency code leaves the locale's
+ * default currency in place instead of failing composition.
+ */
 internal class NativePHPChartsRadialFormatting(configuration: NativePHPChartsRadialConfiguration) {
     private val locale = if (configuration.locale.isBlank()) Locale.getDefault() else Locale.forLanguageTag(configuration.locale)
     private val formatter: NumberFormat = when (configuration.valueFormat) {

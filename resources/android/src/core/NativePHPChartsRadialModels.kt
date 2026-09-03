@@ -18,6 +18,11 @@ internal data class NativePHPChartsRadialStyle(
     val opacity: Float = 1f,
 )
 
+/**
+ * Renderer-ready pie/donut state. Zero-value segments remain available to the
+ * legend but are excluded from geometry and hit testing; [hasData] therefore
+ * requires a positive finite total rather than merely a non-empty wire array.
+ */
 internal data class NativePHPChartsRadialConfiguration(
     val kind: NativePHPChartsRadialKind,
     val segments: List<NativePHPChartsRadialSegment>,

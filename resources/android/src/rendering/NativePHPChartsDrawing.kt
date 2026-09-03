@@ -37,6 +37,11 @@ internal data class NativePHPChartsSeriesPaths(
     val fillTarget: List<NativePHPChartsDatum>?,
 )
 
+/**
+ * Paths derived from one layout snapshot and reused across animation-complete
+ * frames. Viewport culling retains neighboring endpoints so Canvas clipping can
+ * preserve line continuity at both plot edges.
+ */
 internal class NativePHPChartsPathCache private constructor(
     private val pathsBySeries: Map<String, NativePHPChartsSeriesPaths>,
 ) {
@@ -72,6 +77,10 @@ internal class NativePHPChartsPathCache private constructor(
     }
 }
 
+/**
+ * Removes marks irrelevant to the horizontal viewport while retaining one
+ * neighbor on each side and every segment that crosses the visible plot.
+ */
 internal fun nativePHPChartsCullToPlot(
     data: List<NativePHPChartsDatum>,
     plot: androidx.compose.ui.geometry.Rect,
@@ -444,6 +453,11 @@ private fun DrawScope.drawNativePHPChartsErrorRange(datum: NativePHPChartsDatum,
     drawLine(color, Offset(datum.center.x - cap, bottom), Offset(datum.center.x + cap, bottom), 1.25.dp.toPx())
 }
 
+/**
+ * Draws logical crosshairs in physical Canvas coordinates. Horizontal bars swap
+ * the physical axes, so a logical x crosshair becomes horizontal rather than
+ * changing the public interaction contract.
+ */
 internal fun DrawScope.drawNativePHPChartsSelectionOverlay(
     datum: NativePHPChartsDatum,
     selectedData: List<NativePHPChartsDatum>,
@@ -620,6 +634,10 @@ private fun ellipsizeNativePHPCharts(value: String, paint: Paint, width: Float):
     return value.take(count) + "…"
 }
 
+/**
+ * Resolves a configured alias or bundled font file, then falls back to an Android
+ * family name. `null` deliberately selects Compose's system typeface.
+ */
 internal fun resolveNativePHPChartsTypeface(context: android.content.Context, token: String?): Typeface? {
     if (token.isNullOrBlank() || token == "System") return null
     val name = NativeUIFontResolver.aliases[token] ?: token

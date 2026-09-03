@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Converts EDGE node revisions into atomic pie/donut snapshots and composes plot plus legend.
+///
+/// A selected id survives presentation-only updates but is cleared when its segment disappears.
 struct NativePHPChartsRadialRenderer: View {
     let node: NativeUINode
     let kind: NativePHPChartsRadialKind

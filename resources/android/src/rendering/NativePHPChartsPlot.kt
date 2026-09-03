@@ -41,6 +41,18 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * Owns transient Cartesian interaction state and draws one normalized layout.
+ *
+ * Selection is retained by stable series/point identity. Taps and accessibility
+ * actions dispatch immediately; scrub updates only the preview during drag and
+ * dispatches once when the drag ends. Viewport frames update local x-domain state
+ * for responsive redraw, but emit one callback only after a completed, changed
+ * gesture. A canceled viewport gesture restores its starting domain.
+ *
+ * Canvas geometry is in pixels. Viewport values remain logical x values even for
+ * horizontal bars, whose pan/zoom gesture follows the physical vertical axis.
+ */
 @Composable
 internal fun NativePHPChartsPlot(
     node: NativeUINode,
@@ -376,6 +388,13 @@ internal fun NativePHPChartsPlot(
     }
 }
 
+/**
+ * Reduces raw pointer events to slop-qualified pan/zoom frames.
+ *
+ * The recognizer starts only inside the current plot, consumes position changes
+ * after touch slop, and calls [onEnd] only for an accepted gesture that crossed
+ * slop. `completed` is false when another recognizer consumed the gesture.
+ */
 private suspend fun PointerInputScope.detectNativePHPChartsViewportGestures(
     canStart: (Offset) -> Boolean,
     onStart: () -> Unit,

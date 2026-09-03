@@ -6,7 +6,20 @@ import com.nativephp.mobile.ui.nativerender.ColorParser
 import org.json.JSONArray
 import org.json.JSONObject
 
+/**
+ * Converts the renderer-neutral Cartesian wire contract into Compose models.
+ *
+ * The PHP layer performs authoritative validation. This native boundary remains
+ * fail-soft for stale or independently produced payloads: malformed roots become
+ * empty/default objects, non-finite points are discarded, and values with
+ * explicit public bounds are clamped before geometry or drawing code.
+ */
 internal object NativePHPChartsDecoder {
+    /**
+     * Produces one immutable configuration snapshot for a Compose render.
+     * Series-level style remains nullable so rendering can preserve the explicit
+     * precedence of series override, global style, then platform fallback.
+     */
     fun decode(input: NativePHPChartsWireInput, kind: NativePHPChartsKind): NativePHPChartsConfiguration {
         val styleRoot = input.styleJson.asObject()
         val legacyAxis = styleRoot.optJSONObject("axis")
@@ -305,6 +318,7 @@ private fun JSONArray.floatList(): List<Float> = buildList {
     }
 }
 
+/** Resolves the shared color grammar and preserves the supplied fallback on absent/invalid input. */
 internal fun chartColor(value: String?, fallback: Color): Color = value
     ?.takeIf(String::isNotBlank)
     ?.let { Color(ColorParser.parse(it, fallback.toArgb())) }

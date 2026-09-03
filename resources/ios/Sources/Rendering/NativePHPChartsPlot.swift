@@ -1,6 +1,11 @@
 import Charts
 import SwiftUI
 
+/// Renders one Cartesian snapshot and owns its transient selection and viewport state.
+///
+/// `viewportDomain` always represents logical x. Vertical Cartesian charts map it to the
+/// physical x scale; horizontal bars map it to the physical y scale while the value domain
+/// moves to physical x. Marks and the overlay share the snapshot geometry for parity.
 struct NativePHPChartsPlot: View {
     let nodeID: Int
     let kind: NativePHPChartsKind
@@ -149,6 +154,8 @@ struct NativePHPChartsPlot: View {
         Self.configuredViewportDomain(snapshot: snapshot)
     }
 
+    /// Resolves the initial typed wire bounds into the renderer's logical x coordinate.
+    /// Invalid or incomplete bounds disable the native viewport defensively.
     private static func configuredViewportDomain(
         snapshot: NativePHPChartsSnapshot
     ) -> ClosedRange<Double>? {
@@ -308,6 +315,10 @@ struct NativePHPChartsPlot: View {
         }
     }
 
+    /// Commits visible selection state and then emits the versioned PHP callback, if bound.
+    ///
+    /// Tap, scrub completion, and accessibility actions enter here. A nil hit clears native
+    /// selection without fabricating a callback payload.
     private func select(_ point: NativePHPChartsPoint?) {
         selectedPointID = point?.selectionID
 
@@ -337,10 +348,12 @@ struct NativePHPChartsPlot: View {
         )
     }
 
+    /// Updates scrub UI without crossing the native-to-PHP bridge on every gesture frame.
     private func preview(_ point: NativePHPChartsPoint?) {
         selectedPointID = point?.selectionID
     }
 
+    /// Stores the final preview and emits exactly one typed viewport payload for the gesture.
     private func commitViewport(
         _ domain: ClosedRange<Double>,
         reason: NativePHPChartsViewportReason

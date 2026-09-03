@@ -11,6 +11,15 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToLong
 
+/**
+ * Owns every conversion between x-axis wire values, numeric layout coordinates,
+ * localized labels, and viewport callback values.
+ *
+ * Date and datetime geometry is measured in epoch seconds. Date-only values use
+ * midnight in the configured timezone; an invalid or absent timezone falls back
+ * to the device zone. Unparseable values return `null` for geometry and fall back
+ * to the point label for display. [xWire] restores the public number/ISO shape.
+ */
 internal class NativePHPChartsFormatting(private val configuration: NativePHPChartsConfiguration) {
     private val locale = if (configuration.locale.isBlank()) Locale.getDefault() else Locale.forLanguageTag(configuration.locale)
     private val timezone = configuration.xAxis.timezone.takeIf(String::isNotBlank)?.let { runCatching { ZoneId.of(it) }.getOrNull() }

@@ -4,6 +4,7 @@ import com.nativephp.mobile.ui.nativerender.NativeUIBridge
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 import org.json.JSONObject
 
+/** Final reason reported for a viewport gesture that may combine pan and zoom frames. */
 internal enum class NativePHPChartsViewportReason(val wireValue: String) {
     Pan("pan"),
     Zoom("zoom"),
@@ -27,7 +28,13 @@ internal enum class NativePHPChartsViewportReason(val wireValue: String) {
     }
 }
 
+/** Serializes a committed logical x viewport back across the NativePHP bridge. */
 internal object NativePHPChartsViewportSelection {
+    /**
+     * Emits only when `_viewport-change` is bound. The caller is responsible for
+     * dispatching after a completed gesture whose domain actually changed; bounds
+     * are converted from epoch/number geometry back to the public x wire type.
+     */
     fun dispatch(
         node: NativeUINode,
         configuration: NativePHPChartsConfiguration,

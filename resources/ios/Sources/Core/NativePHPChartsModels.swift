@@ -16,6 +16,10 @@ enum NativePHPChartsXAxisType: String, Codable {
     case datetime
 }
 
+/// The JSON scalar accepted for x coordinates and returned in callbacks.
+///
+/// Keeping numbers and strings distinct preserves category/date identities while allowing
+/// numeric-looking strings to participate in numeric compatibility fallbacks.
 enum NativePHPChartsWireValue: Hashable, Codable {
     case string(String)
     case number(Double)
@@ -91,6 +95,11 @@ struct NativePHPChartsWireSeries: Decodable {
     }
 }
 
+/// A normalized point in the renderer's logical coordinate space.
+///
+/// `plotX` is always a sortable `Double`: category ordinal, numeric value, or Unix seconds.
+/// `index` remains the PHP source index after sampling and is therefore the index emitted
+/// to the application, rather than the point's position in the rendered subset.
 struct NativePHPChartsPoint: Identifiable, Hashable {
     let id: String
     let label: String
@@ -107,6 +116,7 @@ struct NativePHPChartsPoint: Identifiable, Hashable {
     let low: Double?
     let close: Double?
 
+    /// Length-prefixing the series id prevents collisions when either id contains `:`.
     var selectionID: String {
         "\(seriesID.utf8.count):\(seriesID)\(id)"
     }
@@ -126,6 +136,10 @@ struct NativePHPChartsSeries: Identifiable {
     }
 }
 
+/// Immutable indexes and derived geometry shared by rendering and interaction.
+///
+/// Building these lookup tables once per snapshot makes selection independent of SwiftUI
+/// render passes and ensures grouped-bar offsets are identical for marks and hit testing.
 struct NativePHPChartsDataSet {
     struct XGap: Equatable {
         let lower: Double
@@ -227,6 +241,10 @@ struct NativePHPChartsDataSet {
         return pointsBySeriesAndX[fillTo]?[point.plotX]
     }
 
+    /// Returns viewport points plus the endpoints of segments that cross either edge.
+    ///
+    /// The extra neighbors keep line and area paths visually continuous at the clip bounds;
+    /// discrete marks intentionally bypass this filtering.
     func visiblePoints(
         for series: NativePHPChartsSeries,
         in viewport: ClosedRange<Double>?
@@ -265,6 +283,10 @@ struct NativePHPChartsDataSet {
         return points.first { ($0.x?.stringValue ?? $0.label) == category }?.plotX
     }
 
+    /// Converts logical x to the rendered category coordinate.
+    ///
+    /// Only grouped bars move away from their logical category center; all other marks keep
+    /// `plotX`, which remains the coordinate used by viewport bounds and shared tooltips.
     func renderX(
         for point: NativePHPChartsPoint,
         kind: NativePHPChartsKind,
@@ -277,6 +299,7 @@ struct NativePHPChartsDataSet {
         return groupedBarGeometry.x(for: point)
     }
 
+    /// Expands a logical domain just enough to avoid clipping grouped bars at its edges.
     func xDomain(
         for kind: NativePHPChartsKind,
         barMode: NativePHPChartsBarMode = .grouped,
@@ -311,6 +334,10 @@ struct NativePHPChartsDataSet {
         }
     }
 
+    /// Finds points near a logical x/category range using the sorted distinct x index.
+    ///
+    /// One adjacent bucket is retained on each side so a visible line segment or a grouped
+    /// bar offset just outside the raw lookup range can still win pixel-space hit testing.
     func selectionCandidates(in range: ClosedRange<Double>) -> [NativePHPChartsPoint] {
         guard !xValues.isEmpty else {
             return []
@@ -337,6 +364,11 @@ struct NativePHPChartsDataSet {
         return xValues[start..<end].flatMap { pointsByX[$0, default: []] }
     }
 
+    /// Decodes normalized PHP series and assigns every point a logical x coordinate.
+    ///
+    /// Categories use first-seen order across all series. Missing ids and unparseable typed
+    /// x values retain compatibility fallbacks so older shells fail soft; malformed JSON
+    /// resolves to an empty data set and therefore the renderer's explicit empty state.
     static func decode(
         seriesJSON: String,
         xAxis: NativePHPChartsAxisConfiguration,

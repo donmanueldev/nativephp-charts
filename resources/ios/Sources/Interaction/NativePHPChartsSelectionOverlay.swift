@@ -1,6 +1,11 @@
 import Charts
 import SwiftUI
 
+/// Owns Cartesian gesture arbitration and the visual selection layer above Swift Charts.
+///
+/// Scrubbing previews selection on every drag frame but commits only when the drag ends.
+/// Viewport gestures likewise preview the domain locally and emit one callback at completion.
+/// PHP disallows scrub plus one-finger pan; this layer repeats the arbitration defensively.
 struct NativePHPChartsSelectionOverlay: View {
     let kind: NativePHPChartsKind
     let snapshot: NativePHPChartsSnapshot
@@ -246,6 +251,7 @@ struct NativePHPChartsSelectionOverlay: View {
         viewport.map(NativePHPChartsViewportInteraction.State.init(domain:))
     }
 
+    /// Updates only renderer state while the gesture is active; no PHP event is sent here.
     private func updateViewportGesture(
         _ state: inout NativePHPChartsViewportInteraction.State,
         in plotFrame: CGRect
@@ -263,6 +269,7 @@ struct NativePHPChartsSelectionOverlay: View {
         onViewportPreview(resolved)
     }
 
+    /// Commits one semantic viewport event after a domain-changing gesture finishes.
     private func finishViewportGesture() {
         guard let state = viewportGesture else { return }
         viewportGesture = nil
@@ -333,6 +340,10 @@ struct NativePHPChartsSelectionOverlay: View {
         )
     }
 
+    /// Returns the physical Swift Charts coordinates of the selected mark's visible anchor.
+    ///
+    /// Horizontal bars are rendered at `-category` to keep labels in source order from top to
+    /// bottom, so their selection anchor must mirror that sign convention.
     private func plottedPosition(for point: NativePHPChartsPoint) -> NativePHPChartsPlottedPosition {
         if kind == .bar {
             let geometry = snapshot.domain.barGeometry(

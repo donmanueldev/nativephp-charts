@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// Lays out Cartesian series metadata independently of the chart plot.
+///
+/// Leading/trailing legends use a vertical stack. Top/bottom legends first try a single row,
+/// then become a horizontal scroller when Dynamic Type or series count exceeds available width.
 struct NativePHPChartsLegend: View {
     let data: NativePHPChartsDataSet
     let configuration: NativePHPChartsLegendConfiguration

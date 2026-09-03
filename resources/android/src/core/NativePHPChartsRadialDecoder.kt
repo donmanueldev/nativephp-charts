@@ -4,6 +4,13 @@ import androidx.compose.ui.graphics.Color
 import org.json.JSONArray
 import org.json.JSONObject
 
+/**
+ * Fail-soft decoder for the pie/donut wire contract.
+ *
+ * Invalid JSON yields an empty chart, invalid or negative segments are skipped,
+ * visual bounds are clamped, and pie always forces a zero inner radius. Donut's
+ * public radius constraint is enforced again here to keep native rendering safe.
+ */
 internal object NativePHPChartsRadialDecoder {
     private val fallbackColors = listOf(
         Color(0xFF6366F1), Color(0xFF14B8A6), Color(0xFFF59E0B), Color(0xFFEC4899),

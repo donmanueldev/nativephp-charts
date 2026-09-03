@@ -6,7 +6,16 @@ enum NativePHPChartsViewportReason: String, Encodable, Equatable {
     case panZoom = "pan_zoom"
 }
 
+/// Pure viewport math shared by the SwiftUI gesture layer and source-level tests.
+///
+/// Domains always use the chart's logical x coordinate. For horizontal bars the overlay
+/// converts physical vertical motion and focus into that logical direction before updating
+/// this state, so the resolver is independent of renderer orientation.
 struct NativePHPChartsViewportInteraction {
+    /// Accumulates one gesture session from its immutable starting domain.
+    ///
+    /// Pan and magnification remain relative to `initialDomain`; recomputing from the latest
+    /// preview would compound SwiftUI's cumulative gesture values and make results drift.
     struct State: Equatable {
         let initialDomain: ClosedRange<Double>
         var latestDomain: ClosedRange<Double>
@@ -50,6 +59,10 @@ struct NativePHPChartsViewportInteraction {
         }
     }
 
+    /// Resolves a preview domain, honoring minimum span and preserving span at full-domain edges.
+    ///
+    /// Returns `nil` for degenerate domains or layout geometry. Zoom is anchored at the logical
+    /// focal fraction, then pan shifts the zoomed span in domain units before final clamping.
     static func resolve(
         state: State,
         fullDomain: ClosedRange<Double>,
@@ -75,10 +88,12 @@ struct NativePHPChartsViewportInteraction {
         return clamped(lower...(lower + span), to: fullDomain)
     }
 
+    /// Converts physical gesture direction to increasing logical-x direction.
     static func logicalTranslation(_ physicalTranslation: Double, reversed: Bool) -> Double {
         reversed ? -physicalTranslation : physicalTranslation
     }
 
+    /// Converts a physical focal position to a bounded logical-x fraction.
     static func logicalFraction(_ physicalFraction: Double, reversed: Bool) -> Double {
         let fraction = clamp(physicalFraction, to: 0...1)
         return reversed ? 1 - fraction : fraction

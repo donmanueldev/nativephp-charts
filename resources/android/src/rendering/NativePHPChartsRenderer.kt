@@ -15,6 +15,13 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 
+/**
+ * Cartesian renderer boundary from NativePHP node props to Compose UI.
+ *
+ * The wire snapshot and decoded configuration are memoized by value. Empty or
+ * malformed data takes the same accessible empty-state path; valid state is then
+ * split between legend composition and the Canvas plot.
+ */
 @Composable
 internal fun NativePHPChartsRender(node: NativeUINode, modifier: Modifier, kind: NativePHPChartsKind) {
     val wireInput = NativePHPChartsWireInput.from(node)

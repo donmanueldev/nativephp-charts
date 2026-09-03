@@ -1,6 +1,11 @@
 import Foundation
 import SwiftUI
 
+/// Defensive decoder for the renderer-neutral style JSON produced by PHP.
+///
+/// Missing sections inherit empty option groups so mark-specific defaults can be resolved at
+/// the rendering boundary. Invalid JSON falls back to the complete default style rather than
+/// mixing partially decoded presentation state.
 struct NativePHPChartsStyle: Decodable {
     let line: Line
     let area: Area

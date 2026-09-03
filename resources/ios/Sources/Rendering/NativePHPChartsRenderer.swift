@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// Converts EDGE node revisions into atomic Cartesian snapshots and composes plot plus legend.
+///
+/// Selection identity survives unrelated property updates when the point still exists. It is
+/// cleared when a new payload removes the selected point, preventing stale tooltips and events.
 struct NativePHPChartsRenderer: View {
     let node: NativeUINode
     let kind: NativePHPChartsKind

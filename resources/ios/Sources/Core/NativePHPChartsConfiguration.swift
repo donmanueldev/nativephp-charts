@@ -1,5 +1,11 @@
 import Foundation
 
+/// Captures the scalar EDGE properties before any chart-specific decoding occurs.
+///
+/// PHP normally validates and normalizes every JSON field. The native boundary still
+/// supplies defaults because a partially upgraded generated shell can omit newer
+/// properties. Large Cartesian series may arrive by `file-v1`; a missing or unreadable
+/// file deliberately resolves to an empty series instead of rendering stale data.
 struct NativePHPChartsWireInput: Equatable {
     nonisolated(unsafe) private static let seriesFileCache = NSCache<NSString, NSString>()
 
@@ -59,6 +65,10 @@ struct NativePHPChartsWireInput: Equatable {
         barOrientation = node.props.getString("bar_orientation", default: "vertical")
     }
 
+    /// Resolves the mutually exclusive inline and file-backed series transports.
+    ///
+    /// File contents are immutable and content-addressed on the PHP side, so caching by
+    /// path is safe for the lifetime of the renderer process.
     private static func resolveSeriesJSON(node: NativeUINode) -> String {
         let inline = node.props.getString("series_json", default: "[]")
         let transport = node.props.getString("series_transport", default: "inline-v1")
@@ -80,6 +90,11 @@ struct NativePHPChartsWireInput: Equatable {
     }
 }
 
+/// Decodes either axis contract into the scalar plot coordinate used by Swift Charts.
+///
+/// Category values remain ordinal and are resolved by `NativePHPChartsDataSet`; numeric
+/// values stay numeric, while date and datetime values become Unix seconds in the
+/// configured timezone. Structured `format` wins over the legacy flat formatting keys.
 struct NativePHPChartsAxisConfiguration: Decodable {
     let type: NativePHPChartsXAxisType
     let format: NativePHPChartsNumberFormat?
@@ -387,6 +402,11 @@ struct NativePHPChartsConfiguration {
     let barMode: NativePHPChartsBarMode
     let barOrientation: NativePHPChartsBarOrientation
 
+    /// Merges the versioned structured contract with legacy scalar properties.
+    ///
+    /// Malformed optional JSON falls back section-by-section. This is a compatibility
+    /// boundary, not the primary validator: invalid application input should already have
+    /// been rejected by the PHP normalizers before it reaches the native tree.
     static func decode(_ input: NativePHPChartsWireInput, kind: NativePHPChartsKind) -> NativePHPChartsConfiguration {
         let legacyYFormat = NativePHPChartsNumberFormat(
             style: input.valueFormat,
@@ -426,6 +446,11 @@ struct NativePHPChartsConfiguration {
     }
 }
 
+/// An immutable render transaction derived from one wire-input revision.
+///
+/// Configuration must be decoded before formatting and data because typed x values depend
+/// on the resolved axis. Domain calculation then consumes those exact instances, keeping
+/// marks, axes, hit testing, and callback serialization in the same coordinate system.
 struct NativePHPChartsSnapshot {
     let configuration: NativePHPChartsConfiguration
     let formatter: NativePHPChartsFormatter

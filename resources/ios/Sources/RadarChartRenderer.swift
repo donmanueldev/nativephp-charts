@@ -32,6 +32,7 @@ enum NativePHPChartsRadarAccessibility {
     }
 }
 
+/// Adapts one series/spoke value to the shared version-one point-selection payload.
 enum NativePHPChartsRadarSelectionPayload {
     static func json(
         selection: NativePHPChartsRadarSelection,
@@ -52,6 +53,10 @@ enum NativePHPChartsRadarSelectionPayload {
     }
 }
 
+/// Produces the closed elbow sequence for radar step interpolation.
+///
+/// The closing edge is included explicitly so the final spoke returns to the first with the
+/// same before/after semantics as every other edge.
 enum NativePHPChartsRadarPathGeometry {
     static func steppedVertices(_ points: [CGPoint], interpolation: String) -> [CGPoint]? {
         guard let first = points.first, points.count > 2,
@@ -141,6 +146,11 @@ struct NativePHPChartsRadarChartRenderer: View {
     }
 }
 
+/// Draws radar data directly in Canvas coordinates and owns committed selection state.
+///
+/// The plot center is the geometry midpoint, the first axis starts at twelve o'clock, and
+/// spokes advance clockwise. Each value is normalized by its axis maximum before animation;
+/// the same computed points feed drawing, hit testing, and tooltip placement.
 private struct NativePHPChartsRadarPlot: View {
     let nodeID: Int
     let snapshot: NativePHPChartsRadarSnapshot
@@ -205,6 +215,8 @@ private struct NativePHPChartsRadarPlot: View {
         )
     }
 
+    /// Updates native selection, then emits one versioned callback for a non-nil target.
+    /// Accessibility actions and spatial taps share this path and payload.
     private func select(_ selection: NativePHPChartsRadarSelection?) {
         selectedID = selection?.id
         guard let selection,
@@ -214,6 +226,7 @@ private struct NativePHPChartsRadarPlot: View {
         NativeElementBridge.sendTextChangeEvent(snapshot.onSelect, nodeId: nodeID, text: json)
     }
 
+    /// Selects the nearest rendered vertex inside the 44-point touch radius.
     private func nearest(
         to location: CGPoint,
         points: [(selection: NativePHPChartsRadarSelection, point: CGPoint)]
@@ -222,6 +235,7 @@ private struct NativePHPChartsRadarPlot: View {
             .flatMap { distance($0.point, location) <= 44 ? $0.selection : nil }
     }
 
+    /// Resolves semantic values into Canvas points once for drawing and interaction parity.
     private func plottedSelections(in size: CGSize) -> [(selection: NativePHPChartsRadarSelection, point: CGPoint)] {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
         let radius = min(size.width, size.height) * 0.34
@@ -309,6 +323,7 @@ private struct NativePHPChartsRadarPlot: View {
         snapshot.style.color(snapshot.series.count == 1 ? snapshot.style.points.color : nil, fallback: resolvedLineColor(for: series))
     }
 
+    /// Converts an ordered spoke index and normalized value ratio into Canvas coordinates.
     private func point(index: Int, ratio: Double, center: CGPoint, radius: CGFloat) -> CGPoint {
         let angle = -Double.pi / 2 + (2 * Double.pi * Double(index) / Double(max(snapshot.axes.count, 1)))
         let progressRatio = CGFloat(ratio) * revealProgress
@@ -359,6 +374,7 @@ private struct NativePHPChartsRadarPlot: View {
     }
 }
 
+/// Keeps radar legend layout outside the Canvas coordinate system.
 private struct NativePHPChartsRadarLegend: View {
     let series: [NativePHPChartsRadarSeries]
     let configuration: NativePHPChartsLegendConfiguration

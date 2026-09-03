@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The decoded radar contract is separate from the SwiftUI view tree so
-/// formatting, selection, and wire decoding remain independently testable.
+/// One declared spoke in the ordered radar domain.
 struct NativePHPChartsRadarAxis: Decodable, Hashable, Identifiable {
     let id: String
     let label: String
@@ -36,6 +35,10 @@ struct NativePHPChartsRadarSelection: Hashable, Identifiable {
     var id: String { "\(series.id.utf8.count):\(series.id)\(axis.id)" }
 }
 
+/// Captures the normalized radar EDGE properties before native snapshot construction.
+///
+/// Axes and values use separate JSON lists, but PHP guarantees that each series repeats every
+/// axis exactly once and in declaration order. Defaults keep older generated shells readable.
 struct NativePHPChartsRadarWireInput: Equatable {
     let axesJSON: String
     let seriesJSON: String
@@ -108,6 +111,11 @@ struct NativePHPChartsRadarWireInput: Equatable {
     }
 }
 
+/// Decodes one radar wire revision into aligned geometry, formatting, and selections.
+///
+/// The native alignment check repeats the PHP invariant by accepting a value only when its
+/// array index exists and its axis id matches the declared spoke. Malformed JSON or misaligned
+/// values therefore become empty/partial native state instead of connecting the wrong axes.
 struct NativePHPChartsRadarSnapshot {
     let axes: [NativePHPChartsRadarAxis]
     let series: [NativePHPChartsRadarSeries]

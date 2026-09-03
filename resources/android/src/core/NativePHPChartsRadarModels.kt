@@ -18,6 +18,10 @@ internal data class NativePHPChartsRadarSeries(
     val values: List<NativePHPChartsRadarValue>,
 )
 
+/**
+ * Stable selection identity for one series/axis pair. The byte-length prefix
+ * prevents ambiguous concatenation when ids have variable length.
+ */
 internal data class NativePHPChartsRadarSelection(
     val series: NativePHPChartsRadarSeries,
     val axis: NativePHPChartsRadarAxis,
@@ -47,6 +51,11 @@ internal data class NativePHPChartsRadarStyle(
     val axisFontSize: Float,
 )
 
+/**
+ * Decoded radar state whose axis order defines both geometry and keyboard-style
+ * accessibility traversal. A series value participates only when its position
+ * and axis id both match the corresponding axis; at least three axes are required.
+ */
 internal data class NativePHPChartsRadarConfiguration(
     val axes: List<NativePHPChartsRadarAxis>,
     val series: List<NativePHPChartsRadarSeries>,
