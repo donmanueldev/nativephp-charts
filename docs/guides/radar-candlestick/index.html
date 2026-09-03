@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Native Radar and Candlestick Charts for NativePHP</title>
+    <meta name="description"
+        content="Use NativePHP Charts radar and candlestick components from Laravel and PHP with platform-neutral Blade contracts for iOS and Android.">
+    <meta property="og:title" content="Native Radar and Candlestick Charts for NativePHP">
+    <meta property="og:description" content="Documented native radar and OHLC chart components for NativePHP Mobile.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://donmanueldev.github.io/nativephp-charts/guides/radar-candlestick/">
+    <meta property="og:image"
+        content="https://donmanueldev.github.io/nativephp-charts/assets/brand/nativephp-charts-512.png">
+    <meta name="twitter:card" content="summary">
+    <link rel="canonical" href="https://donmanueldev.github.io/nativephp-charts/guides/radar-candlestick/">
+    <link rel="icon" href="../../assets/brand/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../../assets/initial.css">
+    <link rel="stylesheet" href="../../assets/styles.css">
+    <script
+        type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"Native Radar and Candlestick Charts for NativePHP","description":"Use documented native radar and candlestick components with NativePHP Charts.","url":"https://donmanueldev.github.io/nativephp-charts/guides/radar-candlestick/","about":{"@id":"https://donmanueldev.github.io/nativephp-charts/#software"},"author":{"@id":"https://donmanueldev.github.io/nativephp-charts/#organization"}},{"@type":"SoftwareApplication","@id":"https://donmanueldev.github.io/nativephp-charts/#software","name":"NativePHP Charts","applicationCategory":"DeveloperApplication","operatingSystem":"iOS 18.2 or newer, Android API 26 or newer","url":"https://donmanueldev.github.io/nativephp-charts/"},{"@type":"Organization","@id":"https://donmanueldev.github.io/nativephp-charts/#organization","name":"Donmanueldev","url":"https://github.com/donmanueldev"}]}</script>
+</head>
+
+<body><a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+        <div class="shell header-inner"><a class="brand" href="../../" aria-label="NativePHP Charts home"><img
+                    src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+                    Charts</span></a>
+            <nav class="primary-navigation" aria-label="Primary"><a href="../installation/">Install</a><a
+                    href="../cartesian-charts/">Charts</a><a class="nav-cta"
+                    href="https://github.com/donmanueldev/nativephp-charts">GitHub</a></nav>
+        </div>
+    </header>
+    <main id="main-content">
+        <section class="guide-hero grid-surface">
+            <div class="shell">
+                <p class="eyebrow">Radar and candlestick charts for NativePHP</p>
+                <h1>Native contracts for capability and OHLC data.</h1>
+                <p>NativePHP Charts exposes dedicated radar and candlestick Blade components. Use their distinct data
+                    contracts rather than adapting a Cartesian series into a misleading visualization.</p>
+            </div>
+        </section>
+        <section class="section">
+            <div class="shell guide-layout">
+                <article class="guide-content">
+                    <h2>Candlestick charts use OHLC points</h2>
+                    <p>A candlestick series represents ordered open, high, low, and close values. Provide an explicit
+                        date x-axis and stable point IDs when selection matters.</p>
+                    <pre><code>&lt;native:candlestick-chart
+    class="w-full h-80"
+    :series="[[
+        'id' =&gt; 'nio-usd', 'name' =&gt; 'NIO/USD', 'color' =&gt; '#2563EB',
+        'points' =&gt; [[
+            'id' =&gt; '2026-08-29', 'x' =&gt; '2026-08-29', 'label' =&gt; '29 Aug',
+            'open' =&gt; 36.72, 'high' =&gt; 36.91, 'low' =&gt; 36.68, 'close' =&gt; 36.84,
+        ]],
+    ]]"
+    :x-axis="['type' =&gt; 'date']"
+    a11y-label="Daily NIO to USD exchange rate"
+/&gt;</code></pre>
+                    <h2>Radar charts use named axes</h2>
+                    <p>Define ordered axes with meaningful maximums, then supply values by axis ID. Radar is for
+                        comparing a shared capability profile, not for time-series data.</p>
+                    <pre><code>&lt;native:radar-chart
+    class="w-full h-80"
+    :axes="[['id' =&gt; 'speed', 'label' =&gt; 'Speed', 'maximum' =&gt; 100]]"
+    :series="[['id' =&gt; 'nativephp', 'name' =&gt; 'NativePHP', 'color' =&gt; '#6366F1',
+        'values' =&gt; [['axis' =&gt; 'speed', 'value' =&gt; 88]]]]"
+    :grid-levels="4"
+    a11y-label="NativePHP capability profile"
+/&gt;</code></pre>
+                    <h2>Validate on your target devices</h2>
+                    <p>These are documented native components. Validate visual geometry, interaction, text scaling, and
+                        assistive technology on the devices relevant to your release before making performance or
+                        accessibility claims.</p>
+                </article>
+                <aside class="guide-aside" aria-label="Guide navigation"><strong>Guides</strong><a
+                        href="../installation/">Installation</a><a href="../cartesian-charts/">Line, area, bar,
+                        scatter</a><a href="../radial-charts/">Pie and donut</a><a href="./">Radar and candlestick</a><a
+                        href="../../">Documentation home</a></aside>
+            </div>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="shell footer-layout"><a class="brand brand-footer" href="../../"><img
+                    src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+                    Charts</span></a>
+            <p>Native charts for NativePHP Mobile.</p>
+        </div>
+    </footer>
+    <script src="../../assets/site.js" defer></script>
+</body>
+
+</html>

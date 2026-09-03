@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Native Pie and Donut Charts for NativePHP Mobile</title>
+    <meta name="description"
+        content="Build native pie and donut charts in NativePHP Mobile with ordered segments, localized values, legends, and native selection from PHP.">
+    <meta property="og:title" content="Native Pie and Donut Charts for NativePHP Mobile">
+    <meta property="og:description" content="Render native composition charts from Laravel and PHP without a WebView.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://donmanueldev.github.io/nativephp-charts/guides/radial-charts/">
+    <meta property="og:image"
+        content="https://donmanueldev.github.io/nativephp-charts/assets/screenshots/donut-ios.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://donmanueldev.github.io/nativephp-charts/guides/radial-charts/">
+    <link rel="icon" href="../../assets/brand/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../../assets/initial.css">
+    <link rel="stylesheet" href="../../assets/styles.css">
+    <script
+        type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"Native Pie and Donut Charts for NativePHP Mobile","description":"Build native composition charts with NativePHP Charts.","url":"https://donmanueldev.github.io/nativephp-charts/guides/radial-charts/","about":{"@id":"https://donmanueldev.github.io/nativephp-charts/#software"},"author":{"@id":"https://donmanueldev.github.io/nativephp-charts/#organization"}},{"@type":"SoftwareApplication","@id":"https://donmanueldev.github.io/nativephp-charts/#software","name":"NativePHP Charts","applicationCategory":"DeveloperApplication","operatingSystem":"iOS 18.2 or newer, Android API 26 or newer","url":"https://donmanueldev.github.io/nativephp-charts/"},{"@type":"Organization","@id":"https://donmanueldev.github.io/nativephp-charts/#organization","name":"Donmanueldev","url":"https://github.com/donmanueldev"}]}</script>
+</head>
+
+<body><a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+        <div class="shell header-inner"><a class="brand" href="../../" aria-label="NativePHP Charts home"><img
+                    src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+                    Charts</span></a>
+            <nav class="primary-navigation" aria-label="Primary"><a href="../installation/">Install</a><a
+                    href="../cartesian-charts/">Charts</a><a class="nav-cta"
+                    href="https://github.com/donmanueldev/nativephp-charts">GitHub</a></nav>
+        </div>
+    </header>
+    <main id="main-content">
+        <section class="guide-hero grid-surface">
+            <div class="shell">
+                <p class="eyebrow">Pie and donut charts for NativePHP</p>
+                <h1>Make composition visible in native mobile UI.</h1>
+                <p>Pie and donut charts render ordered segments directly on iOS and Android. Use them when the
+                    relationship between parts and their whole is the story.</p>
+            </div>
+        </section>
+        <section class="section">
+            <div class="shell guide-layout">
+                <article class="guide-content">
+                    <h2>Use ordered, meaningful segments</h2>
+                    <p>Every segment has a stable ID, label, non-negative finite value, and color. A non-empty radial
+                        chart must contain at least one positive value.</p>
+                    <pre><code>&lt;native:donut-chart
+    class="w-full h-80"
+    :segments="[
+        ['id' =&gt; 'subscriptions', 'label' =&gt; 'Subscriptions', 'value' =&gt; 48200, 'color' =&gt; '#2563EB'],
+        ['id' =&gt; 'services', 'label' =&gt; 'Services', 'value' =&gt; 31750, 'color' =&gt; '#7C3AED'],
+        ['id' =&gt; 'partners', 'label' =&gt; 'Partners', 'value' =&gt; 9650, 'color' =&gt; '#F59E0B'],
+    ]"
+    :inner-radius-ratio="0.62"
+    :legend="['visible' =&gt; true, 'position' =&gt; 'bottom']"
+    _select="pointSelected"
+    a11y-label="Quarterly revenue by channel"
+/&gt;</code></pre>
+                    <h2>Pie or donut?</h2>
+                    <p>Pie charts use a fixed inner radius of zero. Donut charts default to a 0.6 cutout and accept an
+                        <code>inner-radius-ratio</code> from 0.2 through 0.85. Both use the same ordered segment
+                        contract.</p>
+                    <h2>Keep values understandable</h2>
+                    <p>Set locale and value formatting for the audience. Add a visible legend where labels cannot fit in
+                        the chart and use a purposeful <code>a11y-label</code> for assistive technology.</p>
+                </article>
+                <aside class="guide-aside" aria-label="Guide navigation"><strong>Guides</strong><a
+                        href="../installation/">Installation</a><a href="../cartesian-charts/">Line, area, bar,
+                        scatter</a><a href="./">Pie and donut</a><a href="../radar-candlestick/">Radar and
+                        candlestick</a><a href="../../">Documentation home</a></aside>
+            </div>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="shell footer-layout"><a class="brand brand-footer" href="../../"><img
+                    src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+                    Charts</span></a>
+            <p>Native charts for NativePHP Mobile.</p>
+        </div>
+    </footer>
+    <script src="../../assets/site.js" defer></script>
+</body>
+
+</html>

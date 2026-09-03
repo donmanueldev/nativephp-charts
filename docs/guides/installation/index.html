@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install NativePHP Charts and Render Your First Native Chart</title>
+  <meta name="description"
+    content="Install NativePHP Charts in a Laravel NativePHP Mobile app and render your first accessible native line chart on iOS and Android.">
+  <meta property="og:title" content="Install NativePHP Charts and Render Your First Native Chart">
+  <meta property="og:description"
+    content="A complete NativePHP Mobile path from Composer installation to an accessible native Blade chart.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://donmanueldev.github.io/nativephp-charts/guides/installation/">
+  <meta property="og:image"
+    content="https://donmanueldev.github.io/nativephp-charts/assets/brand/nativephp-charts-512.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="canonical" href="https://donmanueldev.github.io/nativephp-charts/guides/installation/">
+  <link rel="icon" href="../../assets/brand/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../assets/initial.css">
+  <link rel="stylesheet" href="../../assets/styles.css">
+  <script
+    type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"Install NativePHP Charts and Render Your First Native Chart","description":"Install NativePHP Charts in a Laravel NativePHP Mobile app and render an accessible native line chart.","url":"https://donmanueldev.github.io/nativephp-charts/guides/installation/","about":{"@id":"https://donmanueldev.github.io/nativephp-charts/#software"},"author":{"@id":"https://donmanueldev.github.io/nativephp-charts/#organization"}},{"@type":"SoftwareApplication","@id":"https://donmanueldev.github.io/nativephp-charts/#software","name":"NativePHP Charts","applicationCategory":"DeveloperApplication","operatingSystem":"iOS 18.2 or newer, Android API 26 or newer","url":"https://donmanueldev.github.io/nativephp-charts/"},{"@type":"Organization","@id":"https://donmanueldev.github.io/nativephp-charts/#organization","name":"Donmanueldev","url":"https://github.com/donmanueldev"}]}</script>
+</head>
+
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="site-header">
+    <div class="shell header-inner"><a class="brand" href="../../" aria-label="NativePHP Charts home"><img
+          src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+          Charts</span></a>
+      <nav class="primary-navigation" aria-label="Primary"><a href="../../#installation">Install</a><a
+          href="../cartesian-charts/">Charts</a><a class="nav-cta"
+          href="https://github.com/donmanueldev/nativephp-charts">GitHub</a></nav>
+    </div>
+  </header>
+  <main id="main-content">
+    <section class="guide-hero grid-surface">
+      <div class="shell">
+        <p class="eyebrow">NativePHP Charts installation</p>
+        <h1>Your first native chart from PHP.</h1>
+        <p>Install the plugin in a NativePHP Mobile app, register its native renderers, and render an accessible chart
+          directly from an EDGE Blade view.</p>
+      </div>
+    </section>
+    <section class="section">
+      <div class="shell guide-layout">
+        <article class="guide-content">
+          <h2>Install and register the plugin</h2>
+          <p>NativePHP Charts is a compiled native UI plugin. Install it with Composer, publish the provider, register
+            the plugin, and validate its manifest before rebuilding your selected target.</p>
+          <div class="code-window">
+            <div class="code-toolbar"><span>Terminal</span><button class="copy-button" type="button"
+                data-copy-target="install-command">Copy</button></div>
+            <pre id="install-command"><code>composer require donmanueldev/nativephp-charts:^1.0
+php artisan vendor:publish --tag=nativephp-plugins-provider --no-interaction
+php artisan native:plugin:register donmanueldev/nativephp-charts --no-interaction
+php artisan native:plugin:list
+php artisan native:plugin:validate</code></pre>
+          </div>
+          <h2>Render a first chart</h2>
+          <p>Charts are leaf elements. Place one in a NativeComponent EDGE view, give it an explicit height, and
+            describe its purpose for VoiceOver and TalkBack.</p>
+          <pre><code>&lt;native:line-chart
+    class="w-full h-80"
+    :series="[[
+        'id' =&gt; 'monthly-sales',
+        'name' =&gt; 'Sales',
+        'color' =&gt; '#0F766E',
+        'points' =&gt; [
+            ['id' =&gt; 'jan', 'label' =&gt; 'Jan', 'value' =&gt; 42000],
+            ['id' =&gt; 'feb', 'label' =&gt; 'Feb', 'value' =&gt; 51800],
+        ],
+    ]]"
+    a11y-label="Monthly sales"
+/&gt;</code></pre>
+          <h2>Rebuild the selected native target</h2>
+          <p>The Swift and Kotlin renderers compile into your app. After installation or an update, rebuild the platform
+            you are developing for. The package supports NativePHP Mobile 4.x, PHP 8.4+, iOS 18.2+, and Android API 26+.
+          </p>
+        </article>
+        <aside class="guide-aside" aria-label="Guide navigation"><strong>Guides</strong><a href="./">Installation</a><a
+            href="../cartesian-charts/">Line, area, bar, scatter</a><a href="../radial-charts/">Pie and donut</a><a
+            href="../radar-candlestick/">Radar and candlestick</a><a href="../../">Documentation home</a></aside>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="shell footer-layout"><a class="brand brand-footer" href="../../"><img
+          src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+          Charts</span></a>
+      <p>Native charts for NativePHP Mobile.</p>
+    </div>
+  </footer>
+  <script src="../../assets/site.js" defer></script>
+</body>
+
+</html>

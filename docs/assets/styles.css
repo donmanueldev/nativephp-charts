@@ -636,6 +636,171 @@ pre code {
   color: var(--paper);
 }
 
+.chart-coverage {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 2rem;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.chart-coverage article {
+  color: var(--paper);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 7rem;
+  padding: 1.25rem;
+  background: var(--surface);
+}
+
+.chart-coverage strong,
+.chart-coverage span {
+  display: block;
+}
+
+.chart-coverage strong {
+  color: var(--paper);
+  font-size: 1.15rem;
+  letter-spacing: -.02em;
+}
+
+.chart-coverage span {
+  color: #aaa7a4;
+  font-size: .85rem;
+  line-height: 1.45;
+}
+
+.faq-layout,
+.guide-layout {
+  display: grid;
+  grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr);
+  gap: clamp(2rem, 7vw, 7rem);
+}
+
+.faq-list {
+  border-top: 1px solid var(--line);
+}
+
+.faq-list details {
+  border-bottom: 1px solid var(--line);
+  padding: 1.15rem 0;
+}
+
+.faq-list summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.faq-list p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: .85rem 2rem .1rem 0;
+}
+
+.faq-list a,
+.guide-content a {
+  color: var(--ember);
+}
+
+.guide-hero {
+  padding: clamp(8rem, 14vw, 12rem) 0 clamp(3.5rem, 8vw, 7rem);
+}
+
+.guide-hero .eyebrow {
+  color: var(--ember);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.guide-hero h1 {
+  font-size: clamp(2.75rem, 7vw, 6.5rem);
+  letter-spacing: -.065em;
+  line-height: .94;
+  margin: .8rem 0 1.4rem;
+  max-width: 12ch;
+}
+
+.guide-hero p {
+  color: var(--muted);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.6;
+  max-width: 45rem;
+}
+
+.guide-content {
+  min-width: 0;
+  max-width: 48rem;
+}
+
+.guide-content h2 {
+  font-size: clamp(1.7rem, 3.4vw, 2.8rem);
+  letter-spacing: -.04em;
+  line-height: 1.05;
+  margin: 3.5rem 0 1rem;
+}
+
+.guide-content h3 {
+  font-size: 1.15rem;
+  margin: 2rem 0 .65rem;
+}
+
+.guide-content p,
+.guide-content li {
+  color: var(--muted);
+  line-height: 1.72;
+}
+
+.guide-content ul {
+  padding-left: 1.2rem;
+}
+
+.guide-content pre {
+  overflow-x: auto;
+  padding: 1.25rem;
+  background: #111;
+  border: 1px solid var(--line);
+  color: #f6f1eb;
+  line-height: 1.55;
+}
+
+.guide-aside {
+  align-self: start;
+  border-top: 2px solid var(--ember);
+  padding-top: 1rem;
+  position: sticky;
+  top: 7rem;
+}
+
+.guide-aside a {
+  color: var(--muted);
+  display: block;
+  margin: .75rem 0;
+}
+
+.guide-aside a:hover,
+.guide-aside a:focus-visible {
+  color: var(--ink);
+}
+
+@media (max-width: 820px) {
+  .chart-coverage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .faq-layout,
+  .guide-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-aside {
+    position: static;
+  }
+}
+
 .footer-layout {
   display: grid;
   grid-template-columns: 1fr auto;

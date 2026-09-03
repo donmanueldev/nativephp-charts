@@ -13,6 +13,8 @@
 
 **[Explore the documentation and native demos →](https://donmanueldev.github.io/nativephp-charts/)**
 
+Start with the focused guides: [installation and your first chart](https://donmanueldev.github.io/nativephp-charts/guides/installation/), [line, area, bar, and scatter charts](https://donmanueldev.github.io/nativephp-charts/guides/cartesian-charts/), [pie and donut charts](https://donmanueldev.github.io/nativephp-charts/guides/radial-charts/), and [radar and candlestick charts](https://donmanueldev.github.io/nativephp-charts/guides/radar-candlestick/).
+
 Native line, area, bar, scatter, candlestick, radar, pie, and donut charts for [NativePHP Mobile](https://nativephp.com). iOS renders with Swift Charts and SwiftUI Canvas; Android renders with Jetpack Compose Canvas. Data stays on the device; there is no WebView, JavaScript chart library, network service, telemetry, or third-party native chart dependency.
 
 > NativePHP Charts is an independent community plugin. It is not an official NativePHP package.

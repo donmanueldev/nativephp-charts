@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Native Line, Area, Bar, and Scatter Charts for NativePHP</title>
+    <meta name="description"
+        content="Build native line, area, bar, and scatter charts in NativePHP Mobile with one platform-neutral Blade API for iOS and Android.">
+    <meta property="og:title" content="Native Line, Area, Bar, and Scatter Charts for NativePHP">
+    <meta property="og:description" content="Use NativePHP Charts for native Cartesian charts from Laravel and PHP.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://donmanueldev.github.io/nativephp-charts/guides/cartesian-charts/">
+    <meta property="og:image"
+        content="https://donmanueldev.github.io/nativephp-charts/assets/screenshots/line-android.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://donmanueldev.github.io/nativephp-charts/guides/cartesian-charts/">
+    <link rel="icon" href="../../assets/brand/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../../assets/initial.css">
+    <link rel="stylesheet" href="../../assets/styles.css">
+    <script
+        type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TechArticle","headline":"Native Line, Area, Bar, and Scatter Charts for NativePHP","description":"Build native Cartesian charts with NativePHP Charts.","url":"https://donmanueldev.github.io/nativephp-charts/guides/cartesian-charts/","about":{"@id":"https://donmanueldev.github.io/nativephp-charts/#software"},"author":{"@id":"https://donmanueldev.github.io/nativephp-charts/#organization"}},{"@type":"SoftwareApplication","@id":"https://donmanueldev.github.io/nativephp-charts/#software","name":"NativePHP Charts","applicationCategory":"DeveloperApplication","operatingSystem":"iOS 18.2 or newer, Android API 26 or newer","url":"https://donmanueldev.github.io/nativephp-charts/"},{"@type":"Organization","@id":"https://donmanueldev.github.io/nativephp-charts/#organization","name":"Donmanueldev","url":"https://github.com/donmanueldev"}]}</script>
+</head>
+
+<body><a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+        <div class="shell header-inner"><a class="brand" href="../../" aria-label="NativePHP Charts home"><img
+                    src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+                    Charts</span></a>
+            <nav class="primary-navigation" aria-label="Primary"><a href="../installation/">Install</a><a
+                    href="../../#demos">Charts</a><a class="nav-cta"
+                    href="https://github.com/donmanueldev/nativephp-charts">GitHub</a></nav>
+        </div>
+    </header>
+    <main id="main-content">
+        <section class="guide-hero grid-surface">
+            <div class="shell">
+                <p class="eyebrow">Cartesian charts for NativePHP</p>
+                <h1>Compare change, volume, and observations natively.</h1>
+                <p>Line, area, bar, and scatter charts share an ordered series contract, localized axes, native
+                    selection, and one Blade API across iOS and Android.</p>
+            </div>
+        </section>
+        <section class="section">
+            <div class="shell guide-layout">
+                <article class="guide-content">
+                    <h2>Choose the chart that answers the question</h2>
+                    <ul>
+                        <li><strong>Line:</strong> change over an ordered sequence.</li>
+                        <li><strong>Area:</strong> cumulative or layered magnitude with overlay or stacked fills.</li>
+                        <li><strong>Bar:</strong> grouped comparisons across categories.</li>
+                        <li><strong>Scatter:</strong> independent observations with numeric, date, or datetime spacing.
+                        </li>
+                    </ul>
+                    <h2>Start with a typed series</h2>
+                    <pre><code>&lt;native:bar-chart
+    class="w-full h-72"
+    :series="$revenueSeries"
+    :legend="['visible' =&gt; true, 'position' =&gt; 'top']"
+    :x-axis="['type' =&gt; 'category']"
+    :y-axis="['valueFormat' =&gt; 'currency', 'currencyCode' =&gt; 'USD']"
+    _select="pointSelected"
+    a11y-label="Revenue by channel"
+/&gt;</code></pre>
+                    <h2>Make selection stable</h2>
+                    <p>Give series and points stable IDs before enabling callbacks or frequently inserting and
+                        reordering data. Native selection and tooltip updates happen on-device; the PHP callback
+                        receives a versioned selection payload.</p>
+                    <h2>Format for people, not renderers</h2>
+                    <p>Use the locale, x-axis, y-axis, legend, and style contracts instead of Swift or Compose-specific
+                        properties. The same semantic input produces native platform output.</p>
+                </article>
+                <aside class="guide-aside" aria-label="Guide navigation"><strong>Guides</strong><a
+                        href="../installation/">Installation</a><a href="./">Line, area, bar, scatter</a><a
+                        href="../radial-charts/">Pie and donut</a><a href="../radar-candlestick/">Radar and
+                        candlestick</a><a href="../../">Documentation home</a></aside>
+            </div>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <div class="shell footer-layout"><a class="brand brand-footer" href="../../"><img
+                    src="../../assets/brand/nativephp-charts-mark.svg" alt="" width="44" height="34"><span>NativePHP
+                    Charts</span></a>
+            <p>Native charts for NativePHP Mobile.</p>
+        </div>
+    </footer>
+    <script src="../../assets/site.js" defer></script>
+</body>
+
+</html>
