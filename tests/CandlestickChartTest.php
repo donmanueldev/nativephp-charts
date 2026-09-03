@@ -108,7 +108,13 @@ it('rejects invalid OHLC ranges and multiple series', function () {
     expect(fn () => CandlestickChart::make()->series($invalid))
         ->toThrow(InvalidArgumentException::class, 'OHLC range')
         ->and(fn () => CandlestickChart::make()->series([$invalid[0], [...$invalid[0], 'id' => 'other']]))
-        ->toThrow(InvalidArgumentException::class, 'zero or one ordered series');
+        ->toThrow(InvalidArgumentException::class, 'zero or one ordered series')
+        ->and(fn () => CandlestickChart::make()->series([[
+            'id' => 'market', 'name' => 'Market', 'color' => '#2563EB',
+            'points' => [[
+                'id' => 'day', 'label' => 'Day', 'open' => 10, 'high' => 12, 'low' => 9, 'close' => 11, 'volume' => 200,
+            ]],
+        ]]))->toThrow(InvalidArgumentException::class, "option 'volume'");
 });
 
 it('rejects LTTB sampling because it can hide OHLC extremes', function () {

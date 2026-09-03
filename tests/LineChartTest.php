@@ -59,6 +59,19 @@ it('invalidates serialized snapshots after fluent configuration changes', functi
         ->and($second['style_json'])->not->toBe($first['style_json']);
 });
 
+it('retains the last valid cartesian state after a rejected axis update', function () {
+    $chart = LineChart::make()->series([[
+        'id' => 'signal', 'name' => 'Signal', 'color' => '#2563EB',
+        'points' => [['id' => 'first', 'label' => 'First', 'value' => 1]],
+    ]]);
+    $before = $chart->toArray(new CallbackRegistry)['props'];
+
+    expect(fn () => $chart->xAxis(['type' => 'number']))
+        ->toThrow(InvalidArgumentException::class, 'is required for a number axis');
+
+    expect($chart->toArray(new CallbackRegistry)['props'])->toBe($before);
+});
+
 it('normalizes multiple ordered series with explicit and compatibility point identities', function () {
     $props = LineChart::make()->series([
         [
@@ -357,6 +370,26 @@ it('samples category axes by their declared order instead of parsing labels as d
         ->toBe(['point-0', 'point-3', 'point-4']);
 });
 
+it('preserves datetime microseconds when selecting LTTB peaks', function () {
+    $props = LineChart::make()
+        ->xAxis(['type' => 'datetime'])
+        ->series([[
+            'id' => 'signal', 'name' => 'Signal', 'color' => '#2563EB',
+            'points' => [
+                ['id' => 'start', 'label' => 'Start', 'x' => '2026-08-29T08:00:00.000001Z', 'value' => 0],
+                ['id' => 'before-peak', 'label' => 'Before peak', 'x' => '2026-08-29T08:00:00.100000Z', 'value' => 0],
+                ['id' => 'peak', 'label' => 'Peak', 'x' => '2026-08-29T08:00:00.500000Z', 'value' => 10],
+                ['id' => 'after-peak', 'label' => 'After peak', 'x' => '2026-08-29T08:00:00.900000Z', 'value' => 0],
+                ['id' => 'end', 'label' => 'End', 'x' => '2026-08-29T08:00:00.999999Z', 'value' => 0],
+            ],
+        ]])
+        ->sampling(['mode' => 'lttb', 'threshold' => 3])
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect(array_column(json_decode($props['series_json'], true, flags: JSON_THROW_ON_ERROR)[0]['points'], 'id'))
+        ->toBe(['start', 'peak', 'end']);
+});
+
 it('rejects sampling when related series require matching x positions', function () {
     $series = [
         ['id' => 'lower', 'name' => 'Lower', 'color' => '#0F766E', 'points' => [['id' => 'a', 'label' => 'A', 'value' => 1]]],
@@ -425,6 +458,38 @@ it('externalizes oversized series before the native uint16 prop boundary', funct
         ->and(strlen(serialize($props)))->toBeLessThan(65_535)
         ->and(json_decode(file_get_contents($props['series_json_file']), true, flags: JSON_THROW_ON_ERROR)[0]['points'])
         ->toHaveCount(10_000);
+});
+
+it('regenerates an unavailable external series payload from the current chart state', function () {
+    $points = array_map(
+        fn (int $index): array => ['id' => "point-{$index}", 'label' => "Point {$index}", 'x' => $index, 'value' => $index % 97],
+        range(0, 9_999),
+    );
+    $chart = LineChart::make()
+        ->xAxis(['type' => 'number'])
+        ->series([['id' => 'benchmark', 'name' => 'Benchmark', 'color' => '#2563EB', 'points' => $points]]);
+    $first = $chart->toArray(new CallbackRegistry)['props'];
+
+    unlink($first['series_json_file']);
+    $second = $chart->toArray(new CallbackRegistry)['props'];
+
+    expect($second['series_transport'])->toBe('file-v1')
+        ->and($second['series_json_file'])->toBeFile()
+        ->and(json_decode(file_get_contents($second['series_json_file']), true, flags: JSON_THROW_ON_ERROR)[0]['points'])
+        ->toHaveCount(10_000);
+});
+
+it('rejects undocumented cartesian data and annotation options', function () {
+    expect(fn () => LineChart::make()->series([[
+        'id' => 'signal', 'name' => 'Signal', 'color' => '#2563EB', 'typo' => true, 'points' => [],
+    ]]))->toThrow(InvalidArgumentException::class, "series at index 0 option 'typo'")
+        ->and(fn () => LineChart::make()->series([[
+            'id' => 'signal', 'name' => 'Signal', 'color' => '#2563EB',
+            'points' => [['id' => 'point', 'label' => 'Point', 'value' => 1, 'vale' => 1]],
+        ]]))->toThrow(InvalidArgumentException::class, "option 'vale'")
+        ->and(fn () => LineChart::make()->annotations([[
+            'id' => 'target', 'type' => 'line', 'axis' => 'y', 'value' => 10, 'typo' => true,
+        ]]))->toThrow(InvalidArgumentException::class, "annotation 'target' option 'typo'");
 });
 
 it('rejects invalid interaction viewport and sampling contracts', function (callable $configure, string $message) {
@@ -684,6 +749,20 @@ it('rejects invalid axes, legends, callbacks, and line styles', function (Closur
     'callback arguments' => [fn (LineChart $chart) => $chart->onSelect('handlePoint($value)'), 'JSON-compatible literals'],
     'invalid dash structure' => [fn (LineChart $chart) => $chart->style(['line' => ['dash' => 4]]), 'list of 2, 4, 6, or 8 numbers'],
 ]);
+
+it('accepts JSON callback arguments containing apostrophes and canonicalizes short colors', function () {
+    $registry = new CallbackRegistry;
+    $props = LineChart::make()
+        ->onSelect('selected("O\'Reilly")')
+        ->series([[
+            'id' => 'signal', 'name' => 'Signal', 'color' => '#AbC',
+            'points' => [['id' => 'point', 'label' => 'Point', 'value' => 1]],
+        ]])
+        ->toArray($registry)['props'];
+
+    expect($registry->resolve($props['on_select']))->toBe(['method' => 'selected', 'args' => ["O'Reilly"]])
+        ->and(json_decode($props['series_json'], true, flags: JSON_THROW_ON_ERROR)[0]['color'])->toBe('#AABBCC');
+});
 
 it('rejects invalid explicit cartesian domains', function (Closure $configure, string $message) {
     expect(fn () => $configure(LineChart::make())->toArray(new CallbackRegistry))
