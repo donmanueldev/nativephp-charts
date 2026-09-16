@@ -19,8 +19,13 @@ Native line, area, bar, scatter, candlestick, radar, pie, and donut charts for [
 
 > NativePHP Charts is an independent community plugin. It is not an official NativePHP package.
 
+## Apps using NativePHP Charts
+
+- [Despertá](https://desperta.momotombo.dev/) — [Get it on Google Play](https://play.google.com/store/apps/details?id=dev.momotombo.desperta)
+
 ## Documentation
 
+- [Apps using NativePHP Charts](#apps-using-nativephp-charts)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
