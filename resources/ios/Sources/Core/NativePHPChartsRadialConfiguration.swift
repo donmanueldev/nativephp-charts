@@ -10,7 +10,7 @@ enum NativePHPChartsRadialKind: String {
 /// Missing fields retain cross-version defaults. PHP is the authoritative validator, while
 /// the native configuration still clamps visual ratios so a stale shell cannot create
 /// degenerate geometry.
-struct NativePHPChartsRadialWireInput: Equatable {
+struct NativePHPChartsRadialWireInput: Equatable, Sendable {
     let contractVersion: Int
     let segmentsJSON: String
     let styleJSON: String
@@ -22,12 +22,16 @@ struct NativePHPChartsRadialWireInput: Equatable {
     let maximumFractionDigits: Int
     let animated: Bool
     let emptyLabel: String
+    let errorLabel: String
     let accessibilityLabel: String
+    let themeMode: String
+    let preset: String
+    let themeJSON: String
     let onSelect: Int
     let innerRadiusRatio: Double
 
     init(node: NativeUINode, kind: NativePHPChartsRadialKind) {
-        contractVersion = node.props.getInt("contract_version", default: 1)
+        contractVersion = node.props.getInt("contract_version", default: 0)
         segmentsJSON = node.props.getString("segments_json", default: "[]")
         styleJSON = node.props.getString("style_json", default: "{}")
         legendJSON = node.props.getString("legend_json", default: "{}")
@@ -38,11 +42,28 @@ struct NativePHPChartsRadialWireInput: Equatable {
         maximumFractionDigits = node.props.getInt("maximum_fraction_digits", default: -1)
         animated = node.props.getBool("animated", default: true)
         emptyLabel = node.props.getString("empty_label", default: "No data")
+        errorLabel = node.props.getString("error_label", default: "Chart unavailable")
         accessibilityLabel = node.props.getString("a11y_label", default: "Chart")
+        themeMode = node.props.getString("theme_mode", default: "system")
+        preset = node.props.getString("preset", default: "default")
+        themeJSON = node.props.getString("theme_json", default: "{}")
         onSelect = node.props.getInt("on_select", default: 0)
 
         let defaultRatio: Float = kind == .donut ? 0.6 : 0
         innerRadiusRatio = Double(node.props.getFloat("inner_radius_ratio", default: defaultRatio))
+    }
+
+    static func testing(contractVersion: Int = 1, segmentsJSON: String) -> Self {
+        Self(contractVersion: contractVersion, segmentsJSON: segmentsJSON)
+    }
+
+    private init(contractVersion: Int, segmentsJSON: String) {
+        self.contractVersion = contractVersion; self.segmentsJSON = segmentsJSON
+        styleJSON = "{}"; legendJSON = "{}"; locale = ""; valueFormat = "number"; currencyCode = ""
+        minimumFractionDigits = -1; maximumFractionDigits = -1; animated = true
+        emptyLabel = "No data"; errorLabel = "Chart unavailable"; accessibilityLabel = "Chart"
+        themeMode = "system"; preset = "default"; themeJSON = "{}"
+        onSelect = 0; innerRadiusRatio = 0
     }
 }
 
@@ -111,14 +132,18 @@ struct NativePHPChartsRadialConfiguration {
     let accessibilityLabel: String
     let onSelect: Int
     let innerRadiusRatio: Double
+    let theme: NativePHPChartsTheme.Variant?
+    let palette: [String]
 
-    init(input: NativePHPChartsRadialWireInput, kind: NativePHPChartsRadialKind) {
+    init(input: NativePHPChartsRadialWireInput, kind: NativePHPChartsRadialKind, colorSchemeIsDark: Bool = false) {
         legend = NativePHPChartsLegendConfiguration.decode(input.legendJSON)
         style = NativePHPChartsRadialStyle.decode(input.styleJSON)
         animated = input.animated
         emptyLabel = input.emptyLabel
         accessibilityLabel = input.accessibilityLabel
         onSelect = input.onSelect
+        theme = NativePHPChartsTheme.decode(input.themeJSON)?.variant(mode: input.themeMode, colorSchemeIsDark: colorSchemeIsDark)
+        palette = theme?.palette.isEmpty == false ? (theme?.palette ?? []) : NativePHPChartsRuntime.palette(preset: input.preset)
 
         switch kind {
         case .pie:
@@ -131,13 +156,28 @@ struct NativePHPChartsRadialConfiguration {
 
 /// Immutable radial configuration, formatter, and cumulative angular data for one node revision.
 struct NativePHPChartsRadialSnapshot {
+    let availability: NativePHPChartsAvailability
     let configuration: NativePHPChartsRadialConfiguration
     let formatter: NativePHPChartsRadialFormatter
     let data: NativePHPChartsRadialDataSet
 
-    init(input: NativePHPChartsRadialWireInput, kind: NativePHPChartsRadialKind) {
-        configuration = NativePHPChartsRadialConfiguration(input: input, kind: kind)
+    init(input: NativePHPChartsRadialWireInput, kind: NativePHPChartsRadialKind, colorSchemeIsDark: Bool = false) {
+        configuration = NativePHPChartsRadialConfiguration(input: input, kind: kind, colorSchemeIsDark: colorSchemeIsDark)
         formatter = NativePHPChartsRadialFormatter(input: input)
-        data = NativePHPChartsRadialDataSet.decode(input.segmentsJSON)
+        if input.contractVersion != NativePHPChartsRuntime.supportedContractVersion {
+            availability = .unsupportedContract
+            data = NativePHPChartsRadialDataSet(segments: [], total: 0)
+        } else if NativePHPChartsRadialDataSet.validate(input.segmentsJSON) == false {
+            availability = .invalidPayload
+            data = NativePHPChartsRadialDataSet(segments: [], total: 0)
+        } else {
+            availability = .available
+            data = NativePHPChartsRadialDataSet.decode(input.segmentsJSON, palette: configuration.palette)
+        }
+        NativePHPChartsRuntime.diagnose(availability, chartType: kind.rawValue)
+    }
+
+    @concurrent static func load(input: NativePHPChartsRadialWireInput, kind: NativePHPChartsRadialKind, colorSchemeIsDark: Bool = false) async -> Self {
+        Self(input: input, kind: kind, colorSchemeIsDark: colorSchemeIsDark)
     }
 }

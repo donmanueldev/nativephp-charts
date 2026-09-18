@@ -6,7 +6,7 @@ import SwiftUI
 /// Missing sections inherit empty option groups so mark-specific defaults can be resolved at
 /// the rendering boundary. Invalid JSON falls back to the complete default style rather than
 /// mixing partially decoded presentation state.
-struct NativePHPChartsStyle: Decodable {
+struct NativePHPChartsStyle: Decodable, Sendable {
     let line: Line
     let area: Area
     let bar: Bar
@@ -58,7 +58,7 @@ struct NativePHPChartsStyle: Decodable {
         return style
     }
 
-    struct Line: Decodable {
+    struct Line: Decodable, Sendable {
         let color: String?
         let width: CGFloat?
         let interpolation: String?
@@ -72,7 +72,7 @@ struct NativePHPChartsStyle: Decodable {
         }
     }
 
-    struct Area: Decodable {
+    struct Area: Decodable, Sendable {
         let opacity: Double?
         let gradient: Bool?
 
@@ -82,7 +82,7 @@ struct NativePHPChartsStyle: Decodable {
         }
     }
 
-    struct Bar: Decodable {
+    struct Bar: Decodable, Sendable {
         let radius: CGFloat?
         let width: CGFloat?
 
@@ -104,7 +104,7 @@ struct NativePHPChartsStyle: Decodable {
         }
     }
 
-    struct Candlestick: Decodable, Equatable {
+    struct Candlestick: Decodable, Equatable, Sendable {
         let risingColor: String?
         let fallingColor: String?
         let neutralColor: String?
@@ -152,7 +152,7 @@ struct NativePHPChartsStyle: Decodable {
         var resolvedWickWidth: CGFloat { wickWidth ?? 1.5 }
     }
 
-    struct Points: Decodable {
+    struct Points: Decodable, Sendable {
         let visible: Bool?
         let color: String?
         let size: CGFloat?
@@ -164,7 +164,7 @@ struct NativePHPChartsStyle: Decodable {
         }
     }
 
-    struct Grid: Decodable {
+    struct Grid: Decodable, Sendable {
         let visible: Bool?
         let color: String?
         let width: CGFloat?
@@ -176,7 +176,7 @@ struct NativePHPChartsStyle: Decodable {
         }
     }
 
-    struct Axis: Decodable {
+    struct Axis: Decodable, Sendable {
         let visible: Bool?
         let color: String?
         let labelColor: String?

@@ -5,39 +5,46 @@ import SwiftUI
 /// Selection identity survives unrelated property updates when the point still exists. It is
 /// cleared when a new payload removes the selected point, preventing stale tooltips and events.
 struct NativePHPChartsRenderer: View {
+    private struct LoadKey: Equatable { let input: NativePHPChartsWireInput; let isDark: Bool }
     let node: NativeUINode
     let kind: NativePHPChartsKind
 
     @State private var snapshot: NativePHPChartsSnapshot
     @State private var selectedPointID: String?
+    @Environment(\.colorScheme) private var colorScheme
 
     init(node: NativeUINode, kind: NativePHPChartsKind) {
         self.node = node
         self.kind = kind
-        _snapshot = State(initialValue: NativePHPChartsSnapshot(input: NativePHPChartsWireInput(node: node), kind: kind))
+        _snapshot = State(initialValue: NativePHPChartsSnapshot(input: .testing(seriesJSON: "[]"), kind: kind))
     }
 
     var body: some View {
         Group {
-            if snapshot.data.isEmpty {
+            if snapshot.availability != .available {
+                unavailableState
+            } else if snapshot.data.isEmpty {
                 emptyState
             } else {
                 content
             }
         }
-        .onChange(of: wireInput) { _, input in
-            let updated = NativePHPChartsSnapshot(input: input, kind: kind)
+        .background(snapshot.configuration.style.color(snapshot.configuration.theme?.background, fallback: .clear))
+        .foregroundStyle(snapshot.configuration.style.color(snapshot.configuration.theme?.foreground, fallback: .primary))
+        .task(id: loadKey) {
+            guard let updated = await NativePHPChartsSnapshot.load(input: wireInput, kind: kind, colorSchemeIsDark: colorScheme == .dark),
+                  Task.isCancelled == false
+            else { return }
             snapshot = updated
-
-            if updated.data.point(selectionID: selectedPointID) == nil {
-                selectedPointID = nil
-            }
+            selectedPointID = updated.data.point(selectionID: selectedPointID)?.selectionID
         }
     }
 
     private var wireInput: NativePHPChartsWireInput {
         NativePHPChartsWireInput(node: node)
     }
+
+    private var loadKey: LoadKey { LoadKey(input: wireInput, isDark: colorScheme == .dark) }
 
     @ViewBuilder
     private var content: some View {
@@ -84,6 +91,15 @@ struct NativePHPChartsRenderer: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(snapshot.configuration.accessibilityLabel)
         .accessibilityValue(snapshot.configuration.emptyLabel)
+    }
+
+    private var unavailableState: some View {
+        ContentUnavailableView {
+            Label(wireInput.errorLabel, systemImage: "exclamationmark.triangle")
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(snapshot.configuration.accessibilityLabel)
+        .accessibilityValue(wireInput.errorLabel)
     }
 
     private var emptyIcon: String {

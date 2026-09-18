@@ -96,28 +96,36 @@ enum NativePHPChartsRadarAxisLabelLayout {
 }
 
 struct NativePHPChartsRadarChartRenderer: View {
+    private struct LoadKey: Equatable { let input: NativePHPChartsRadarWireInput; let isDark: Bool }
     let node: NativeUINode
 
     @State private var snapshot: NativePHPChartsRadarSnapshot
     @State private var selectedID: String?
+    @Environment(\.colorScheme) private var colorScheme
 
     init(node: NativeUINode) {
         self.node = node
-        _snapshot = State(initialValue: NativePHPChartsRadarSnapshot(input: NativePHPChartsRadarWireInput(node: node)))
+        _snapshot = State(initialValue: NativePHPChartsRadarSnapshot(input: NativePHPChartsRadarWireInput()))
     }
 
     var body: some View {
         Group {
-            if snapshot.isEmpty { emptyState } else { content }
+            if snapshot.availability != .available { unavailableState }
+            else if snapshot.isEmpty { emptyState }
+            else { content }
         }
-        .onChange(of: wireInput) { _, input in
-            let updated = NativePHPChartsRadarSnapshot(input: input)
+        .background(snapshot.style.color(snapshot.theme?.background, fallback: .clear))
+        .foregroundStyle(snapshot.style.color(snapshot.theme?.foreground, fallback: .primary))
+        .task(id: loadKey) {
+            let updated = await NativePHPChartsRadarSnapshot.load(input: wireInput, colorSchemeIsDark: colorScheme == .dark)
+            guard Task.isCancelled == false else { return }
             snapshot = updated
-            if updated.selection(id: selectedID) == nil { selectedID = nil }
+            selectedID = updated.selection(id: selectedID)?.id
         }
     }
 
     private var wireInput: NativePHPChartsRadarWireInput { NativePHPChartsRadarWireInput(node: node) }
+    private var loadKey: LoadKey { LoadKey(input: wireInput, isDark: colorScheme == .dark) }
 
     @ViewBuilder
     private var content: some View {
@@ -143,6 +151,13 @@ struct NativePHPChartsRadarChartRenderer: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(snapshot.accessibilityLabel)
             .accessibilityValue(snapshot.emptyLabel)
+    }
+
+    private var unavailableState: some View {
+        ContentUnavailableView { Label(wireInput.errorLabel, systemImage: "exclamationmark.triangle") }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(snapshot.accessibilityLabel)
+            .accessibilityValue(wireInput.errorLabel)
     }
 }
 
@@ -251,8 +266,8 @@ private struct NativePHPChartsRadarPlot: View {
     ) {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
         let radius = min(size.width, size.height) * 0.34
-        let gridColor = snapshot.style.color(snapshot.style.grid.color, fallback: .secondary.opacity(0.2))
-        let axisColor = snapshot.style.color(snapshot.style.axis.color, fallback: .secondary.opacity(0.28))
+        let gridColor = snapshot.style.color(snapshot.style.grid.color, fallback: snapshot.style.color(snapshot.theme?.grid, fallback: .secondary.opacity(0.2)))
+        let axisColor = snapshot.style.color(snapshot.style.axis.color, fallback: snapshot.style.color(snapshot.theme?.muted, fallback: .secondary.opacity(0.28)))
 
         if snapshot.style.grid.visible ?? true {
             for level in 1...snapshot.gridLevels {
@@ -272,7 +287,7 @@ private struct NativePHPChartsRadarPlot: View {
                     axisCount: snapshot.axes.count
                 ) {
                     let labelPoint = point(index: index, ratio: 1.17, center: center, radius: radius)
-                    let labelColor = snapshot.style.color(snapshot.style.axis.labelColor, fallback: .secondary)
+                    let labelColor = snapshot.style.color(snapshot.style.axis.labelColor, fallback: snapshot.style.color(snapshot.theme?.foreground, fallback: .secondary))
                     context.draw(
                         context.resolve(Text(displayLabel).font(snapshot.style.axisFont(scale: axisFontScale)).foregroundStyle(labelColor)),
                         at: labelPoint

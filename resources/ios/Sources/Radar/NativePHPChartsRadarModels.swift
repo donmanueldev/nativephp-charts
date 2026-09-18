@@ -23,6 +23,18 @@ struct NativePHPChartsRadarSeries: Decodable, Hashable, Identifiable {
         case colorValue = "color"
     }
 
+    init(id: String, name: String, colorValue: String, values: [NativePHPChartsRadarValue]) {
+        self.id = id; self.name = name; self.colorValue = colorValue; self.values = values
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        colorValue = try container.decodeIfPresent(String.self, forKey: .colorValue) ?? ""
+        values = try container.decode([NativePHPChartsRadarValue].self, forKey: .values)
+    }
+
     var color: Color { Color(argb: ColorParser.parse(colorValue, default: 0xFF6366F1)) }
 }
 
@@ -39,7 +51,8 @@ struct NativePHPChartsRadarSelection: Hashable, Identifiable {
 ///
 /// Axes and values use separate JSON lists, but PHP guarantees that each series repeats every
 /// axis exactly once and in declaration order. Defaults keep older generated shells readable.
-struct NativePHPChartsRadarWireInput: Equatable {
+struct NativePHPChartsRadarWireInput: Equatable, Sendable {
+    let contractVersion: Int
     let axesJSON: String
     let seriesJSON: String
     let styleJSON: String
@@ -51,12 +64,17 @@ struct NativePHPChartsRadarWireInput: Equatable {
     let maximumFractionDigits: Int
     let animated: Bool
     let emptyLabel: String
+    let errorLabel: String
     let accessibilityLabel: String
+    let themeMode: String
+    let preset: String
+    let themeJSON: String
     let onSelect: Int
     let gridLevels: Int
     let fillOpacity: Double
 
     init(
+        contractVersion: Int = 1,
         axesJSON: String = "[]",
         seriesJSON: String = "[]",
         styleJSON: String = "{}",
@@ -68,11 +86,16 @@ struct NativePHPChartsRadarWireInput: Equatable {
         maximumFractionDigits: Int = -1,
         animated: Bool = true,
         emptyLabel: String = "No data",
+        errorLabel: String = "Chart unavailable",
         accessibilityLabel: String = "Chart",
+        themeMode: String = "system",
+        preset: String = "default",
+        themeJSON: String = "{}",
         onSelect: Int = 0,
         gridLevels: Int = 5,
         fillOpacity: Double = 0.22
     ) {
+        self.contractVersion = contractVersion
         self.axesJSON = axesJSON
         self.seriesJSON = seriesJSON
         self.styleJSON = styleJSON
@@ -84,7 +107,11 @@ struct NativePHPChartsRadarWireInput: Equatable {
         self.maximumFractionDigits = maximumFractionDigits
         self.animated = animated
         self.emptyLabel = emptyLabel
+        self.errorLabel = errorLabel
         self.accessibilityLabel = accessibilityLabel
+        self.themeMode = themeMode
+        self.preset = preset
+        self.themeJSON = themeJSON
         self.onSelect = onSelect
         self.gridLevels = gridLevels
         self.fillOpacity = fillOpacity
@@ -92,6 +119,7 @@ struct NativePHPChartsRadarWireInput: Equatable {
 
     init(node: NativeUINode) {
         self.init(
+            contractVersion: node.props.getInt("contract_version", default: 0),
             axesJSON: node.props.getString("axes_json", default: "[]"),
             seriesJSON: node.props.getString("series_json", default: "[]"),
             styleJSON: node.props.getString("style_json", default: "{}"),
@@ -103,7 +131,11 @@ struct NativePHPChartsRadarWireInput: Equatable {
             maximumFractionDigits: node.props.getInt("maximum_fraction_digits", default: -1),
             animated: node.props.getBool("animated", default: true),
             emptyLabel: node.props.getString("empty_label", default: "No data"),
+            errorLabel: node.props.getString("error_label", default: "Chart unavailable"),
             accessibilityLabel: node.props.getString("a11y_label", default: "Chart"),
+            themeMode: node.props.getString("theme_mode", default: "system"),
+            preset: node.props.getString("preset", default: "default"),
+            themeJSON: node.props.getString("theme_json", default: "{}"),
             onSelect: node.props.getInt("on_select", default: 0),
             gridLevels: node.props.getInt("grid_levels", default: 5),
             fillOpacity: Double(node.props.getFloat("fill_opacity", default: 0.22))
@@ -117,6 +149,7 @@ struct NativePHPChartsRadarWireInput: Equatable {
 /// array index exists and its axis id matches the declared spoke. Malformed JSON or misaligned
 /// values therefore become empty/partial native state instead of connecting the wrong axes.
 struct NativePHPChartsRadarSnapshot {
+    let availability: NativePHPChartsAvailability
     let axes: [NativePHPChartsRadarAxis]
     let series: [NativePHPChartsRadarSeries]
     let style: NativePHPChartsStyle
@@ -130,10 +163,26 @@ struct NativePHPChartsRadarSnapshot {
     let fillOpacity: Double
     let animationID: Int
     let selections: [NativePHPChartsRadarSelection]
+    let theme: NativePHPChartsTheme.Variant?
+    let palette: [String]
 
-    init(input: NativePHPChartsRadarWireInput) {
-        let decodedAxes = Self.decode([NativePHPChartsRadarAxis].self, input.axesJSON)
-        let decodedSeries = Self.decode([NativePHPChartsRadarSeries].self, input.seriesJSON)
+    init(input: NativePHPChartsRadarWireInput, colorSchemeIsDark: Bool = false) {
+        let axesResult = Self.decode([NativePHPChartsRadarAxis].self, input.axesJSON)
+        let seriesResult = Self.decode([NativePHPChartsRadarSeries].self, input.seriesJSON)
+        let valid = input.contractVersion == NativePHPChartsRuntime.supportedContractVersion
+            && axesResult != nil && seriesResult != nil
+            && Self.validate(axes: axesResult ?? [], series: seriesResult ?? [])
+        availability = input.contractVersion != NativePHPChartsRuntime.supportedContractVersion
+            ? .unsupportedContract
+            : (valid ? .available : .invalidPayload)
+        let decodedAxes = valid ? (axesResult ?? []) : []
+        let resolvedTheme = NativePHPChartsTheme.decode(input.themeJSON)?.variant(mode: input.themeMode, colorSchemeIsDark: colorSchemeIsDark)
+        let resolvedPalette = resolvedTheme?.palette.isEmpty == false ? (resolvedTheme?.palette ?? []) : NativePHPChartsRuntime.palette(preset: input.preset)
+        theme = resolvedTheme
+        palette = resolvedPalette
+        let decodedSeries = valid ? (seriesResult ?? []).enumerated().map { index, item in
+            NativePHPChartsRadarSeries(id: item.id, name: item.name, colorValue: item.colorValue.isEmpty ? resolvedPalette[index % resolvedPalette.count] : item.colorValue, values: item.values)
+        } : []
         let decodedStyle = NativePHPChartsStyle.decode(input.styleJSON)
 
         axes = decodedAxes
@@ -160,6 +209,7 @@ struct NativePHPChartsRadarSnapshot {
         hasher.combine(decodedAxes)
         hasher.combine(decodedSeries)
         animationID = hasher.finalize()
+        NativePHPChartsRuntime.diagnose(availability, chartType: "radar")
     }
 
     var isEmpty: Bool { axes.count < 3 || series.allSatisfy(\.values.isEmpty) }
@@ -169,11 +219,29 @@ struct NativePHPChartsRadarSnapshot {
         selections.first { $0.id == id }
     }
 
-    private static func decode<Value: Decodable>(_ type: Value.Type, _ json: String) -> Value where Value: RangeReplaceableCollection {
-        guard let data = json.data(using: .utf8), let value = try? JSONDecoder().decode(type, from: data) else {
-            return Value()
+    @concurrent static func load(input: NativePHPChartsRadarWireInput, colorSchemeIsDark: Bool = false) async -> Self {
+        Self(input: input, colorSchemeIsDark: colorSchemeIsDark)
+    }
+
+    private static func decode<Value: Decodable>(_ type: Value.Type, _ json: String) -> Value? {
+        guard let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+
+    private static func validate(axes: [NativePHPChartsRadarAxis], series: [NativePHPChartsRadarSeries]) -> Bool {
+        if axes.isEmpty { return series.isEmpty }
+        guard axes.count >= 3,
+              Set(axes.map(\.id)).count == axes.count,
+              axes.allSatisfy({ $0.id.isEmpty == false && $0.maximum.isFinite && $0.maximum > 0 }),
+              Set(series.map(\.id)).count == series.count,
+              series.allSatisfy({ $0.id.isEmpty == false && $0.values.count == axes.count })
+        else { return false }
+
+        return series.allSatisfy { item in
+            zip(item.values, axes).allSatisfy { value, axis in
+                value.axis == axis.id && value.value.isFinite && value.value >= 0 && value.value <= axis.maximum
+            }
         }
-        return value
     }
 }
 

@@ -5,7 +5,7 @@ private struct NativePHPChartsWireSegment: Decodable {
     let id: String
     let label: String
     let value: Double
-    let color: String
+    let color: String?
 }
 
 /// A radial segment in the cumulative value domain `[0, total]`.
@@ -87,13 +87,14 @@ struct NativePHPChartsRadialDataSet {
     ///
     /// Duplicate ids, non-finite values, negative values, and overflowing totals are ignored
     /// defensively. PHP rejects those cases before transport; malformed JSON becomes empty state.
-    static func decode(_ json: String) -> NativePHPChartsRadialDataSet {
+    static func decode(_ json: String, palette: [String] = NativePHPChartsRuntime.palette(preset: "default")) -> NativePHPChartsRadialDataSet {
         guard let data = json.data(using: .utf8),
               let decoded = try? JSONDecoder().decode([NativePHPChartsWireSegment].self, from: data)
         else {
             return NativePHPChartsRadialDataSet(segments: [], total: 0)
         }
 
+        let effectivePalette = palette.isEmpty ? NativePHPChartsRuntime.palette(preset: "default") : palette
         var seenIDs: Set<String> = []
         var cumulative = 0.0
         var segments: [NativePHPChartsRadialSegment] = []
@@ -118,7 +119,7 @@ struct NativePHPChartsRadialDataSet {
                     id: wire.id,
                     label: wire.label,
                     value: wire.value,
-                    colorValue: wire.color,
+                    colorValue: wire.color ?? effectivePalette[index % effectivePalette.count],
                     index: index,
                     lowerBound: lowerBound,
                     upperBound: cumulative
@@ -127,5 +128,23 @@ struct NativePHPChartsRadialDataSet {
         }
 
         return NativePHPChartsRadialDataSet(segments: segments, total: cumulative)
+    }
+
+    static func validate(_ json: String) -> Bool {
+        guard let data = json.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([NativePHPChartsWireSegment].self, from: data)
+        else { return false }
+        var ids: Set<String> = []
+        var total = 0.0
+        for segment in decoded {
+            guard segment.id.isEmpty == false,
+                  ids.insert(segment.id).inserted,
+                  segment.value.isFinite,
+                  segment.value >= 0
+            else { return false }
+            total += segment.value
+            guard total.isFinite else { return false }
+        }
+        return true
     }
 }

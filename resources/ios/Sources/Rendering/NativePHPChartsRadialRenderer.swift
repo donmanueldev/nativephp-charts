@@ -4,18 +4,20 @@ import SwiftUI
 ///
 /// A selected id survives presentation-only updates but is cleared when its segment disappears.
 struct NativePHPChartsRadialRenderer: View {
+    private struct LoadKey: Equatable { let input: NativePHPChartsRadialWireInput; let isDark: Bool }
     let node: NativeUINode
     let kind: NativePHPChartsRadialKind
 
     @State private var snapshot: NativePHPChartsRadialSnapshot
     @State private var selectedSegmentID: String?
+    @Environment(\.colorScheme) private var colorScheme
 
     init(node: NativeUINode, kind: NativePHPChartsRadialKind) {
         self.node = node
         self.kind = kind
         _snapshot = State(
             initialValue: NativePHPChartsRadialSnapshot(
-                input: NativePHPChartsRadialWireInput(node: node, kind: kind),
+                input: .testing(segmentsJSON: "[]"),
                 kind: kind
             )
         )
@@ -23,24 +25,32 @@ struct NativePHPChartsRadialRenderer: View {
 
     var body: some View {
         Group {
-            if snapshot.data.isEmpty {
+            if snapshot.availability != .available {
+                unavailableState
+            } else if snapshot.data.isEmpty {
                 emptyState
             } else {
                 content
             }
         }
-        .onChange(of: wireInput) { _, input in
-            let updated = NativePHPChartsRadialSnapshot(input: input, kind: kind)
+        .background(themeColor(snapshot.configuration.theme?.background, fallback: .clear))
+        .foregroundStyle(themeColor(snapshot.configuration.theme?.foreground, fallback: .primary))
+        .task(id: loadKey) {
+            let updated = await NativePHPChartsRadialSnapshot.load(input: wireInput, kind: kind, colorSchemeIsDark: colorScheme == .dark)
+            guard Task.isCancelled == false else { return }
             snapshot = updated
-
-            if updated.data.segment(id: selectedSegmentID) == nil {
-                selectedSegmentID = nil
-            }
+            selectedSegmentID = updated.data.segment(id: selectedSegmentID)?.id
         }
     }
 
     private var wireInput: NativePHPChartsRadialWireInput {
         NativePHPChartsRadialWireInput(node: node, kind: kind)
+    }
+
+    private var loadKey: LoadKey { LoadKey(input: wireInput, isDark: colorScheme == .dark) }
+
+    private func themeColor(_ value: String?, fallback: Color) -> Color {
+        value.map { Color(argb: ColorParser.parse($0, default: 0xFF6366F1)) } ?? fallback
     }
 
     @ViewBuilder
@@ -87,6 +97,13 @@ struct NativePHPChartsRadialRenderer: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(snapshot.configuration.accessibilityLabel)
         .accessibilityValue(snapshot.configuration.emptyLabel)
+    }
+
+    private var unavailableState: some View {
+        ContentUnavailableView { Label(wireInput.errorLabel, systemImage: "exclamationmark.triangle") }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(snapshot.configuration.accessibilityLabel)
+            .accessibilityValue(wireInput.errorLabel)
     }
 
     private var emptyIcon: String {
