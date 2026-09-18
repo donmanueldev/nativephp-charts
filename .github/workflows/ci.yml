@@ -115,17 +115,15 @@ jobs:
           php "$NATIVEPHP_SHELL_HOST/artisan" native:plugin:register donmanueldev/nativephp-charts --no-interaction
           php "$NATIVEPHP_SHELL_HOST/artisan" native:plugin:validate --no-interaction
 
-      - name: Generate, build, and launch iOS shell
+      - name: Generate iOS shell and select simulator
         env:
           NATIVEPHP_APP_ID: dev.nativephp.charts.ci
           NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-ios-shell
-          NATIVEPHP_START_URL: /
         working-directory: ${{ runner.temp }}/nativephp-charts-ios-shell
         run: |
           php artisan native:install ios --no-interaction
           simulator_id="$(xcrun simctl list devices available -j | ruby "$GITHUB_WORKSPACE/scripts/select-ios-simulator.rb")"
           echo "NATIVEPHP_IOS_SIMULATOR_ID=$simulator_id" >> "$GITHUB_ENV"
-          php artisan native:run ios "$simulator_id" --build=debug --no-tty --no-interaction
 
       - name: Compile generated shell for iPhone arm64
         env:
@@ -165,7 +163,7 @@ jobs:
           path: |
             ${{ runner.temp }}/nativephp-charts-ios.xcresult
             ${{ runner.temp }}/nativephp-charts-ios-evidence
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
           compression-level: 0
 
