@@ -69,3 +69,211 @@ jobs:
 
       - name: Compile Swift renderers and run native tests
         run: swift test
+
+  ios-generated-shell:
+    name: iOS generated shell UI tests
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.4"
+          coverage: none
+          tools: composer:v2
+
+      - name: Create clean Laravel host
+        env:
+          NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-ios-shell
+        run: |
+          composer create-project laravel/laravel:^13.0 "$NATIVEPHP_SHELL_HOST" --prefer-dist --no-interaction --no-progress
+          composer config --working-dir="$NATIVEPHP_SHELL_HOST" repositories.nativephp-plugins composer https://plugins.nativephp.com
+          composer config --working-dir="$NATIVEPHP_SHELL_HOST" repositories.nativephp-charts path "$GITHUB_WORKSPACE"
+          composer require --working-dir="$NATIVEPHP_SHELL_HOST" nativephp/mobile:^4.0 nativephp/mobile-ui:^0.4.0 donmanueldev/nativephp-charts:@dev --prefer-dist --no-interaction --no-progress
+
+      - name: Install behavior fixture and register plugins
+        env:
+          NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-ios-shell
+        run: |
+          mkdir -p "$NATIVEPHP_SHELL_HOST/app/NativeComponents" "$NATIVEPHP_SHELL_HOST/resources/views/native"
+          cp ios-harness/host/app/NativeComponents/ChartBehaviorHarness.php "$NATIVEPHP_SHELL_HOST/app/NativeComponents/ChartBehaviorHarness.php"
+          cp ios-harness/host/app/NativeComponents/ChartGalleryHarness.php "$NATIVEPHP_SHELL_HOST/app/NativeComponents/ChartGalleryHarness.php"
+          cp ios-harness/host/app/NativeComponents/ChartPerformanceHarness.php "$NATIVEPHP_SHELL_HOST/app/NativeComponents/ChartPerformanceHarness.php"
+          cp ios-harness/host/resources/views/native/chart-behavior-harness.blade.php "$NATIVEPHP_SHELL_HOST/resources/views/native/chart-behavior-harness.blade.php"
+          cp ios-harness/host/resources/views/native/chart-gallery-harness.blade.php "$NATIVEPHP_SHELL_HOST/resources/views/native/chart-gallery-harness.blade.php"
+          cp ios-harness/host/resources/views/native/chart-performance-harness.blade.php "$NATIVEPHP_SHELL_HOST/resources/views/native/chart-performance-harness.blade.php"
+          cp ios-harness/host/routes/web.php "$NATIVEPHP_SHELL_HOST/routes/web.php"
+          composer dump-autoload --working-dir="$NATIVEPHP_SHELL_HOST" --no-interaction
+          php "$NATIVEPHP_SHELL_HOST/artisan" vendor:publish --tag=nativephp-plugins-provider --no-interaction
+          php "$NATIVEPHP_SHELL_HOST/artisan" native:plugin:register nativephp/mobile-ui --no-interaction
+          php "$NATIVEPHP_SHELL_HOST/artisan" native:plugin:register donmanueldev/nativephp-charts --no-interaction
+          php "$NATIVEPHP_SHELL_HOST/artisan" native:plugin:validate --no-interaction
+
+      - name: Generate, build, and launch iOS shell
+        env:
+          NATIVEPHP_APP_ID: dev.nativephp.charts.ci
+          NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-ios-shell
+          NATIVEPHP_START_URL: /
+        working-directory: ${{ runner.temp }}/nativephp-charts-ios-shell
+        run: |
+          php artisan native:install ios --no-interaction
+          simulator_id="$(xcrun simctl list devices available -j | ruby "$GITHUB_WORKSPACE/scripts/select-ios-simulator.rb")"
+          echo "NATIVEPHP_IOS_SIMULATOR_ID=$simulator_id" >> "$GITHUB_ENV"
+          php artisan native:run ios "$simulator_id" --build=debug --no-tty --no-interaction
+
+      - name: Compile generated shell for iPhone arm64
+        env:
+          NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-ios-shell
+        run: |
+          xcodebuild build \
+            -workspace "$NATIVEPHP_SHELL_HOST/nativephp/ios/NativePHP.xcworkspace" \
+            -scheme NativePHP \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+      - name: Run generated-shell UI behavior tests
+        env:
+          NATIVEPHP_CHARTS_XCRESULT_PATH: ${{ runner.temp }}/nativephp-charts-ios.xcresult
+          NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-ios-shell
+        run: scripts/run-generated-ios-ui-tests.sh "$NATIVEPHP_SHELL_HOST/nativephp/ios"
+
+      - name: Export iOS gallery evidence
+        if: ${{ always() }}
+        env:
+          NATIVEPHP_CHARTS_IOS_EVIDENCE: ${{ runner.temp }}/nativephp-charts-ios-evidence
+          NATIVEPHP_CHARTS_XCRESULT_PATH: ${{ runner.temp }}/nativephp-charts-ios.xcresult
+        run: |
+          if [[ -d "$NATIVEPHP_CHARTS_XCRESULT_PATH" ]]; then
+            scripts/export-ios-gallery-evidence.sh "$NATIVEPHP_CHARTS_XCRESULT_PATH" "$NATIVEPHP_CHARTS_IOS_EVIDENCE"
+          else
+            echo "No XCTest result bundle was produced." >&2
+          fi
+
+      - name: Upload iOS XCTest evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nativephp-charts-ios-xctest
+          path: |
+            ${{ runner.temp }}/nativephp-charts-ios.xcresult
+            ${{ runner.temp }}/nativephp-charts-ios-evidence
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  android-native:
+    name: Android renderer and UI tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@7a445ee88d4e23b52c33f45b371b4e0b63c5acba # v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up PHP for NativePHP contract source
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.4"
+          coverage: none
+          tools: composer:v2
+
+      - name: Install NativePHP Mobile source
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Compile renderers, run tests, and assemble contract harness
+        run: gradle --project-dir android-harness testDebugUnitTest assembleDebug --stacktrace
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run Compose behavior tests on emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: gradle --project-dir android-harness connectedDebugAndroidTest --stacktrace
+
+  android-generated-shell:
+    name: Android generated NativePHP shell
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@7a445ee88d4e23b52c33f45b371b4e0b63c5acba # v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.4"
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Gradle caches
+        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
+
+      - name: Create clean Laravel host
+        env:
+          NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-shell
+        run: |
+          composer create-project laravel/laravel:^13.0 "$NATIVEPHP_SHELL_HOST" --prefer-dist --no-interaction --no-progress
+          composer config --working-dir="$NATIVEPHP_SHELL_HOST" repositories.nativephp-plugins composer https://plugins.nativephp.com
+          composer config --working-dir="$NATIVEPHP_SHELL_HOST" repositories.nativephp-charts path "$GITHUB_WORKSPACE"
+          composer require --working-dir="$NATIVEPHP_SHELL_HOST" nativephp/mobile:^4.0 nativephp/mobile-ui:^0.4.0 donmanueldev/nativephp-charts:@dev --prefer-dist --no-interaction --no-progress
+
+      - name: Register native plugins
+        working-directory: ${{ runner.temp }}/nativephp-charts-shell
+        run: |
+          php artisan vendor:publish --tag=nativephp-plugins-provider --no-interaction
+          php artisan native:plugin:register nativephp/mobile-ui --no-interaction
+          php artisan native:plugin:register donmanueldev/nativephp-charts --no-interaction
+          php artisan native:plugin:validate --no-interaction
+
+      - name: Generate and bundle Android shell
+        env:
+          NATIVEPHP_APP_ID: dev.nativephp.charts.ci
+        working-directory: ${{ runner.temp }}/nativephp-charts-shell
+        run: |
+          printf '\nNATIVEPHP_APP_ID=%s\n' "$NATIVEPHP_APP_ID" >> .env
+          php artisan native:install android --no-interaction
+          php artisan native:run android --build=bundle --no-tty --no-interaction
+
+      - name: Validate generated renderers and compile debug shell
+        env:
+          NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-shell
+        run: scripts/validate-generated-android-shell.sh "$NATIVEPHP_SHELL_HOST/nativephp/android"

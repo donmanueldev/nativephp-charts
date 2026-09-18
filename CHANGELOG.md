@@ -4,6 +4,29 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 ## [Unreleased]
 
+### Added
+
+- Native progress and contribution heatmap charts with selection, reduced-motion behavior, empty/error states, and accessible summaries.
+- Semantic `light`, `dark`, and `system` themes with built-in and application-defined presets.
+- Versioned Android and generated-shell iOS behavior harnesses, plus an Astro/Starlight documentation application.
+- A versioned physical-performance evidence schema and regression comparator for latency, memory, payload, slow-frame, and callback measurements.
+- A fail-closed Android physical recorder that correlates Logcat, Perfetto FrameTimeline, and `TOTAL RSS` across five cold runs per density.
+- A deterministic installed-app Android gallery and capture command for all ten chart families.
+
+### Changed
+
+- Moved native payload reads and decoding off the UI thread while preserving the last valid snapshot during replacement loading.
+- Reduced Android solid-linear HWUI geometry at sub-pixel density while preserving per-column extrema and the complete selection snapshot.
+- Made explicit series, segment, and metric colors optional so semantic palettes can supply stable defaults.
+- Extended the version 1 `PointSelection` contract with `progress` and `contribution_heatmap` chart types.
+
+### Fixed
+
+- Reject unknown contracts and corrupt native snapshots with a bounded diagnostic and visible error state.
+- Keep new file-backed payloads for at least ten minutes and prune only expired entries beyond the retained 64.
+- Ignore unrevealed Android geometry during animated hit testing.
+- Preserve the full chart accessibility frame on iOS so VoiceOver focus and assistive hit testing cover the rendered plot.
+
 ## [1.1.0] - 2026-09-01
 
 ### Added
