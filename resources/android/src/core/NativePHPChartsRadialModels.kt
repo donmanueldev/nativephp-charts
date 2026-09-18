@@ -35,6 +35,7 @@ internal data class NativePHPChartsRadialConfiguration(
     val maximumFractionDigits: Int,
     val animated: Boolean,
     val emptyLabel: String,
+    val errorLabel: String,
     val accessibilityLabel: String,
     val onSelect: Int,
     val innerRadiusRatio: Float,

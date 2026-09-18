@@ -89,12 +89,24 @@ internal class NativePHPChartsHitIndex private constructor(
     }
 
     companion object {
-        fun build(data: List<NativePHPChartsDatum>): NativePHPChartsHitIndex = NativePHPChartsHitIndex(
-            dataSortedByX = data.sortedBy { it.center.x },
-            maximumMarkHalfWidth = data.maxOfOrNull {
-                max(it.bar?.width?.div(2f) ?: 0f, it.candlestick?.body?.width?.div(2f) ?: 0f)
-            } ?: 0f,
-        )
+        fun build(data: List<NativePHPChartsDatum>): NativePHPChartsHitIndex {
+            var sorted = true
+            var maximumMarkHalfWidth = 0f
+            data.forEachIndexed { index, datum ->
+                if (index > 0 && data[index - 1].center.x > datum.center.x) {
+                    sorted = false
+                }
+                maximumMarkHalfWidth = max(
+                    maximumMarkHalfWidth,
+                    max(datum.bar?.width?.div(2f) ?: 0f, datum.candlestick?.body?.width?.div(2f) ?: 0f),
+                )
+            }
+
+            return NativePHPChartsHitIndex(
+                dataSortedByX = if (sorted) data else data.sortedBy { it.center.x },
+                maximumMarkHalfWidth = maximumMarkHalfWidth,
+            )
+        }
     }
 }
 

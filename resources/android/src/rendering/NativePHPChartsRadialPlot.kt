@@ -50,6 +50,7 @@ internal fun NativePHPChartsRadialPlot(
     }
     val selected = layout.data.firstOrNull { it.segment.id == selectedId }
     val progress = remember { Animatable(if (shouldAnimate) 0f else 1f) }
+    val interactionReady = progress.value >= 0.999f
     LaunchedEffect(configuration.animationKey, shouldAnimate) {
         if (shouldAnimate) {
             progress.snapTo(0f)
@@ -119,8 +120,10 @@ internal fun NativePHPChartsRadialPlot(
                     },
                 )
             }
-            .pointerInput(layout, configuration.onSelect) {
-                detectTapGestures { location -> layout.segmentAt(location)?.let(::select) }
+            .pointerInput(layout, configuration.onSelect, interactionReady) {
+                detectTapGestures { location ->
+                    if (interactionReady) layout.segmentAt(location)?.let(::select)
+                }
             },
     ) {
         val revealAngle = 360f * progress.value

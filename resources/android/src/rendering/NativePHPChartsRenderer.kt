@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -25,7 +26,18 @@ import com.nativephp.mobile.ui.nativerender.NativeUINode
 @Composable
 internal fun NativePHPChartsRender(node: NativeUINode, modifier: Modifier, kind: NativePHPChartsKind) {
     val wireInput = NativePHPChartsWireInput.from(node)
-    val configuration = remember(wireInput, kind) { NativePHPChartsDecoder.decode(wireInput, kind) }
+    val systemDark = isSystemInDarkTheme()
+    val decodeKey = wireInput to systemDark
+    val decoded = rememberNativePHPChartsDecodedState(decodeKey, kind.name.lowercase()) {
+        NativePHPChartsDecoder.decode(it.first, kind, it.second)
+    }
+    if (decoded !is NativePHPChartsAsyncState.Ready) {
+        if (decoded is NativePHPChartsAsyncState.Unavailable) {
+            NativePHPChartsUnavailable(modifier, wireInput.accessibilityLabel, wireInput.errorLabel)
+        }
+        return
+    }
+    val configuration = decoded.value
     val formatting = remember(configuration) { NativePHPChartsFormatting(configuration) }
 
     if (!configuration.hasData) {

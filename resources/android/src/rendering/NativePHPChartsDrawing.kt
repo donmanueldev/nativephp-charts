@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import com.nativephp.plugins.native_ui.ui.NativeUIFontResolver
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -64,9 +65,17 @@ internal class NativePHPChartsPathCache private constructor(
                     val interpolation = series.style?.interpolation
                         ?: configuration.style.interpolation
                     val target = series.fillTo?.let(renderDataBySeries::get)
+                    val lineData = if (
+                        interpolation == "linear" &&
+                        (series.style?.dash ?: configuration.style.dash).isEmpty()
+                    ) {
+                        nativePHPChartsCoalesceLinearToPixels(data)
+                    } else {
+                        data
+                    }
                     NativePHPChartsSeriesPaths(
                         data = data,
-                        line = nativePHPChartsPath(data, interpolation, 1f, layout),
+                        line = nativePHPChartsPath(lineData, interpolation, 1f, layout),
                         area = if (includeArea) nativePHPChartsAreaPath(data, interpolation, 1f, layout) else null,
                         fillBetween = target?.let { nativePHPChartsBetweenPath(data, it, interpolation, 1f, layout) },
                         fillTarget = target,
@@ -75,6 +84,50 @@ internal class NativePHPChartsPathCache private constructor(
             )
         }
     }
+}
+
+/**
+ * Reduces only sub-pixel linear geometry sent to HWUI. The full data list is
+ * retained by [NativePHPChartsSeriesPaths] for hit-testing and callbacks. For
+ * each physical x column, endpoints and vertical extrema remain in source
+ * order so no screen-visible peak or trough is discarded.
+ */
+internal fun nativePHPChartsCoalesceLinearToPixels(
+    data: List<NativePHPChartsDatum>,
+): List<NativePHPChartsDatum> {
+    if (data.size <= 4) return data
+
+    val result = ArrayList<NativePHPChartsDatum>(data.size)
+    var groupStart = 0
+
+    fun appendGroup(start: Int, endExclusive: Int) {
+        if (endExclusive - start <= 4) {
+            for (index in start until endExclusive) result.add(data[index])
+            return
+        }
+
+        var minimumIndex = start
+        var maximumIndex = start
+        for (index in start + 1 until endExclusive) {
+            if (data[index].center.y < data[minimumIndex].center.y) minimumIndex = index
+            if (data[index].center.y > data[maximumIndex].center.y) maximumIndex = index
+        }
+        listOf(start, minimumIndex, maximumIndex, endExclusive - 1)
+            .distinct()
+            .sorted()
+            .forEach { result.add(data[it]) }
+    }
+
+    for (index in 1..data.size) {
+        val groupEnded = index == data.size ||
+            floor(data[index].center.x) != floor(data[groupStart].center.x)
+        if (groupEnded) {
+            appendGroup(groupStart, index)
+            groupStart = index
+        }
+    }
+
+    return result
 }
 
 /**
@@ -99,13 +152,15 @@ internal fun nativePHPChartsCullToPlot(
         if (datum.center.x in plot.left..plot.right) {
             include(index)
         }
-    }
-    data.zipWithNext().forEachIndexed { index, (start, end) ->
-        val segmentMinimum = min(start.center.x, end.center.x)
-        val segmentMaximum = max(start.center.x, end.center.x)
-        if (segmentMinimum <= plot.right && segmentMaximum >= plot.left) {
-            include(index)
-            include(index + 1)
+
+        if (index + 1 < data.size) {
+            val next = data[index + 1]
+            val segmentMinimum = min(datum.center.x, next.center.x)
+            val segmentMaximum = max(datum.center.x, next.center.x)
+            if (segmentMinimum <= plot.right && segmentMaximum >= plot.left) {
+                include(index)
+                include(index + 1)
+            }
         }
     }
 

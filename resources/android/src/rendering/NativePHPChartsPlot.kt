@@ -105,6 +105,10 @@ internal fun NativePHPChartsPlot(
     var selectedIdentity by remember { mutableStateOf<NativePHPChartsSelectionIdentity?>(null) }
     val animationKey = remember(configuration) { configuration.animationKey }
     val progress = remember { Animatable(if (shouldAnimate) 0f else 1f) }
+    val interactionReady = progress.value >= 0.999f
+    val pointCount = remember(configuration.series) { configuration.series.sumOf { it.points.size } }
+    val drawObserver = LocalNativePHPChartsDrawObserver.current
+    val traceSuffix = "${configuration.kind.name.lowercase()}.$pointCount"
     LaunchedEffect(animationKey, shouldAnimate) {
         if (shouldAnimate) {
             progress.snapTo(0f)
@@ -113,17 +117,23 @@ internal fun NativePHPChartsPlot(
             progress.snapTo(1f)
         }
     }
-    val summary = remember(configuration, formatting) { configuration.accessibilitySummary(formatting) }
+    val summary = remember(configuration, formatting) {
+        NativePHPChartsPerformance.trace("NPC.accessibility.$traceSuffix") {
+            configuration.accessibilitySummary(formatting)
+        }
+    }
     val baseLayout = remember(configuration, formatting, canvasSize, density, drawingResources.axisLabelPaint) {
-        val fontMetrics = drawingResources.axisLabelPaint.fontMetrics
-        NativePHPChartsLayoutEngine.build(
-            configuration = configuration,
-            formatting = formatting,
-            size = canvasSize,
-            density = density,
-            measureAxisLabel = drawingResources.axisLabelPaint::measureText,
-            axisLabelHeight = fontMetrics.descent - fontMetrics.ascent,
-        )
+        NativePHPChartsPerformance.trace("NPC.layout.$traceSuffix") {
+            val fontMetrics = drawingResources.axisLabelPaint.fontMetrics
+            NativePHPChartsLayoutEngine.build(
+                configuration = configuration,
+                formatting = formatting,
+                size = canvasSize,
+                density = density,
+                measureAxisLabel = drawingResources.axisLabelPaint::measureText,
+                axisLabelHeight = fontMetrics.descent - fontMetrics.ascent,
+            )
+        }
     }
     val configuredViewport = remember(configuration.viewport, formatting) {
         if (!configuration.viewport.enabled) {
@@ -149,25 +159,29 @@ internal fun NativePHPChartsPlot(
         if (!configuration.viewport.enabled || viewportDomain == null) {
             baseLayout
         } else {
-            val fontMetrics = drawingResources.axisLabelPaint.fontMetrics
-            NativePHPChartsLayoutEngine.build(
-                configuration = configuration,
-                formatting = formatting,
-                size = canvasSize,
-                density = density,
-                measureAxisLabel = drawingResources.axisLabelPaint::measureText,
-                axisLabelHeight = fontMetrics.descent - fontMetrics.ascent,
-                viewportOverride = viewportDomain,
-            )
+            NativePHPChartsPerformance.trace("NPC.viewport-layout.$traceSuffix") {
+                val fontMetrics = drawingResources.axisLabelPaint.fontMetrics
+                NativePHPChartsLayoutEngine.build(
+                    configuration = configuration,
+                    formatting = formatting,
+                    size = canvasSize,
+                    density = density,
+                    measureAxisLabel = drawingResources.axisLabelPaint::measureText,
+                    axisLabelHeight = fontMetrics.descent - fontMetrics.ascent,
+                    viewportOverride = viewportDomain,
+                )
+            }
         }
     }
     val pathCache = remember(layout, configuration) {
         if (configuration.kind == NativePHPChartsKind.Line || configuration.kind == NativePHPChartsKind.Area) {
-            NativePHPChartsPathCache.build(
-                layout = layout,
-                configuration = configuration,
-                includeArea = configuration.kind == NativePHPChartsKind.Area,
-            )
+            NativePHPChartsPerformance.trace("NPC.path-cache.$traceSuffix") {
+                NativePHPChartsPathCache.build(
+                    layout = layout,
+                    configuration = configuration,
+                    includeArea = configuration.kind == NativePHPChartsKind.Area,
+                )
+            }
         } else {
             null
         }
@@ -334,8 +348,8 @@ internal fun NativePHPChartsPlot(
                     },
                 )
             }
-            .pointerInput(configuration.interaction.enabled, configuration.interaction.mode, density) {
-                if (!configuration.interaction.enabled) return@pointerInput
+            .pointerInput(configuration.interaction.enabled, configuration.interaction.mode, density, interactionReady) {
+                if (!configuration.interaction.enabled || !interactionReady) return@pointerInput
 
                 if (configuration.interaction.mode == "scrub") {
                     var pending: NativePHPChartsDatum? = null
@@ -357,34 +371,37 @@ internal fun NativePHPChartsPlot(
                 }
             },
     ) {
-        drawNativePHPChartsAxes(configuration, layout, drawingResources)
-        clipRect(layout.plot.left, layout.plot.top, layout.plot.right, layout.plot.bottom) {
-            drawNativePHPChartsAnnotations(layout)
-            when (configuration.kind) {
-                NativePHPChartsKind.Line -> drawNativePHPChartsLines(
-                    configuration, layout, progress.value, false, drawingResources, requireNotNull(pathCache),
-                )
-                NativePHPChartsKind.Area -> drawNativePHPChartsLines(
-                    configuration, layout, progress.value, true, drawingResources, requireNotNull(pathCache),
-                )
-                NativePHPChartsKind.Bar -> drawNativePHPChartsBars(configuration, layout, progress.value)
-                NativePHPChartsKind.Scatter -> drawNativePHPChartsScatter(
-                    configuration, layout, progress.value, drawingResources,
-                )
-                NativePHPChartsKind.Candlestick -> drawNativePHPChartsCandlesticks(configuration, layout, progress.value)
+        NativePHPChartsPerformance.trace("NPC.draw.$traceSuffix") {
+            drawNativePHPChartsAxes(configuration, layout, drawingResources)
+            clipRect(layout.plot.left, layout.plot.top, layout.plot.right, layout.plot.bottom) {
+                drawNativePHPChartsAnnotations(layout)
+                when (configuration.kind) {
+                    NativePHPChartsKind.Line -> drawNativePHPChartsLines(
+                        configuration, layout, progress.value, false, drawingResources, requireNotNull(pathCache),
+                    )
+                    NativePHPChartsKind.Area -> drawNativePHPChartsLines(
+                        configuration, layout, progress.value, true, drawingResources, requireNotNull(pathCache),
+                    )
+                    NativePHPChartsKind.Bar -> drawNativePHPChartsBars(configuration, layout, progress.value)
+                    NativePHPChartsKind.Scatter -> drawNativePHPChartsScatter(
+                        configuration, layout, progress.value, drawingResources,
+                    )
+                    NativePHPChartsKind.Candlestick -> drawNativePHPChartsCandlesticks(configuration, layout, progress.value)
+                }
+                selected?.let {
+                    drawNativePHPChartsSelectionOverlay(
+                        it, selectedData, configuration.interaction, layout, drawingResources,
+                    )
+                }
+                selected?.takeIf { configuration.interaction.tooltip != "none" }?.let {
+                    drawNativePHPChartsTooltip(
+                        it, selectedData, configuration.interaction, formatting, layout, drawingResources,
+                    )
+                }
             }
-            selected?.let {
-                drawNativePHPChartsSelectionOverlay(
-                    it, selectedData, configuration.interaction, layout, drawingResources,
-                )
-            }
-            selected?.takeIf { configuration.interaction.tooltip != "none" }?.let {
-                drawNativePHPChartsTooltip(
-                    it, selectedData, configuration.interaction, formatting, layout, drawingResources,
-                )
-            }
+            drawNativePHPChartsAnnotationLabels(layout, drawingResources)
         }
-        drawNativePHPChartsAnnotationLabels(layout, drawingResources)
+        drawObserver?.invoke(configuration.kind, pointCount)
     }
 }
 
