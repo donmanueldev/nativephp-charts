@@ -1,0 +1,253 @@
+---
+import Layout from "../layouts/Layout.astro";
+import lineExample from "../../examples/line.blade.php?raw";
+import "../styles/landing.css";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const charts = [
+  { name: "Line", description: "Time series and trends", slug: "line", icon: "M4 35 18 23 31 29 45 10 60 17 76 4" },
+  { name: "Area", description: "Magnitude and composition", slug: "area", icon: "M4 40V30L18 20 31 25 45 8 60 16 76 4V40Z" },
+  { name: "Bar", description: "Category comparisons", slug: "bar", icon: "M10 40V24H20V40M34 40V8H44V40M58 40V17H68V40" },
+  { name: "Scatter", description: "Correlation and outliers", slug: "scatter", icon: "M12 32h1M23 22h1M34 29h1M42 14h1M55 20h1M67 7h1" },
+  { name: "Pie", description: "Part-to-whole snapshots", slug: "pie", icon: "M40 22V3A19 19 0 1 0 59 22ZM45 17H64A19 19 0 0 0 45 0Z" },
+  { name: "Donut", description: "Part-to-whole with a center", slug: "donut", icon: "M40 3a19 19 0 1 0 .1 0M40 13a9 9 0 1 1-.1 0" },
+  { name: "Radar", description: "Multi-axis profiles", slug: "radar", icon: "M40 2 62 17 54 40H26L18 17ZM40 9 55 19 48 32 30 36 25 19Z" },
+  { name: "Candlestick", description: "OHLC financial ranges", slug: "candlestick", icon: "M17 4V39M12 14H22V29H12ZM40 1V33M35 8H45V21H35ZM63 11V42M58 19H68V34H58Z" },
+  { name: "Progress", description: "Concentric completion rings", slug: "progress", icon: "M54 7A19 19 0 1 0 59 23M45 14A10 10 0 1 0 49 25" },
+  { name: "Contribution heatmap", description: "Daily activity over time", slug: "contribution-heatmap", icon: "M9 8h8v8H9ZM26 8h8v8H26ZM43 8h8v8H43ZM60 8h8v8H60ZM9 27h8v8H9ZM26 27h8v8H26ZM43 27h8v8H43ZM60 27h8v8H60Z" },
+];
+
+---
+
+<Layout>
+  <header class="site-header">
+    <a class="brand" href={`${base}/`} aria-label="NativePHP Charts home">
+      <img
+        src={`${base}/brand/nativephp-charts-mark-white.svg`}
+        width="32"
+        height="32"
+        alt=""
+      />
+      <span>NativePHP Charts</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href={`${base}/getting-started/installation/`}>Docs</a>
+      <a href="#charts">Charts</a>
+      <a href="https://github.com/donmanueldev/nativephp-charts">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <section class="hero grid-surface">
+      <div class="hero-copy">
+        <h1>Native charts for<br />NativePHP Mobile.</h1>
+        <p class="lede">
+          Render line, bar, pie, and seven other chart types with Swift Charts on iOS and Jetpack Compose on Android. Configure data, styles, and selection callbacks in PHP.
+        </p>
+        <div class="actions">
+          <a
+            class="button primary"
+            href={`${base}/getting-started/installation/`}>Installation</a
+          >
+          <a class="button secondary" href="#charts">Browse charts</a>
+        </div>
+        <ul class="compatibility" aria-label="Compatibility">
+          <li>NativePHP Mobile 4</li><li>PHP 8.4+</li><li>iOS 18.2+</li><li>
+            Android API 26+
+          </li>
+        </ul>
+      </div>
+      <div class="hero-media" aria-label="Native chart previews">
+        <figure class="chart-preview ios">
+          <div class="preview-heading">
+            <span>iOS</span><span>Swift Charts</span>
+          </div>
+          <img
+            src={`${base}/evidence/ios/line-selected.png`}
+            alt="Native iOS line chart with the March value selected"
+            width="1178"
+            height="1304"
+            fetchpriority="high"
+          />
+        </figure>
+        <figure class="chart-preview android">
+          <div class="preview-heading">
+            <span>Android</span><span>Jetpack Compose</span>
+          </div>
+          <img
+            src={`${base}/evidence/android/native-shell-line-selected.png`}
+            alt="Native Android chart showing the temperature in Managua through the afternoon"
+            width="1020"
+            height="1500"
+          />
+        </figure>
+      </div>
+    </section>
+
+    <section class="native-contract">
+      <div>
+        <h2>Add a chart in Blade.</h2>
+        <p>
+          Start with a complete chart and its data. Then customize its
+          appearance or handle point selections in PHP.
+        </p>
+        <a class="text-link" href={`${base}/getting-started/installation/#create-a-native-screen`}>Create your first native screen</a>
+      </div>
+      <div class="contract-explorer" data-code-tabs>
+        <div
+          class="contract-tabs"
+          role="tablist"
+          aria-label="NativePHP chart examples"
+        >
+          <button
+            id="tab-chart"
+            role="tab"
+            type="button"
+            aria-selected="true"
+            aria-controls="example-chart"
+            tabindex="0">Chart</button
+          >
+          <button
+            id="tab-theme"
+            role="tab"
+            type="button"
+            aria-selected="false"
+            aria-controls="example-theme"
+            tabindex="-1">Theme</button
+          >
+          <button
+            id="tab-callback"
+            role="tab"
+            type="button"
+            aria-selected="false"
+            aria-controls="example-callback"
+            tabindex="-1">Callback</button
+          >
+        </div>
+        <div
+          id="example-chart"
+          class="contract-panel"
+          role="tabpanel"
+          aria-labelledby="tab-chart"
+          tabindex="0"
+        >
+          <pre
+            aria-label="Line chart Blade example"><code>{lineExample}</code></pre>
+        </div>
+        <div
+          id="example-theme"
+          class="contract-panel"
+          role="tabpanel"
+          aria-labelledby="tab-theme"
+          tabindex="0"
+          hidden
+        >
+          <p class="example-note">
+            Replace the Chart example’s theme and preset attributes, then add
+            this style. Remove the series color to use the preset palette.
+          </p>
+          <pre
+            aria-label="Chart appearance attributes"><code>theme="system"
+preset="contrast"
+:style="[
+    'line' =&gt; ['width' =&gt; 3],
+    'points' =&gt; ['size' =&gt; 5],
+]"</code></pre>
+          <a class="example-link" href={`${base}/guides/themes/`}>Themes and presets</a>
+        </div>
+        <div
+          id="example-callback"
+          class="contract-panel"
+          role="tabpanel"
+          aria-labelledby="tab-callback"
+          tabindex="0"
+          hidden
+        >
+          <p class="example-note">In your native screen class, import <code>Donmanueldev\NativephpCharts\PointSelection</code> and add these members. Bind <code>_select="selectPoint"</code> on the chart.</p>
+          <pre
+            aria-label="Point selection callback example"><code>public ?string $selectedPoint = null;
+
+public function selectPoint(string $payload): void
+&#123;
+    $selection = PointSelection::fromJson($payload);
+    $this-&gt;selectedPoint = $selection-&gt;pointId;
+&#125;</code></pre>
+          <a class="example-link" href={`${base}/guides/callbacks-interactions/`}>Full callback example</a>
+        </div>
+        <div class="contract-toolbar">
+          <span data-copy-status aria-live="polite"></span>
+          <button type="button" data-copy-current>Copy example</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="charts" class="chart-index" aria-labelledby="chart-heading">
+      <header>
+        <h2 id="chart-heading">Chart types</h2><p>
+          Each guide includes a data example, native previews, supported options,
+          and selection behavior.
+        </p>
+      </header>
+      <div class="chart-list">
+        {
+          charts.map(({ name, description, slug, icon }) => (
+            <a href={`${base}/charts/${slug}/`}>
+              <svg
+                class="chart-icon"
+                viewBox="0 0 80 44"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d={icon} />
+              </svg>
+              <span class="chart-description">
+                <strong>{name}</strong>
+                <span>{description}</span>
+              </span>
+              <span class="chart-arrow" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="apps-section" aria-labelledby="apps-heading">
+      <div>
+        <h2 id="apps-heading">Apps using NativePHP Charts</h2>
+        <p>See the package in apps built with NativePHP Mobile.</p>
+        <a class="text-link" href={`${base}/apps/`}>Explore apps</a>
+      </div>
+      <article class="app-card">
+        <span class="app-platform">Android</span>
+        <h3>Despertá</h3>
+        <p>An alarm app with question challenges and habit tracking. Alarms and habit history are stored on the device, without an account.</p>
+        <a href="https://desperta.momotombo.dev/">Visit Despertá <span aria-hidden="true">↗</span></a>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>NativePHP Charts</span>
+    <span>MIT license</span>
+    <div class="footer-credit">
+      <span>Crafted with passion by</span>
+      <a href="https://momotombo.dev/" rel="external">
+        <strong>Momotombo Devs</strong>
+        <img
+          src="https://desperta.momotombo.dev/assets/isotipo.svg"
+          width="28"
+          height="14"
+          loading="lazy"
+          alt=""
+          aria-hidden="true"
+        />
+      </a>
+    </div>
+  </footer>
+</Layout>
