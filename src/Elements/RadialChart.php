@@ -8,7 +8,7 @@ use Native\Mobile\Edge\CallbackRegistry;
 
 abstract class RadialChart extends ChartElement
 {
-    /** @var list<array{id: string, label: string, value: int|float, color: string}> */
+    /** @var list<array{id: string, label: string, value: int|float, color?: string}> */
     protected array $segments = [];
 
     protected float $innerRadiusRatio = 0.0;

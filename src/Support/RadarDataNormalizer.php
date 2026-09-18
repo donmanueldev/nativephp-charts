@@ -102,12 +102,16 @@ final class RadarDataNormalizer
                 throw new InvalidArgumentException("The radar chart series '{$id}' values must follow the declared axis order.");
             }
 
-            return [
+            $normalized = [
                 'id' => $id,
                 'name' => self::text($item['name'] ?? null, "series '{$id}' name"),
-                'color' => ColorNormalizer::normalize($item['color'] ?? null, 'radar chart', "series '{$id}'"),
                 'values' => $normalizedValues,
             ];
+            if (array_key_exists('color', $item)) {
+                $normalized['color'] = ColorNormalizer::normalize($item['color'], 'radar chart', "series '{$id}'");
+            }
+
+            return $normalized;
         }, $series, array_keys($series));
     }
 

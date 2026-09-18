@@ -5,6 +5,7 @@ namespace Donmanueldev\NativephpCharts\Elements;
 use Donmanueldev\NativephpCharts\Support\AxisNormalizer;
 use Donmanueldev\NativephpCharts\Support\CallbackExpression;
 use Donmanueldev\NativephpCharts\Support\ChartStyleNormalizer;
+use Donmanueldev\NativephpCharts\Support\ChartThemeNormalizer;
 use Donmanueldev\NativephpCharts\Support\LegendNormalizer;
 use Donmanueldev\NativephpCharts\Support\WireEncoder;
 use InvalidArgumentException;
@@ -17,7 +18,10 @@ abstract class ChartElement extends Element
     protected array $chartProps = [
         'animated' => true,
         'empty_label' => 'No data',
+        'error_label' => 'Chart unavailable',
         'a11y_label' => 'Chart',
+        'theme_mode' => 'system',
+        'preset' => 'default',
         'locale' => '',
         'value_format' => 'number',
         'currency_code' => '',
@@ -82,6 +86,35 @@ abstract class ChartElement extends Element
     public function emptyLabel(string $emptyLabel): static
     {
         $this->chartProps['empty_label'] = $this->requiredText($emptyLabel, 'empty label');
+        $this->invalidateCommonWireSnapshot();
+
+        return $this;
+    }
+
+    public function errorLabel(string $errorLabel): static
+    {
+        $this->chartProps['error_label'] = $this->requiredText($errorLabel, 'error label');
+        $this->invalidateCommonWireSnapshot();
+
+        return $this;
+    }
+
+    public function theme(string $theme): static
+    {
+        $theme = trim($theme);
+        if (! in_array($theme, ['light', 'dark', 'system'], true)) {
+            throw new InvalidArgumentException("The {$this->chartName()} theme must be light, dark, or system.");
+        }
+        $this->chartProps['theme_mode'] = $theme;
+        $this->invalidateCommonWireSnapshot();
+
+        return $this;
+    }
+
+    public function preset(string $preset): static
+    {
+        ChartThemeNormalizer::resolve($preset, $this->chartName());
+        $this->chartProps['preset'] = trim($preset);
         $this->invalidateCommonWireSnapshot();
 
         return $this;
@@ -160,7 +193,10 @@ abstract class ChartElement extends Element
     {
         $this->applyBooleanAttributes($attrs, ['animated'], 'animated');
         $this->applyStringAttributes($attrs, ['empty-label', 'emptyLabel'], 'emptyLabel');
+        $this->applyStringAttributes($attrs, ['error-label', 'errorLabel'], 'errorLabel');
         $this->applyStringAttributes($attrs, ['a11y-label', 'a11yLabel'], 'a11yLabel');
+        $this->applyStringAttributes($attrs, ['theme'], 'theme');
+        $this->applyStringAttributes($attrs, ['preset'], 'preset');
         $this->applyStringAttributes($attrs, ['locale'], 'locale');
         $this->applyStringAttributes($attrs, ['value-format', 'valueFormat'], 'valueFormat');
         $this->applyStringAttributes($attrs, ['currency-code', 'currencyCode'], 'currencyCode');
@@ -321,6 +357,11 @@ abstract class ChartElement extends Element
         return $this->commonWireSnapshot = [
             ...$this->chartProps,
             'contract_version' => 1,
+            'theme_json' => WireEncoder::encode(
+                ChartThemeNormalizer::resolve((string) $this->chartProps['preset'], $this->chartName()),
+                $this->chartName(),
+                emptyAsObject: true,
+            ),
             'style_json' => WireEncoder::encode($this->chartStyle, $this->chartName(), emptyAsObject: true),
             'legend_json' => WireEncoder::encode($legend, $this->chartName()),
         ];

@@ -10,13 +10,17 @@ it('publishes stable empty-state pie defaults', function () {
     expect($props)->toBe([
         'animated' => true,
         'empty_label' => 'No data',
+        'error_label' => 'Chart unavailable',
         'a11y_label' => 'Chart',
+        'theme_mode' => 'system',
+        'preset' => 'default',
         'locale' => '',
         'value_format' => 'number',
         'currency_code' => '',
         'minimum_fraction_digits' => -1,
         'maximum_fraction_digits' => -1,
         'contract_version' => 1,
+        'theme_json' => json_encode(Donmanueldev\NativephpCharts\Support\ChartThemeNormalizer::builtIns()['default'], JSON_THROW_ON_ERROR),
         'style_json' => '{}',
         'legend_json' => '{"visible":false,"position":"bottom","alignment":"center","style":{}}',
         'on_select' => 0,
@@ -67,6 +71,14 @@ it('accepts radial style boundaries', function () {
     ])->toArray(new CallbackRegistry)['props']['style_json'];
 
     expect($style)->toBe('{"segment":{"gap":12,"corner_radius":20,"opacity":0}}');
+});
+
+it('allows the semantic theme palette to supply a missing segment color', function () {
+    $props = PieChart::make()->segments([
+        ['id' => 'web', 'label' => 'Web', 'value' => 70],
+    ])->toArray(new CallbackRegistry)['props'];
+
+    expect(json_decode($props['segments_json'], true, flags: JSON_THROW_ON_ERROR)[0])->not->toHaveKey('color');
 });
 
 it('rejects malformed segment collections', function (Closure $configure, string $message) {
