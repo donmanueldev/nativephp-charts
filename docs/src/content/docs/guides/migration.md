@@ -20,4 +20,4 @@ Compatibility-generated point IDs remain available in 1.x, but selection retenti
 
 Progress and contribution heatmap use the same version 1 selection envelope as existing charts. Consumers can extend an exhaustive `chart_type` match with `progress` and `contribution_heatmap` without changing callback transport.
 
-Do not publish or roll out a native plugin update based only on PHP tests. Require platform compilation and report simulator/emulator and physical-device acceptance separately.
+Publish native plugin updates through the platform compilation and native runtime validation workflow.
