@@ -17,6 +17,8 @@ final class WirePayloadStore
 
     private const RETAINED_PAYLOADS = 64;
 
+    private const MINIMUM_RETENTION_SECONDS = 600;
+
     /**
      * Return the wire attributes for inline JSON or a file-backed payload.
      *
@@ -102,8 +104,9 @@ final class WirePayloadStore
 
         usort($paths, static fn (string $left, string $right): int => filemtime($right) <=> filemtime($left));
 
+        $cutoff = time() - self::MINIMUM_RETENTION_SECONDS;
         foreach (array_slice($paths, self::RETAINED_PAYLOADS) as $path) {
-            if ($path !== $currentPath) {
+            if ($path !== $currentPath && filemtime($path) < $cutoff) {
                 @unlink($path);
             }
         }
