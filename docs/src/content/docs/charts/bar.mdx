@@ -1,0 +1,57 @@
+---
+title: Bar chart
+description: Compare categories with grouped or stacked bars.
+sidebar: { order: 3 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/bar.blade.php?raw";
+
+Use bars when precise comparison matters more than trend continuity.
+
+## When to use
+
+Choose bar for discrete categories, rankings, grouped comparisons, or compositions with a shared baseline.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/bar.png" alt="Bar chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="2760" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/bar-selected.png" alt="Bar chart after selecting a bar on a physical Samsung device" width="1344" height="2760" /><figcaption>Android · Bar selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/bar.png" alt="Bar chart running in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/bar-selected.png" alt="Bar chart after selecting a bar in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS · Bar selection</figcaption></figure></div>
+
+## Variants
+
+- `mode="grouped"` compares peers; `mode="stacked"` compares totals and composition.
+- `orientation="horizontal"` helps long category labels.
+
+## Customization
+
+Set bar radius and width through `style.bar`. Series colors and styles override the chart defaults; individual points do not accept style overrides.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+Selection emits one completed callback with stable series and point IDs. Horizontal charts keep the same selection contract.
+
+## Empty and error states
+
+Empty data renders `empty-label`; malformed or duplicate IDs are rejected. Native contract failures render `error-label`.
+
+## Accessibility
+
+Use complete category labels and an `a11y-label` that names the measure and grouping.
+
+## API
+
+Bar adds `mode="grouped|stacked"`, `orientation="vertical|horizontal"`, and the `bar` style section to the Cartesian API.
+
+## Troubleshooting
+
+If labels collide, prefer horizontal orientation or fewer categories. Avoid stacked bars when users need exact internal comparisons.
