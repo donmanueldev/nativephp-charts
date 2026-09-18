@@ -3,3 +3,8 @@
 /resources/ios/.build export-ignore
 /resources/ios/Tests export-ignore
 /resources/ios/TestSupport export-ignore
+/android-harness export-ignore
+/ios-harness export-ignore
+/fixtures export-ignore
+/performance export-ignore
+/scripts export-ignore
