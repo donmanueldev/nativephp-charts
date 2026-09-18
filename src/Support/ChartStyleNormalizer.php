@@ -16,7 +16,7 @@ final class ChartStyleNormalizer
      * Normalize only the style sections supported by the selected chart type.
      *
      * Possible canonical output sections are `line`, `area`, `bar`, `candlestick`,
-     * `segment`, `points`, `grid`, and `axis`; the selected chart family determines
+     * `segment`, `ring`, `cell`, `points`, `grid`, and `axis`; the selected chart family determines
      * which subset is legal.
      *
      * Empty or omitted sections stay absent, allowing native defaults to apply. Radar
@@ -35,6 +35,8 @@ final class ChartStyleNormalizer
             'bar' => ['radius', 'corner_radius', 'cornerRadius', 'width'],
             'candlestick' => ['rising_color', 'risingColor', 'falling_color', 'fallingColor', 'neutral_color', 'neutralColor', 'wick_width', 'wickWidth'],
             'segment' => ['gap', 'corner_radius', 'cornerRadius', 'opacity'],
+            'ring' => ['track_color', 'trackColor', 'width', 'gap', 'cap'],
+            'cell' => ['size', 'gap', 'corner_radius', 'cornerRadius'],
             'points' => ['visible', 'color', 'size'],
             'grid' => ['visible', 'color', 'width'],
             'axis' => ['visible', 'color', 'label_color', 'labelColor', 'font', 'font_size', 'fontSize', 'label_count', 'labelCount'],
@@ -47,6 +49,8 @@ final class ChartStyleNormalizer
             'candlestick' => ['bar', 'candlestick', 'grid', 'axis'],
             'radar' => ['line', 'area', 'points', 'grid', 'axis'],
             'pie', 'donut' => ['segment'],
+            'progress' => ['ring'],
+            'contribution_heatmap' => ['cell', 'axis'],
             default => throw new InvalidArgumentException("The chart type '{$chartType}' is not supported."),
         };
 
@@ -70,6 +74,8 @@ final class ChartStyleNormalizer
                 'bar' => self::bar($values, $chartName),
                 'candlestick' => self::candlestick($values, $chartName),
                 'segment' => self::segment($values, $chartName),
+                'ring' => self::ring($values, $chartName),
+                'cell' => self::cell($values, $chartName),
                 'points' => self::points($values, $chartName),
                 'grid' => self::grid($values, $chartName),
                 'axis' => self::axis($values, $chartName),
@@ -167,6 +173,46 @@ final class ChartStyleNormalizer
 
         if (array_key_exists('opacity', $style)) {
             $normalized['opacity'] = self::numberInRange($style['opacity'], $chartName, 'segment.opacity', 0, 1);
+        }
+
+        return $normalized;
+    }
+
+    private static function ring(array $style, string $chartName): array
+    {
+        $normalized = [];
+        $trackColor = $style['track_color'] ?? $style['trackColor'] ?? null;
+        if ($trackColor !== null) {
+            $normalized['track_color'] = self::color($trackColor, $chartName, 'ring.trackColor');
+        }
+        if (array_key_exists('width', $style)) {
+            $normalized['width'] = self::positiveNumber($style['width'], $chartName, 'ring.width', 64.0);
+        }
+        if (array_key_exists('gap', $style)) {
+            $normalized['gap'] = self::numberInRange($style['gap'], $chartName, 'ring.gap', 0, 32);
+        }
+        if (array_key_exists('cap', $style)) {
+            if (! is_string($style['cap']) || ! in_array($style['cap'], ['round', 'butt'], true)) {
+                throw new InvalidArgumentException("The {$chartName} style ring.cap must be round or butt.");
+            }
+            $normalized['cap'] = $style['cap'];
+        }
+
+        return $normalized;
+    }
+
+    private static function cell(array $style, string $chartName): array
+    {
+        $normalized = [];
+        if (array_key_exists('size', $style)) {
+            $normalized['size'] = self::positiveNumber($style['size'], $chartName, 'cell.size', 64.0);
+        }
+        if (array_key_exists('gap', $style)) {
+            $normalized['gap'] = self::numberInRange($style['gap'], $chartName, 'cell.gap', 0, 16);
+        }
+        $cornerRadius = $style['corner_radius'] ?? $style['cornerRadius'] ?? null;
+        if ($cornerRadius !== null) {
+            $normalized['corner_radius'] = self::numberInRange($cornerRadius, $chartName, 'cell.cornerRadius', 0, 16);
         }
 
         return $normalized;

@@ -168,3 +168,33 @@ it('rejects radial payloads that violate segment identity invariants', function 
     'different x label' => [['x' => 'Other'], 'series_name, x, and label'],
     'different visible label' => [['label' => 'Other'], 'series_name, x, and label'],
 ]);
+
+it('preserves progress and contribution selection payloads in contract v1', function (array $payload) {
+    expect(PointSelection::fromJson(json_encode($payload, JSON_THROW_ON_ERROR))->toArray())->toBe($payload);
+})->with([
+    'progress' => [[
+        'version' => 1, 'chart_type' => 'progress', 'series_id' => 'quality',
+        'series_name' => 'Quality', 'point_id' => 'quality', 'point_index' => 0,
+        'x_type' => 'category', 'x' => 'Quality', 'label' => 'Quality',
+        'value' => .86, 'localized_value' => '86%',
+    ]],
+    'contribution heatmap' => [[
+        'version' => 1, 'chart_type' => 'contribution_heatmap', 'series_id' => '2026-09-16',
+        'series_name' => 'Four commits', 'point_id' => '2026-09-16', 'point_index' => 4,
+        'x_type' => 'date', 'x' => '2026-09-16', 'label' => 'Four commits',
+        'value' => 4, 'localized_value' => '4',
+    ]],
+]);
+
+it('accepts the shared native selection fixtures without changing their version 1 shape', function () {
+    $fixtures = json_decode(
+        file_get_contents(__DIR__.'/../fixtures/contracts/chart_contract_fixtures.json'),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
+
+    foreach (['progress_selection', 'heatmap_selection'] as $key) {
+        $expected = $fixtures[$key]['expected'];
+        expect(PointSelection::fromJson(json_encode($expected, JSON_THROW_ON_ERROR))->toArray())->toBe($expected);
+    }
+});
