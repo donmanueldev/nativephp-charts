@@ -1,0 +1,58 @@
+---
+title: Donut chart
+description: Show part-to-whole data with space for a central summary.
+sidebar: { order: 6 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/donut.blade.php?raw";
+
+Donut uses the same validated segment contract as pie and adds a configurable inner radius.
+
+## When to use
+
+Choose donut for a small part-to-whole view when the center carries a short total or status.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/donut.png" alt="Donut chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="1400" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/donut-selected.png" alt="Donut chart after selecting a segment on a physical Samsung device" width="1344" height="1400" /><figcaption>Android · Segment selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/donut.png" alt="Donut chart running in the generated NativePHP iOS shell" width="1178" height="1230" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/donut-selected.png" alt="Donut chart after selecting a segment in the generated NativePHP iOS shell" width="1178" height="1230" /><figcaption>iOS · Segment selection</figcaption></figure></div>
+
+Use stable segment IDs to retain selection after value updates. The center is visual context, not a replacement for an accessible label or legend.
+
+## Variants
+
+Use pie for a fuller mark or adjust `inner-radius-ratio` to change the ring weight without changing data.
+
+## Customization
+
+Theme, preset, segment styles, legend, formatting, and per-segment colors share the pie contract.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+`_select` returns the stable segment ID, label, value, localized value, and original index.
+
+## Empty and error states
+
+Empty segments render `empty-label`; invalid totals or IDs fail PHP validation; rejected native snapshots render `error-label`.
+
+## Accessibility
+
+Do not rely on center text alone. Supply `a11y-label` and meaningful segment labels.
+
+## API
+
+Donut requires `segments` and adds `inner-radius-ratio` to the common radial API.
+
+## Troubleshooting
+
+If labels become hard to associate, enable the legend or use a bar chart.

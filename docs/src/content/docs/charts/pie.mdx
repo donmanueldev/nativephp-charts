@@ -1,0 +1,60 @@
+---
+title: Pie chart
+description: Show a small part-to-whole snapshot.
+sidebar: { order: 5 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/pie.blade.php?raw";
+
+Use pie only for a small number of non-negative segments with one clear total.
+
+## When to use
+
+Choose pie for a compact part-to-whole snapshot with few segments. Choose bar when exact comparison matters.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+Each segment requires a stable `id`, non-empty `label`, non-negative `value`, and an optional CSS hex `color`. At least one value must be greater than zero.
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/pie.png" alt="Pie chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="1400" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/pie-selected.png" alt="Pie chart after selecting a segment on a physical Samsung device" width="1344" height="1400" /><figcaption>Android · Segment selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/pie.png" alt="Pie chart running in the generated NativePHP iOS shell" width="1178" height="1230" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/pie-selected.png" alt="Pie chart after selecting a segment in the generated NativePHP iOS shell" width="1178" height="1230" /><figcaption>iOS · Segment selection</figcaption></figure></div>
+
+Selection emits the segment ID, label, value, and index. Prefer bar charts when exact comparison matters or when the legend becomes long.
+
+## Variants
+
+Use [donut](/nativephp-charts/charts/donut/) when a central summary adds context; the data contract stays the same.
+
+## Customization
+
+Configure segment gap, corner radius, opacity, theme, preset, legend, and per-segment colors.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+`_select` emits one `PointSelection`; the segment ID is both the series and point ID.
+
+## Empty and error states
+
+No segments renders `empty-label`. All-zero, negative, duplicate, or malformed segments are rejected; native failures render `error-label`.
+
+## Accessibility
+
+Keep labels unique and meaningful, expose the total in nearby text, and never communicate a segment by color alone.
+
+## API
+
+Required `segments` contain `id`, `label`, `value`, and optional `color`. Pie accepts the common radial `segment` style.
+
+## Troubleshooting
+
+If the legend dominates the chart, reduce segment count or switch to bar.

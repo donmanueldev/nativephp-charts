@@ -1,0 +1,56 @@
+---
+title: Radar chart
+description: Compare profiles across three or more declared axes.
+sidebar: { order: 7 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/radar.blade.php?raw";
+
+Radar requires **at least three axes**. Every series must supply one value for every axis in declared order.
+
+## When to use
+
+Choose radar for profile comparison across a stable set of dimensions, not for precise ranking.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/radar.png" alt="Radar chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="1120" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/radar-selected.png" alt="Radar chart with a selected axis tooltip on a physical Samsung device" width="1344" height="1120" /><figcaption>Android · Axis selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/radar.png" alt="Radar chart running in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/radar-selected.png" alt="Radar chart after selecting an axis in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS · Axis selection</figcaption></figure></div>
+
+## Variants
+
+Compare a small number of series against the same ordered axes. Keep axis order fixed between renders.
+
+## Customization
+
+Theme and preset colors apply before series overrides; configure grid levels, fill opacity, lines, points, and grid styles semantically.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+`_select` identifies the series and selected axis value with stable series and axis IDs.
+
+## Empty and error states
+
+An empty series list with at least three valid axes renders the empty state. Fewer than three axes and incomplete, out-of-order, or out-of-range values are rejected atomically.
+
+## Accessibility
+
+Keep labels short, units explicit, and ordering consistent. Pair exact comparisons with a table.
+
+## API
+
+Radar requires `axes` and `series`; specialized props are `grid-levels` and `fill-opacity`.
+
+## Troubleshooting
+
+If validation says values are out of order, match each series value list exactly to the declared axis order.
