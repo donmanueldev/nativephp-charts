@@ -77,3 +77,66 @@ Line, area, bar, scatter, and candlestick charts accept an `interaction` map. Ad
 A selection callback is not a per-frame gesture stream. For a chart inside a scrolling screen, start with `tap`. Scrubbing cannot be combined with an enabled panning viewport; see [viewport and gestures](/nativephp-charts/guides/viewport-gestures/).
 
 Use explicit IDs for interactive data. Automatically generated point IDs can change when the data is reordered.
+
+## Build a chart from PHP
+
+Use the fluent API when the series is assembled in a NativeComponent. This keeps the data, formatting, selection callback, and accessible label together.
+
+```php
+use Donmanueldev\NativephpCharts\Elements\LineChart;
+
+public function revenueChart(): LineChart
+{
+    return LineChart::make()
+        ->series($this->revenueSeries)
+        ->theme('dark')
+        ->locale('es-NI')
+        ->valueFormat('currency')
+        ->currencyCode('NIO')
+        ->legend(['visible' => true, 'position' => 'bottom'])
+        ->style([
+            'line' => ['width' => 3],
+            'points' => ['size' => 5],
+            'grid' => ['visible' => true],
+        ])
+        ->onSelect('selectPoint')
+        ->a11yLabel('Ingresos mensuales');
+}
+```
+
+Pass the element to the Blade view and render it in the native screen:
+
+```blade
+<native:column class="p-5 gap-4">
+    {{ $this->revenueChart() }}
+
+    @if ($selectedPoint)
+        <native:text>{{ $selectedPoint }}</native:text>
+    @endif
+</native:column>
+```
+
+## Refresh data from a selection
+
+Selection is a useful input for the next query. Keep the selected ID in component state, rebuild the series with stable IDs, and let the native chart receive the new snapshot.
+
+```php
+public string $range = '30d';
+
+public function selectRange(string $range): void
+{
+    $this->range = $range;
+    $this->revenueSeries = [[
+            'id' => 'revenue',
+            'name' => 'Revenue',
+            'points' => Revenue::forRange($range)->map(fn (Revenue $row) => [
+                'id' => $row->recorded_at->toDateString(),
+                'label' => $row->recorded_at->format('M j'),
+                'value' => $row->amount,
+                'x' => $row->recorded_at->toAtomString(),
+            ])->all(),
+        ]];
+}
+```
+
+Use a selection callback for decisions made from the chart. Do not use it for animation or pointer-position updates.

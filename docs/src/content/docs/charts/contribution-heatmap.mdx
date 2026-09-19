@@ -37,6 +37,35 @@ Provide 2–9 scale colors, an empty color, theme, preset, and semantic cell siz
 
 See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
 
+## PHP recipe: activity window
+
+Build the visible calendar from your query and use fixed dates while testing so the intended window is explicit.
+
+```php
+use Donmanueldev\NativephpCharts\Elements\ContributionHeatmap;
+
+public function activityHeatmap(): ContributionHeatmap
+{
+    return ContributionHeatmap::make()
+        ->values($this->activity->map(fn (Activity $day) => [
+            'id' => $day->date->toDateString(),
+            'date' => $day->date->toDateString(),
+            'label' => "{$day->count} completed",
+            'value' => $day->count,
+        ])->all())
+        ->endDate(now()->toDateString())
+        ->days(90)
+        ->weekStartsOn(1)
+        ->locale('es-NI')
+        ->maximumFractionDigits(0)
+        ->style(['cell' => ['size' => 14, 'gap' => 3, 'corner_radius' => 3]])
+        ->onSelect('selectPoint')
+        ->a11yLabel('Activity completed during the last 90 days');
+}
+```
+
+Values outside the 90-day window are not rendered. Keep the query bounded to the same dates when a missing day matters to the screen.
+
 ## Interaction
 
 To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).

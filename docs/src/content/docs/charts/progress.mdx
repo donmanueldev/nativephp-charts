@@ -33,6 +33,34 @@ Configure semantic track color, ring thickness, spacing, and line termination th
 
 See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
 
+## PHP recipe: delivery goals
+
+This fluent example formats each ring as a Spanish percentage, shows a legend, and keeps the selected metric in the NativeComponent.
+
+```php
+use Donmanueldev\NativephpCharts\Elements\ProgressChart;
+
+public function deliveryProgress(): ProgressChart
+{
+    return ProgressChart::make()
+        ->metrics([
+            ['id' => 'orders', 'label' => 'Orders delivered', 'value' => 0.92],
+            ['id' => 'returns', 'label' => 'Returns resolved', 'value' => 0.76],
+        ])
+        ->centerLabel('Today')
+        ->locale('es-NI')
+        ->valueFormat('percent')
+        ->minimumFractionDigits(0)
+        ->maximumFractionDigits(0)
+        ->legend(['visible' => true])
+        ->style(['ring' => ['width' => 10, 'gap' => 8, 'cap' => 'round']])
+        ->onSelect('selectPoint')
+        ->a11yLabel('Daily delivery goals');
+}
+```
+
+`value` is normalized: use `0.92` for 92%, never `92`.
+
 ## Interaction
 
 To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
