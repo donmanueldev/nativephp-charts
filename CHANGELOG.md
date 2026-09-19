@@ -4,6 +4,8 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-18
+
 ### Added
 
 - Native progress and contribution heatmap charts with selection, reduced-motion behavior, empty/error states, and accessible summaries.
@@ -85,7 +87,8 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 - Initial native line chart component for NativePHP Mobile.
 
-[Unreleased]: https://github.com/donmanueldev/nativephp-charts/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/donmanueldev/nativephp-charts/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/donmanueldev/nativephp-charts/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/donmanueldev/nativephp-charts/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/donmanueldev/nativephp-charts/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/donmanueldev/nativephp-charts/compare/v0.1.0...v0.2.0
