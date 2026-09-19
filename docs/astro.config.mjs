@@ -13,7 +13,7 @@ export default defineConfig({
       description: 'Compiled-native charts for NativePHP Mobile.',
       disable404Route: true,
       logo: { src: './public/brand/nativephp-charts-mark.svg', replacesTitle: false },
-      favicon: "/favicon.svg",
+      favicon: "/brand/favicon.svg",
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/donmanueldev/nativephp-charts' }],
       customCss: ['./src/styles/docs.css'],
       head: [{ tag: 'script', attrs: { src: `${base}/site.js`, defer: true } }],
