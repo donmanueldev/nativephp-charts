@@ -72,7 +72,7 @@ jobs:
 
   ios-generated-shell:
     name: iOS generated shell UI tests
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 45
 
     steps:
