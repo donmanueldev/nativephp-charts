@@ -71,6 +71,22 @@
             "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsRadarChartRenderer",
             "ios_renderer": "NativePHPChartsRadarChartRenderer",
             "self_closing": true
+        },
+        {
+            "type": "progress_chart",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\ProgressChart",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\ProgressChart",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsProgressChartRenderer",
+            "ios_renderer": "NativePHPChartsProgressChartRenderer",
+            "self_closing": true
+        },
+        {
+            "type": "contribution_heatmap",
+            "element": "Donmanueldev\\NativephpCharts\\Elements\\ContributionHeatmap",
+            "blade": "Donmanueldev\\NativephpCharts\\Components\\ContributionHeatmap",
+            "android_renderer": "com.donmanueldev.plugins.nativephp_charts.ui.NativePHPChartsContributionHeatmapRenderer",
+            "ios_renderer": "NativePHPChartsContributionHeatmapRenderer",
+            "self_closing": true
         }
     ],
     "android": {

@@ -2,6 +2,8 @@ import Charts
 import SwiftUI
 
 enum NativePHPChartsCandlestickBodyWidth: Equatable {
+    static let defaultWidth: CGFloat = 12
+
     case fixed(CGFloat)
     case ratio(CGFloat)
 
@@ -55,7 +57,10 @@ struct NativePHPChartsCandlestickGeometry: Equatable {
         self.high = high
         self.low = low
         self.close = close
-        bodyWidth = style.width.map(NativePHPChartsCandlestickBodyWidth.fixed) ?? .ratio(0.62)
+        // Swift Charts treats ratio widths as a fraction of a continuous date unit, which
+        // collapses OHLC bodies to a hairline. A point width remains legible for category,
+        // number, and date axes while preserving an explicit application override.
+        bodyWidth = .fixed(style.width ?? NativePHPChartsCandlestickBodyWidth.defaultWidth)
         cornerRadius = style.radius ?? 5
     }
 }

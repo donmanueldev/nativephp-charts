@@ -20,16 +20,21 @@ internal object NativePHPChartsRadialDecoder {
     fun decode(
         input: NativePHPChartsRadialWireInput,
         kind: NativePHPChartsRadialKind,
-    ): NativePHPChartsRadialConfiguration {
+        systemDark: Boolean,
+    ): NativePHPChartsDecodeResult<NativePHPChartsRadialConfiguration> {
+        nativePHPChartsContractFailure(input.contractVersion)?.let { return it }
+        val theme = nativePHPChartsTheme(input.themeJson, input.themeMode, systemDark)
+        val segments = decodeSegments(input.segmentsJson, theme)
+            ?: return NativePHPChartsDecodeResult.Failure("malformed_segments_snapshot")
         val styleRoot = radialObject(input.styleJson)
         val segmentStyle = styleRoot.optJSONObject("segment") ?: JSONObject()
         val innerRadiusRatio = when (kind) {
             NativePHPChartsRadialKind.Pie -> 0f
             NativePHPChartsRadialKind.Donut -> input.innerRadiusRatio.coerceIn(0.2f, 0.85f)
         }
-        return NativePHPChartsRadialConfiguration(
+        return NativePHPChartsDecodeResult.Success(NativePHPChartsRadialConfiguration(
             kind = kind,
-            segments = decodeSegments(input.segmentsJson),
+            segments = segments,
             style = NativePHPChartsRadialStyle(
                 gap = segmentStyle.optDouble("gap", 2.0).toFloat().coerceIn(0f, 12f),
                 cornerRadius = segmentStyle.optDouble("corner_radius", 0.0).toFloat().coerceIn(0f, 20f),
@@ -43,38 +48,37 @@ internal object NativePHPChartsRadialDecoder {
             maximumFractionDigits = input.maximumFractionDigits,
             animated = input.animated,
             emptyLabel = input.emptyLabel,
+            errorLabel = input.errorLabel,
             accessibilityLabel = input.accessibilityLabel,
             onSelect = input.onSelect,
             innerRadiusRatio = innerRadiusRatio,
-        )
+        ))
     }
 
-    private fun decodeSegments(json: String): List<NativePHPChartsRadialSegment> = try {
+    private fun decodeSegments(json: String, theme: NativePHPChartsTheme): List<NativePHPChartsRadialSegment>? = try {
         val root = JSONArray(json)
         buildList {
             for (index in 0 until root.length()) {
                 val item = root.optJSONObject(index)
-                if (item == null) {
-                    continue
-                }
+                if (item == null) return null
                 val value = item.optDouble("value", Double.NaN)
-                if (!value.isFinite() || value < 0.0) {
-                    continue
-                }
+                if (!value.isFinite() || value < 0.0) return null
                 val id = item.optString("id", "segment-$index")
                 add(
                     NativePHPChartsRadialSegment(
                         id = id,
                         label = item.optString("label", id),
                         value = value,
-                        color = chartColor(item.optString("color"), fallbackColors[index % fallbackColors.size]),
+                        color = item.optionalRadialString("color")
+                            ?.let { chartColor(it, fallbackColors[index % fallbackColors.size]) }
+                            ?: theme.color(index, fallbackColors[index % fallbackColors.size]),
                         index = index,
                     ),
                 )
             }
         }
     } catch (_: Exception) {
-        emptyList()
+        null
     }
 
     private fun decodeRadialLegend(root: JSONObject): NativePHPChartsLegend {
@@ -100,3 +104,6 @@ private fun radialObject(json: String): JSONObject = try {
 } catch (_: Exception) {
     JSONObject()
 }
+
+private fun JSONObject.optionalRadialString(name: String): String? =
+    optString(name).takeIf(String::isNotBlank)

@@ -20,14 +20,26 @@ internal object NativePHPChartsDecoder {
      * Series-level style remains nullable so rendering can preserve the explicit
      * precedence of series override, global style, then platform fallback.
      */
-    fun decode(input: NativePHPChartsWireInput, kind: NativePHPChartsKind): NativePHPChartsConfiguration {
+    suspend fun decode(
+        input: NativePHPChartsWireInput,
+        kind: NativePHPChartsKind,
+        systemDark: Boolean,
+    ): NativePHPChartsDecodeResult<NativePHPChartsConfiguration> {
+        nativePHPChartsContractFailure(input.contractVersion)?.let { return it }
+        val seriesJson = when (val resolved = NativePHPChartsWireInput.resolveSeriesJson(input)) {
+            is NativePHPChartsDecodeResult.Success -> resolved.value
+            is NativePHPChartsDecodeResult.Failure -> return resolved
+        }
+        val theme = nativePHPChartsTheme(input.themeJson, input.themeMode, systemDark)
+        val series = decodeSeries(seriesJson, theme, kind)
+            ?: return NativePHPChartsDecodeResult.Failure("malformed_series_snapshot")
         val styleRoot = input.styleJson.asObject()
         val legacyAxis = styleRoot.optJSONObject("axis")
 
-        return NativePHPChartsConfiguration(
+        return NativePHPChartsDecodeResult.Success(NativePHPChartsConfiguration(
             kind = kind,
-            series = decodeSeries(input.seriesJson),
-            style = decodeStyle(styleRoot, kind),
+            series = series,
+            style = decodeStyle(styleRoot, kind, theme),
             xAxis = decodeXAxis(input.xAxisJson.asObject(), legacyAxis),
             yAxis = decodeYAxis(input.yAxisJson.asObject(), legacyAxis, input),
             legend = decodeLegend(input.legendJson.asObject()),
@@ -42,38 +54,47 @@ internal object NativePHPChartsDecoder {
             beginAtZero = input.beginAtZero,
             animated = input.animated,
             emptyLabel = input.emptyLabel,
+            errorLabel = input.errorLabel,
             accessibilityLabel = input.accessibilityLabel,
+            backgroundColor = chartColor(theme.background, Color.Transparent),
             locale = input.locale,
             onSelect = input.onSelect,
             onViewportChange = input.onViewportChange,
-        )
+        ))
     }
 
-    private fun decodeSeries(json: String): List<NativePHPChartsSeries> = try {
+    private fun decodeSeries(
+        json: String,
+        theme: NativePHPChartsTheme,
+        kind: NativePHPChartsKind,
+    ): List<NativePHPChartsSeries>? = try {
         val root = JSONArray(json)
         buildList {
             for (seriesIndex in 0 until root.length()) {
                 val item = root.optJSONObject(seriesIndex)
-                if (item == null) {
-                    continue
-                }
+                if (item == null) return null
                 val id = item.optString("id", "series-$seriesIndex")
                 val points = item.optJSONArray("points") ?: JSONArray()
                 add(
                     NativePHPChartsSeries(
                         id = id,
                         name = item.optString("name", id),
-                        color = chartColor(item.optString("color"), Color(0xFF6366F1)),
+                        color = item.optionalString("color")?.let { chartColor(it, Color(0xFF6366F1)) }
+                            ?: theme.color(seriesIndex, Color(0xFF6366F1)),
                         points = buildList {
                             for (pointIndex in 0 until points.length()) {
                                 val point = points.optJSONObject(pointIndex)
-                                if (point == null) {
-                                    continue
-                                }
+                                if (point == null) return null
                                 val value = point.optDouble("value", Double.NaN)
-                                if (!value.isFinite()) {
-                                    continue
-                                }
+                                if (!value.isFinite()) return null
+                                val open = point.doubleOrNull("open")
+                                val high = point.doubleOrNull("high")
+                                val low = point.doubleOrNull("low")
+                                val close = point.doubleOrNull("close")
+                                if (kind == NativePHPChartsKind.Candlestick &&
+                                    (open == null || high == null || low == null || close == null ||
+                                        low > minOf(open, close) || high < maxOf(open, close) || low > high)
+                                ) return null
                                 add(
                                     NativePHPChartsPoint(
                                         id = point.optString("id", "$id-$pointIndex"),
@@ -83,10 +104,10 @@ internal object NativePHPChartsDecoder {
                                         index = point.optInt("source_index", pointIndex),
                                         errorMin = point.doubleOrNull("error_min"),
                                         errorMax = point.doubleOrNull("error_max"),
-                                        open = point.doubleOrNull("open"),
-                                        high = point.doubleOrNull("high"),
-                                        low = point.doubleOrNull("low"),
-                                        close = point.doubleOrNull("close"),
+                                        open = open,
+                                        high = high,
+                                        low = low,
+                                        close = close,
                                     ),
                                 )
                             }
@@ -99,7 +120,7 @@ internal object NativePHPChartsDecoder {
             }
         }
     } catch (_: Exception) {
-        emptyList()
+        null
     }
 
     private fun decodeSeriesStyle(root: JSONObject): NativePHPChartsSeriesStyle {
@@ -128,7 +149,11 @@ internal object NativePHPChartsDecoder {
         )
     }
 
-    private fun decodeStyle(root: JSONObject, kind: NativePHPChartsKind): NativePHPChartsStyle {
+    private fun decodeStyle(
+        root: JSONObject,
+        kind: NativePHPChartsKind,
+        theme: NativePHPChartsTheme,
+    ): NativePHPChartsStyle {
         val line = root.optJSONObject("line")
         val points = root.optJSONObject("points")
         val grid = root.optJSONObject("grid")
@@ -145,7 +170,7 @@ internal object NativePHPChartsDecoder {
             pointColor = points?.optString("color")?.takeIf(String::isNotBlank),
             pointSize = points.float("size", defaultPointSize(kind)),
             pointsVisible = points.booleanOrNull("visible"),
-            gridColor = grid?.optString("color")?.takeIf(String::isNotBlank),
+            gridColor = grid?.optString("color")?.takeIf(String::isNotBlank) ?: theme.grid,
             gridVisible = grid.booleanOrNull("visible"),
             gridWidth = grid.float("width", 1f),
             areaOpacity = area.float("opacity", 0.28f).coerceIn(0f, 1f),
@@ -157,11 +182,11 @@ internal object NativePHPChartsDecoder {
             candlestickNeutralColor = candlestick?.optionalString("neutral_color"),
             candlestickWickWidth = candlestick.float("wick_width", 1.5f),
             axisVisible = axis.booleanOrNull("visible"),
-            axisColor = axis?.optString("color")?.takeIf(String::isNotBlank),
+            axisColor = axis?.optString("color")?.takeIf(String::isNotBlank) ?: theme.muted,
             axisLabelCount = axis.intOrNull("label_count"),
             axisFont = axis?.optString("font")?.takeIf(String::isNotBlank),
             axisFontSize = axis.float("font_size", 10f),
-            axisLabelColor = axis?.optString("label_color")?.takeIf(String::isNotBlank),
+            axisLabelColor = axis?.optString("label_color")?.takeIf(String::isNotBlank) ?: theme.foreground,
         )
     }
 

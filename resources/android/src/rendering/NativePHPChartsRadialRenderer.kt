@@ -1,6 +1,7 @@
 package com.donmanueldev.plugins.nativephp_charts.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,7 +27,17 @@ internal fun NativePHPChartsRadialRender(
     kind: NativePHPChartsRadialKind,
 ) {
     val wireInput = NativePHPChartsRadialWireInput.from(node)
-    val configuration = remember(wireInput, kind) { NativePHPChartsRadialDecoder.decode(wireInput, kind) }
+    val systemDark = isSystemInDarkTheme()
+    val decoded = rememberNativePHPChartsDecodedState(wireInput to systemDark, kind.name.lowercase()) {
+        NativePHPChartsRadialDecoder.decode(it.first, kind, it.second)
+    }
+    if (decoded !is NativePHPChartsAsyncState.Ready) {
+        if (decoded is NativePHPChartsAsyncState.Unavailable) {
+            NativePHPChartsUnavailable(modifier, wireInput.accessibilityLabel, wireInput.errorLabel)
+        }
+        return
+    }
+    val configuration = decoded.value
     val formatting = remember(configuration) { NativePHPChartsRadialFormatting(configuration) }
     if (!configuration.hasData) {
         Box(

@@ -35,7 +35,15 @@ it('publishes an ordered OHLC series with close as the selection value', functio
         'close' => 36.84,
         'error_min' => 36.68,
         'error_max' => 36.91,
-    ]);
+    ])->and($props['begin_at_zero'])->toBeFalse();
+});
+
+it('allows an explicit zero-based candlestick domain', function () {
+    $props = CandlestickChart::make()
+        ->beginAtZero(true)
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect($props['begin_at_zero'])->toBeTrue();
 });
 
 it('publishes neutral candlestick colors and wick width globally and per series', function () {

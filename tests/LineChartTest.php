@@ -102,6 +102,15 @@ it('normalizes multiple ordered series with explicit and compatibility point ide
         ->and($legend['visible'])->toBeTrue();
 });
 
+it('allows the semantic theme palette to supply a missing series color', function () {
+    $props = LineChart::make()->series([[
+        'id' => 'revenue', 'name' => 'Revenue',
+        'points' => [['id' => 'jan', 'label' => 'January', 'value' => 12]],
+    ]])->toArray(new CallbackRegistry)['props'];
+
+    expect(json_decode($props['series_json'], true, flags: JSON_THROW_ON_ERROR)[0])->not->toHaveKey('color');
+});
+
 it('maps Blade attributes, axis options, legend style, and selection callback', function () {
     $registry = new CallbackRegistry;
     $chart = LineChart::make();

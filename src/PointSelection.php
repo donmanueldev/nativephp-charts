@@ -73,7 +73,7 @@ final readonly class PointSelection
         }
 
         $chartType = self::string($payload, 'chart_type');
-        if (! in_array($chartType, ['line', 'area', 'bar', 'scatter', 'pie', 'donut', 'radar', 'candlestick'], true)) {
+        if (! in_array($chartType, ['line', 'area', 'bar', 'scatter', 'pie', 'donut', 'radar', 'candlestick', 'progress', 'contribution_heatmap'], true)) {
             throw new InvalidArgumentException("The point selection chart type '{$chartType}' is not supported.");
         }
 
@@ -118,6 +118,14 @@ final readonly class PointSelection
             if ($seriesName !== $x || $seriesName !== $label) {
                 throw new InvalidArgumentException('A radial point selection must use the segment label as series_name, x, and label.');
             }
+        }
+
+        if ($chartType === 'progress' && ($xType !== 'category' || $seriesId !== $pointId || $seriesName !== $x || $seriesName !== $label)) {
+            throw new InvalidArgumentException('A progress selection must use its metric id and label consistently.');
+        }
+
+        if ($chartType === 'contribution_heatmap' && ($xType !== 'date' || $seriesId !== $pointId || $seriesName !== $label)) {
+            throw new InvalidArgumentException('A contribution heatmap selection must use its day id, label, and date consistently.');
         }
 
         return new self(

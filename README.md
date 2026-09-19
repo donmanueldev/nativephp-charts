@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/nativephp-charts-lockup-dark.svg">
-    <img src="docs/assets/brand/nativephp-charts-lockup.svg" width="420" alt="NativePHP Charts">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/brand/nativephp-charts-lockup-dark.svg">
+    <img src="docs/public/brand/nativephp-charts-lockup.svg" width="420" alt="NativePHP Charts">
   </picture>
 </p>
 
@@ -13,9 +13,9 @@
 
 **[Explore the documentation and native demos →](https://donmanueldev.github.io/nativephp-charts/)**
 
-Start with the focused guides: [installation and your first chart](https://donmanueldev.github.io/nativephp-charts/guides/installation/), [line, area, bar, and scatter charts](https://donmanueldev.github.io/nativephp-charts/guides/cartesian-charts/), [pie and donut charts](https://donmanueldev.github.io/nativephp-charts/guides/radial-charts/), and [radar and candlestick charts](https://donmanueldev.github.io/nativephp-charts/guides/radar-candlestick/).
+Start with [installation](https://donmanueldev.github.io/nativephp-charts/getting-started/installation/), choose from the chart guides beginning with [line](https://donmanueldev.github.io/nativephp-charts/charts/line/), then use the focused guides for [themes](https://donmanueldev.github.io/nativephp-charts/guides/themes/), [callbacks](https://donmanueldev.github.io/nativephp-charts/guides/callbacks-interactions/), and [troubleshooting](https://donmanueldev.github.io/nativephp-charts/guides/troubleshooting/).
 
-Native line, area, bar, scatter, candlestick, radar, pie, and donut charts for [NativePHP Mobile](https://nativephp.com). iOS renders with Swift Charts and SwiftUI Canvas; Android renders with Jetpack Compose Canvas. Data stays on the device; there is no WebView, JavaScript chart library, network service, telemetry, or third-party native chart dependency.
+Ten native chart types for [NativePHP Mobile](https://nativephp.com), including Cartesian, radial, progress, and contribution charts. iOS renders with Swift Charts and SwiftUI Canvas; Android renders with Jetpack Compose Canvas. Data stays on the device; there is no WebView, JavaScript chart library, network service, telemetry, or third-party native chart dependency.
 
 > NativePHP Charts is an independent community plugin. It is not an official NativePHP package.
 
@@ -117,10 +117,10 @@ Create `resources/views/native/sales-dashboard.blade.php`. Give the chart an exp
 </native:column>
 ```
 
-The same `series` contract powers line, area, bar, and scatter charts. Every series needs a unique `id`, `name`, `color`, and ordered `points`. Give each point a stable `id` when the chart is interactive or updates frequently.
+The same `series` contract powers line, area, bar, and scatter charts. Every series needs a unique `id`, `name`, and ordered `points`; `color` is optional and otherwise comes from the active preset. Give every interactive point a stable `id` so selection survives updates and reordering.
 
 <p align="center">
-  <img src="docs/assets/screenshots/line-ios-320.webp" width="220" alt="Native line chart running in the iOS simulator">
+  <img src="docs/public/evidence/ios/line.webp" width="220" alt="Native line chart running in the iOS simulator">
 </p>
 
 <p align="center"><sub>Native line chart rendered in the installed iOS app.</sub></p>
@@ -137,6 +137,8 @@ The same `series` contract powers line, area, bar, and scatter charts. Every ser
 | Radar | `<native:radar-chart>` | Ordered `axes`, `series`, and axis values | Grid levels and fill opacity |
 | Pie | `<native:pie-chart>` | Ordered `segments` | Fixed inner radius of `0` |
 | Donut | `<native:donut-chart>` | Ordered `segments` | `inner-radius-ratio` from `0.2` to `0.85` |
+| Progress | `<native:progress-chart>` | Ordered `metrics` with values from `0` to `1` | Ring track, gap, cap, and center label styles |
+| Contribution heatmap | `<native:contribution-heatmap>` | Unique ISO-dated `values` | Date window, week start, scale, and label visibility |
 
 Every listed chart renders natively on iOS and Android and supports localized values, empty states, semantic styling, legends, selection callbacks, and accessible summaries.
 
@@ -316,7 +318,7 @@ Radar charts require 3 to 24 ordered axes. Each series must provide exactly one 
 
 ### Pie and donut charts
 
-Pie and donut charts use ordered `segments`. Every segment needs a unique `id`, a `label`, a non-negative finite `value`, and a `color`. A non-empty chart must contain at least one positive value.
+Pie and donut charts use ordered `segments`. Every segment needs a unique `id`, a `label`, and a non-negative finite `value`; `color` is optional. A non-empty chart must contain at least one positive value.
 
 ```blade
 <native:pie-chart
@@ -353,9 +355,51 @@ Pie and donut charts use ordered `segments`. Every segment needs a unique `id`, 
 
 Pie fixes the inner radius at `0`. Donut defaults to `0.6` and accepts `0.2` through `0.85`.
 
+### Progress and contribution heatmap
+
+Progress values are strict fractions from `0` to `1`. Contribution values use unique ISO dates and non-negative values.
+
+```blade
+<native:progress-chart
+    class="w-full h-72"
+    :metrics="[
+        ['id' => 'delivery', 'label' => 'Delivery', 'value' => 0.82],
+        ['id' => 'quality', 'label' => 'Quality', 'value' => 0.94],
+    ]"
+    center-label="This sprint"
+    preset="spectrum"
+    :legend="['visible' => true]"
+    _select="metricSelected"
+    a11y-label="Sprint goals"
+/>
+
+<native:contribution-heatmap
+    class="w-full h-64"
+    :values="[
+        ['id' => '2026-09-15', 'date' => '2026-09-15', 'value' => 3, 'label' => '3 commits'],
+        ['id' => '2026-09-16', 'date' => '2026-09-16', 'value' => 7, 'label' => '7 commits'],
+    ]"
+    end-date="2026-09-30"
+    :days="180"
+    :week-starts-on="1"
+    _select="daySelected"
+    a11y-label="Repository contributions"
+/>
+```
+
 ## API guide
 
 Use this section after the first chart renders to add interaction, formatting, legends, and semantic styling.
+
+### Themes and presets
+
+Every chart accepts `theme="light|dark|system"`, `preset`, and `error-label`. Built-in presets are `default`, `spectrum`, and `contrast`. Publish the package config to register application presets:
+
+```bash
+php artisan vendor:publish --tag=nativephp-charts-config
+```
+
+Resolution is deterministic: built-in preset, application preset override, chart theme/style, then explicit series, segment, or metric color. The API stays renderer-neutral; it exposes no SwiftUI or Compose primitives.
 
 ### Selection and PHP callbacks
 
@@ -504,21 +548,22 @@ Blade uses kebab case. The fluent PHP API uses camelCase methods such as `series
 - Category x-axes do not accept an explicit numeric/date domain.
 - Unknown axis, legend, style, series, point, and segment options are rejected instead of silently ignored.
 
-### Accessibility and performance
+### Accessibility
 
 - Always provide a localized `a11y-label` describing the chart's purpose.
 - Use stable IDs so selection remains deterministic across updates and reordering.
 - Native renderers bound large accessibility summaries instead of reading an unbounded dataset.
-- Native rendering is not a promise of unlimited data. Validate realistic and worst-case datasets on every target device.
-- Simulator and host tests do not replace VoiceOver, TalkBack, text scaling, gesture, and performance checks on physical devices.
+- Validate realistic and worst-case datasets on every target device.
 
-### Testing and evidence
+### Testing
 
 ```bash
 composer test
+swift test
 ```
 
-PHP tests prove normalization, serialization, compatibility, and callback registration. Native compilation, simulator/emulator rendering, interaction, accessibility, and physical-device performance remain separate acceptance gates.
+PHP tests cover normalization, serialization, compatibility, and callback registration. Swift tests cover the iOS renderer source.
+
 
 ## Platform and frontend scope
 

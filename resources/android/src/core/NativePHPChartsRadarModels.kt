@@ -68,6 +68,7 @@ internal data class NativePHPChartsRadarConfiguration(
     val maximumFractionDigits: Int,
     val animated: Boolean,
     val emptyLabel: String,
+    val errorLabel: String,
     val accessibilityLabel: String,
     val onSelect: Int,
     val gridLevels: Int,

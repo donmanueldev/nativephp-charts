@@ -49,17 +49,21 @@ struct NativePHPChartsAccessibilityRepresentation<Target>: View {
     }
 
     var body: some View {
-        Text(value)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(label)
-            .accessibilityValue(value)
-            .accessibilityActions {
-                ForEach(actions) { action in
-                    Button(action.label) {
-                        onSelect(action.target)
+        GeometryReader { _ in
+            Rectangle()
+                .fill(.clear)
+                .contentShape(Rectangle())
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(label)
+                .accessibilityValue(value)
+                .accessibilityActions {
+                    ForEach(actions) { action in
+                        Button(action.label) {
+                            onSelect(action.target)
+                        }
                     }
                 }
-            }
-            .id(identity)
+                .id(identity)
+        }
     }
 }

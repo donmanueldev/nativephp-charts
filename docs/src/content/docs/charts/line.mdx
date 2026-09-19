@@ -1,0 +1,62 @@
+---
+title: Line chart
+description: Show change, trends, and multiple ordered series.
+sidebar: { order: 1 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/line.blade.php?raw";
+
+Use a line chart for an ordered trend. Use explicit `series.id` and `point.id` values whenever selection must survive insertion or reordering.
+
+## When to use
+
+Choose line for change across time or another continuous ordered domain. Choose bar when the x values are independent categories.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+`series` is an ordered list of series with `id`, `name`, `color`, and `points`. Each point contains `id`, `label`, `value`, and an optional typed `x`.
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/line.png" alt="Line chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="2760" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/line-selected.png" alt="Line chart after selecting a point on a physical Samsung device" width="1344" height="2760" /><figcaption>Android · Point selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/line.png" alt="Line chart running in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/line-selected.png" alt="Line chart after selecting a point in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS · Point selection</figcaption></figure></div>
+
+## Variants
+
+Use multiple series for direct trend comparison, and a date, datetime, or numeric x axis for continuous data.
+
+## Customization
+
+Set `theme`, `preset`, or semantic `style` sections for line width, points, grid, and axes. A series color overrides the preset palette for that series. Do not use a line chart for unordered categories.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+- `_select` receives one completed `PointSelection`, never an event for every animation frame.
+- Number, date, and datetime axes may enable a [viewport](/nativephp-charts/guides/viewport-gestures/).
+- `on-viewport-change` reports a settled pan or zoom on continuous axes.
+
+## Empty and error states
+
+An empty list renders `empty-label`. An unsupported or corrupt native snapshot renders `error-label`; invalid PHP input is rejected before rendering.
+
+## Accessibility
+
+Supply a task-oriented `a11y-label`, not a visual description such as “blue line.” Keep point labels meaningful outside the drawing.
+
+## API
+
+Line-specific style uses `line` and `points`. Cartesian attributes include `series`, `x-axis`, `y-axis`, `interaction`, `viewport`, `sampling`, and `annotations`.
+
+## Troubleshooting
+
+If selection moves after an update, replace compatibility-derived IDs with explicit stable point IDs. If vertical scrolling stalls, review [gesture ownership](/nativephp-charts/guides/viewport-gestures/).
+
+See the [common and Cartesian API](/nativephp-charts/reference/api/#cartesian-charts).

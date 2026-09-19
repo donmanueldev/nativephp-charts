@@ -132,7 +132,9 @@ struct NativePHPChartsSelectionOverlay: View {
     private func resolvedCandlestickBodyWidth(proxy: ChartProxy, plotWidth: CGFloat) -> CGFloat? {
         guard kind == .candlestick, let series = snapshot.data.series.first else { return nil }
         let style = candlestickStyle(for: series)
-        let width = style.width.map(NativePHPChartsCandlestickBodyWidth.fixed) ?? .ratio(0.62)
+        let width = NativePHPChartsCandlestickBodyWidth.fixed(
+            style.width ?? NativePHPChartsCandlestickBodyWidth.defaultWidth
+        )
         return candlestickBodyWidth(width, proxy: proxy, plotWidth: plotWidth)
     }
 

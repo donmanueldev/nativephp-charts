@@ -1,8 +1,9 @@
 package com.donmanueldev.plugins.nativephp_charts.ui
 
-import android.util.LruCache
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Raw Cartesian contract captured from a single [NativeUINode] render.
@@ -16,7 +17,12 @@ import java.io.File
 internal data class NativePHPChartsWireInput(
     val contractVersion: Int,
     val seriesJson: String,
+    val seriesTransport: String,
+    val seriesJsonFile: String,
     val styleJson: String,
+    val themeMode: String,
+    val themeJson: String,
+    val preset: String,
     val xAxisJson: String,
     val yAxisJson: String,
     val legendJson: String,
@@ -28,6 +34,7 @@ internal data class NativePHPChartsWireInput(
     val barMode: String,
     val barOrientation: String,
     val emptyLabel: String,
+    val errorLabel: String,
     val accessibilityLabel: String,
     val locale: String,
     val valueFormat: String,
@@ -42,8 +49,6 @@ internal data class NativePHPChartsWireInput(
     val onViewportChange: Int,
 ) {
     companion object {
-        private val seriesFileCache = LruCache<String, String>(8)
-
         /**
          * Snapshots the wire props so Compose can key decoding with value equality.
          * Missing scalar props receive the legacy-compatible defaults used by PHP.
@@ -53,8 +58,13 @@ internal data class NativePHPChartsWireInput(
 
             return NativePHPChartsWireInput(
                 contractVersion = props.getInt("contract_version", 0),
-                seriesJson = resolveSeriesJson(node),
+                seriesJson = props.getString("series_json", "[]"),
+                seriesTransport = props.getString("series_transport", "inline-v1"),
+                seriesJsonFile = props.getString("series_json_file", ""),
                 styleJson = props.getString("style_json", "{}"),
+                themeMode = props.getString("theme_mode", "system"),
+                themeJson = props.getString("theme_json", "{}"),
+                preset = props.getString("preset", "default"),
                 xAxisJson = props.getString("x_axis_json", "{}"),
                 yAxisJson = props.getString("y_axis_json", "{}"),
                 legendJson = props.getString("legend_json", "{}"),
@@ -66,6 +76,7 @@ internal data class NativePHPChartsWireInput(
                 barMode = props.getString("bar_mode", "grouped"),
                 barOrientation = props.getString("bar_orientation", "vertical"),
                 emptyLabel = props.getString("empty_label", "No data"),
+                errorLabel = props.getString("error_label", "Chart unavailable"),
                 accessibilityLabel = props.getString("a11y_label", "Chart"),
                 locale = props.getString("locale", ""),
                 valueFormat = props.getString("value_format", "number"),
@@ -81,20 +92,19 @@ internal data class NativePHPChartsWireInput(
             )
         }
 
-        private fun resolveSeriesJson(node: NativeUINode): String {
-            val inline = node.props.getString("series_json", "[]")
-            val transport = node.props.getString("series_transport", "inline-v1")
-            val path = node.props.getString("series_json_file", "")
-            if (transport != "file-v1" || path.isBlank()) return inline
-
-            seriesFileCache.get(path)?.let { return it }
-
-            // A stale or unreadable payload must render the normal empty state,
-            // never retain data from a different path or crash composition.
-            return try {
-                File(path).readText(Charsets.UTF_8).also { seriesFileCache.put(path, it) }
-            } catch (_: Exception) {
-                "[]"
+        suspend fun resolveSeriesJson(input: NativePHPChartsWireInput): NativePHPChartsDecodeResult<String> {
+            if (input.seriesTransport != "file-v1") {
+                return NativePHPChartsDecodeResult.Success(input.seriesJson)
+            }
+            if (input.seriesJsonFile.isBlank()) {
+                return NativePHPChartsDecodeResult.Failure("missing_payload_file")
+            }
+            return withContext(Dispatchers.IO) {
+                runCatching { File(input.seriesJsonFile).readText(Charsets.UTF_8) }
+                    .fold(
+                        onSuccess = { NativePHPChartsDecodeResult.Success(it) },
+                        onFailure = { NativePHPChartsDecodeResult.Failure("unreadable_payload_file", it) },
+                    )
             }
         }
     }

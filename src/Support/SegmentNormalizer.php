@@ -16,11 +16,11 @@ final class SegmentNormalizer
     private const int MAX_EXACT_INTEGER = 9_007_199_254_740_991;
 
     /**
-     * Each input segment requires `id`, `label`, `value`, and `color`; no other
-     * keys are accepted.
+     * Each input segment requires `id`, `label`, and `value`; `color` is optional
+     * and otherwise resolved from the semantic theme palette.
      *
      * @param  array<int, mixed>  $segments
-     * @return list<array{id: string, label: string, value: int|float, color: string}>
+     * @return list<array{id: string, label: string, value: int|float, color?: string}>
      *
      * @throws InvalidArgumentException When the ordered segment contract is violated.
      */
@@ -59,16 +59,15 @@ final class SegmentNormalizer
             }
 
             $hasPositiveValue = $hasPositiveValue || $value > 0;
-            $normalized[] = [
+            $item = [
                 'id' => $id,
                 'label' => self::requiredString($segment, 'label', $index, $chartName),
                 'value' => $value,
-                'color' => ColorNormalizer::normalize(
-                    self::requiredString($segment, 'color', $index, $chartName),
-                    $chartName,
-                    "segment '{$id}'",
-                ),
             ];
+            if (array_key_exists('color', $segment)) {
+                $item['color'] = ColorNormalizer::normalize($segment['color'], $chartName, "segment '{$id}'");
+            }
+            $normalized[] = $item;
         }
 
         if ($normalized !== [] && ! $hasPositiveValue) {

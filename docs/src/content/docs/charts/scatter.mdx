@@ -1,0 +1,56 @@
+---
+title: Scatter chart
+description: Show correlation, clustering, and outliers.
+sidebar: { order: 4 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/scatter.blade.php?raw";
+
+Scatter points require numeric `x` values by default. Give every observation a stable point ID.
+
+## When to use
+
+Choose scatter to inspect correlation, clusters, gaps, and outliers between two measures.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/scatter.png" alt="Scatter chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="2760" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/scatter-selected.png" alt="Scatter chart after selecting a point on a physical Samsung device" width="1344" height="2760" /><figcaption>Android · Point selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/scatter.png" alt="Scatter chart running in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/scatter-selected.png" alt="Scatter chart after selecting a point in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS · Point selection</figcaption></figure></div>
+
+## Variants
+
+Use multiple series to compare cohorts. Numeric and datetime x axes support continuous viewports.
+
+## Customization
+
+Use point size and color to distinguish series without encoding critical meaning through color alone.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+A selection reports the series, point, x value, numeric value, and label. Pan and zoom are available for continuous axes.
+
+## Empty and error states
+
+An empty series list renders `empty-label`. Missing numeric x values are invalid; a rejected native snapshot uses `error-label`.
+
+## Accessibility
+
+Give every point a useful label and provide a text summary for dense distributions or important outliers.
+
+## API
+
+Scatter uses the Cartesian contract, defaults x to `number`, and accepts `points`, `grid`, and `axis` style sections.
+
+## Troubleshooting
+
+For dense plots, reduce the displayed range or measure a sampling strategy before hiding observations. See [performance and evidence](/nativephp-charts/guides/performance-evidence/).

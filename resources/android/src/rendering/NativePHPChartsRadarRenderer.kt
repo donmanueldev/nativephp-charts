@@ -4,6 +4,7 @@ import android.graphics.Paint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
@@ -205,6 +206,56 @@ internal fun nativePHPChartsRadarTooltipLayout(
     )
 }
 
+internal data class NativePHPChartsRadarWireInput(
+    val contractVersion: Int,
+    val axesJson: String,
+    val seriesJson: String,
+    val styleJson: String,
+    val themeMode: String,
+    val themeJson: String,
+    val preset: String,
+    val legendJson: String,
+    val locale: String,
+    val valueFormat: String,
+    val currencyCode: String,
+    val minimumFractionDigits: Int,
+    val maximumFractionDigits: Int,
+    val animated: Boolean,
+    val emptyLabel: String,
+    val errorLabel: String,
+    val accessibilityLabel: String,
+    val onSelect: Int,
+    val gridLevels: Int,
+    val fillOpacity: Float,
+) {
+    companion object {
+        fun from(node: NativeUINode): NativePHPChartsRadarWireInput = node.props.let { props ->
+            NativePHPChartsRadarWireInput(
+                contractVersion = props.getInt("contract_version", 0),
+                axesJson = props.getString("axes_json", "[]"),
+                seriesJson = props.getString("series_json", "[]"),
+                styleJson = props.getString("style_json", "{}"),
+                themeMode = props.getString("theme_mode", "system"),
+                themeJson = props.getString("theme_json", "{}"),
+                preset = props.getString("preset", "default"),
+                legendJson = props.getString("legend_json", "{}"),
+                locale = props.getString("locale", ""),
+                valueFormat = props.getString("value_format", "number"),
+                currencyCode = props.getString("currency_code", ""),
+                minimumFractionDigits = props.getInt("minimum_fraction_digits", -1),
+                maximumFractionDigits = props.getInt("maximum_fraction_digits", -1),
+                animated = props.getBool("animated", true),
+                emptyLabel = props.getString("empty_label", "No data"),
+                errorLabel = props.getString("error_label", "Chart unavailable"),
+                accessibilityLabel = props.getString("a11y_label", "Chart"),
+                onSelect = props.getCallbackId("on_select"),
+                gridLevels = props.getInt("grid_levels", 5),
+                fillOpacity = props.getFloat("fill_opacity", 0.22f),
+            )
+        }
+    }
+}
+
 /**
  * Radar renderer boundary from NativePHP props to normalized Compose state.
  *
@@ -214,18 +265,18 @@ internal fun nativePHPChartsRadarTooltipLayout(
  */
 @Composable
 internal fun NativePHPChartsRadarRender(node: NativeUINode, modifier: Modifier) {
-    val props = node.props
-    val wireKey = listOf(
-        props.getString("axes_json", "[]"), props.getString("series_json", "[]"),
-        props.getString("style_json", "{}"), props.getString("legend_json", "{}"),
-        props.getString("locale", ""), props.getString("value_format", "number"),
-        props.getString("currency_code", ""), props.getInt("minimum_fraction_digits", -1),
-        props.getInt("maximum_fraction_digits", -1), props.getBool("animated", true),
-        props.getString("empty_label", "No data"), props.getString("a11y_label", "Chart"),
-        props.getCallbackId("on_select"), props.getInt("grid_levels", 5),
-        props.getFloat("fill_opacity", 0.22f),
-    )
-    val configuration = remember(wireKey) { decodeRadarConfiguration(node) }
+    val wireInput = NativePHPChartsRadarWireInput.from(node)
+    val systemDark = isSystemInDarkTheme()
+    val decoded = rememberNativePHPChartsDecodedState(wireInput to systemDark, "radar") {
+        decodeRadarConfiguration(it.first, it.second)
+    }
+    if (decoded !is NativePHPChartsAsyncState.Ready) {
+        if (decoded is NativePHPChartsAsyncState.Unavailable) {
+            NativePHPChartsUnavailable(modifier, wireInput.accessibilityLabel, wireInput.errorLabel)
+        }
+        return
+    }
+    val configuration = decoded.value
     val formatting = remember(configuration) { NativePHPChartsRadarFormatting(configuration) }
 
     if (!configuration.hasData) {
@@ -294,6 +345,7 @@ private fun NativePHPChartsRadarPlot(
     var selectedId by remember { mutableStateOf<String?>(null) }
     val selected = configuration.selections.firstOrNull { it.id == selectedId }
     val progress = remember { Animatable(if (shouldAnimate) 0f else 1f) }
+    val interactionReady = progress.value >= 0.999f
 
     LaunchedEffect(configuration.animationKey, shouldAnimate) {
         if (shouldAnimate) {
@@ -365,8 +417,9 @@ private fun NativePHPChartsRadarPlot(
                     },
                 )
             }
-            .pointerInput(configuration.selections, size) {
+            .pointerInput(configuration.selections, size, interactionReady) {
                 detectTapGestures { location ->
+                    if (!interactionReady) return@detectTapGestures
                     selectedId = nativePHPChartsRadarSelectedIdAfterTap(
                         selections = radarSelections(configuration, size, 1f),
                         location = location,
@@ -609,33 +662,47 @@ private fun radarPath(points: List<Offset>, interpolation: String): Path = Path(
  * Collection decoding is fail-soft, visual fallbacks mirror the public defaults,
  * opacity is bounded to 0...1, and grid levels are bounded to 2...10.
  */
-private fun decodeRadarConfiguration(node: NativeUINode): NativePHPChartsRadarConfiguration {
-    val props = node.props
-    val axes = radarArray(props.getString("axes_json", "[]")) { item, _ ->
+private fun decodeRadarConfiguration(
+    input: NativePHPChartsRadarWireInput,
+    systemDark: Boolean,
+): NativePHPChartsDecodeResult<NativePHPChartsRadarConfiguration> {
+    nativePHPChartsContractFailure(input.contractVersion)?.let { return it }
+    val theme = nativePHPChartsTheme(input.themeJson, input.themeMode, systemDark)
+    val axes = radarArray(input.axesJson) { item, _ ->
         NativePHPChartsRadarAxis(item.getString("id"), item.getString("label"), item.getDouble("maximum"))
-    }
-    val series = radarArray(props.getString("series_json", "[]")) { item, _ ->
+    } ?: return NativePHPChartsDecodeResult.Failure("malformed_radar_axes")
+    val series = radarArray(input.seriesJson) { item, seriesIndex ->
         NativePHPChartsRadarSeries(
             id = item.getString("id"),
             name = item.getString("name"),
-            color = chartColor(item.getString("color"), Color(0xFF6366F1)),
+            color = item.optString("color").takeIf(String::isNotBlank)
+                ?.let { chartColor(it, Color(0xFF6366F1)) }
+                ?: theme.color(seriesIndex, Color(0xFF6366F1)),
             values = radarArray(item.getJSONArray("values")) { value, _ ->
                 NativePHPChartsRadarValue(value.getString("axis"), value.getDouble("value"))
-            },
+            } ?: throw IllegalArgumentException("invalid radar values"),
         )
-    }
-    val styleRoot = radarObject(props.getString("style_json", "{}"))
+    } ?: return NativePHPChartsDecodeResult.Failure("malformed_radar_series")
+    if (axes.any { it.id.isBlank() || it.label.isBlank() || !it.maximum.isFinite() || it.maximum <= 0.0 } ||
+        (axes.isNotEmpty() && axes.size < 3) ||
+        series.any { item ->
+            item.id.isBlank() || item.name.isBlank() || item.values.size != axes.size ||
+                item.values.zip(axes).any { (value, axis) ->
+                    value.axis != axis.id || !value.value.isFinite() || value.value < 0.0 || value.value > axis.maximum
+                }
+        }
+    ) return NativePHPChartsDecodeResult.Failure("invalid_radar_snapshot")
+    val styleRoot = radarObject(input.styleJson)
     val line = styleRoot.optJSONObject("line")
     val area = styleRoot.optJSONObject("area")
     val points = styleRoot.optJSONObject("points")
     val grid = styleRoot.optJSONObject("grid")
     val axis = styleRoot.optJSONObject("axis")
-    val legendRoot = radarObject(props.getString("legend_json", "{}"))
+    val legendRoot = radarObject(input.legendJson)
     val legendStyle = legendRoot.optJSONObject("style")
-    val fillOpacity = area?.optDouble("opacity", props.getFloat("fill_opacity", 0.22f).toDouble())?.toFloat()
-        ?: props.getFloat("fill_opacity", 0.22f)
+    val fillOpacity = area?.optDouble("opacity", input.fillOpacity.toDouble())?.toFloat() ?: input.fillOpacity
 
-    return NativePHPChartsRadarConfiguration(
+    return NativePHPChartsDecodeResult.Success(NativePHPChartsRadarConfiguration(
         axes = axes,
         series = series,
         style = NativePHPChartsRadarStyle(
@@ -651,11 +718,11 @@ private fun decodeRadarConfiguration(node: NativeUINode): NativePHPChartsRadarCo
             pointColor = points?.optString("color")?.takeIf(String::isNotBlank),
             pointSize = points?.optDouble("size", 7.0)?.toFloat() ?: 7f,
             gridVisible = grid?.optBoolean("visible", true) ?: true,
-            gridColor = grid?.optString("color")?.takeIf(String::isNotBlank),
+            gridColor = grid?.optString("color")?.takeIf(String::isNotBlank) ?: theme.grid,
             gridWidth = grid?.optDouble("width", 1.0)?.toFloat() ?: 1f,
             axisVisible = axis?.optBoolean("visible", true) ?: true,
-            axisColor = axis?.optString("color")?.takeIf(String::isNotBlank),
-            axisLabelColor = axis?.optString("label_color")?.takeIf(String::isNotBlank),
+            axisColor = axis?.optString("color")?.takeIf(String::isNotBlank) ?: theme.muted,
+            axisLabelColor = axis?.optString("label_color")?.takeIf(String::isNotBlank) ?: theme.foreground,
             axisFont = axis?.optString("font")?.takeIf(String::isNotBlank),
             axisFontSize = axis?.optDouble("font_size", 10.0)?.toFloat() ?: 10f,
         ),
@@ -668,17 +735,18 @@ private fun decodeRadarConfiguration(node: NativeUINode): NativePHPChartsRadarCo
             font = legendStyle?.optString("font")?.takeIf(String::isNotBlank),
             labelColor = legendStyle?.optString("label_color")?.takeIf(String::isNotBlank),
         ),
-        locale = props.getString("locale", ""),
-        valueFormat = props.getString("value_format", "number"),
-        currencyCode = props.getString("currency_code", ""),
-        minimumFractionDigits = props.getInt("minimum_fraction_digits", -1),
-        maximumFractionDigits = props.getInt("maximum_fraction_digits", -1),
-        animated = props.getBool("animated", true),
-        emptyLabel = props.getString("empty_label", "No data"),
-        accessibilityLabel = props.getString("a11y_label", "Chart"),
-        onSelect = props.getCallbackId("on_select"),
-        gridLevels = props.getInt("grid_levels", 5).coerceIn(2, 10),
-    )
+        locale = input.locale,
+        valueFormat = input.valueFormat,
+        currencyCode = input.currencyCode,
+        minimumFractionDigits = input.minimumFractionDigits,
+        maximumFractionDigits = input.maximumFractionDigits,
+        animated = input.animated,
+        emptyLabel = input.emptyLabel,
+        errorLabel = input.errorLabel,
+        accessibilityLabel = input.accessibilityLabel,
+        onSelect = input.onSelect,
+        gridLevels = input.gridLevels.coerceIn(2, 10),
+    ))
 }
 
 private fun radarObject(json: String): JSONObject = runCatching { JSONObject(json) }.getOrDefault(JSONObject())
@@ -686,13 +754,14 @@ private fun radarObject(json: String): JSONObject = runCatching { JSONObject(jso
 private fun <Value : Any> radarArray(
     json: String,
     transform: (JSONObject, Int) -> Value?,
-): List<Value> = runCatching { radarArray(JSONArray(json), transform) }.getOrElse {
-    emptyList()
-}
+): List<Value>? = runCatching { radarArray(JSONArray(json), transform) }.getOrNull()
 
 private fun <Value : Any> radarArray(
     array: JSONArray,
     transform: (JSONObject, Int) -> Value?,
-): List<Value> = buildList {
-    for (index in 0 until array.length()) array.optJSONObject(index)?.let { transform(it, index) }?.let(::add)
+): List<Value>? = buildList {
+    for (index in 0 until array.length()) {
+        val item = array.optJSONObject(index) ?: return null
+        add(transform(item, index) ?: return null)
+    }
 }

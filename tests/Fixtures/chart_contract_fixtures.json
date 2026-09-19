@@ -1,0 +1,60 @@
+{
+  "valid_v1": {
+    "contract_version": 1,
+    "series_json": "[{\"id\":\"sales\",\"name\":\"Sales\",\"points\":[{\"id\":\"jan\",\"label\":\"Jan\",\"value\":12,\"source_index\":0}]}]"
+  },
+  "unsupported_version": {
+    "contract_version": 2,
+    "expected_error": "unsupported_contract_version"
+  },
+  "corrupt_json": {
+    "contract_version": 1,
+    "series_json": "[{",
+    "expected_error": "malformed_series_snapshot"
+  },
+  "progress_selection": {
+    "input": {
+      "id": "completion",
+      "label": "Completion",
+      "index": 0,
+      "value": 0.75,
+      "localized_value": "75%"
+    },
+    "expected": {
+      "version": 1,
+      "chart_type": "progress",
+      "series_id": "completion",
+      "series_name": "Completion",
+      "point_id": "completion",
+      "point_index": 0,
+      "x_type": "category",
+      "x": "Completion",
+      "label": "Completion",
+      "value": 0.75,
+      "localized_value": "75%"
+    }
+  },
+  "heatmap_selection": {
+    "input": {
+      "id": "2026-01-02",
+      "label": "Jan 2",
+      "index": 1,
+      "date": "2026-01-02",
+      "value": 4,
+      "localized_value": "4"
+    },
+    "expected": {
+      "version": 1,
+      "chart_type": "contribution_heatmap",
+      "series_id": "2026-01-02",
+      "series_name": "Jan 2",
+      "point_id": "2026-01-02",
+      "point_index": 1,
+      "x_type": "date",
+      "x": "2026-01-02",
+      "label": "Jan 2",
+      "value": 4,
+      "localized_value": "4"
+    }
+  }
+}

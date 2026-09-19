@@ -1,0 +1,60 @@
+---
+title: Candlestick chart
+description: Render one ordered OHLC series without hiding price extremes.
+sidebar: { order: 8 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/candlestick.blade.php?raw";
+
+Use candlestick for ordered open, high, low, and close observations. The package validates every OHLC range.
+
+## When to use
+
+Choose candlestick for market sessions where the relationship between open, high, low, and close matters.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+Each series contains a stable `id`, a `name`, and points with `id`, `label`, typed `x`, `open`, `high`, `low`, and `close`.
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/candlestick.png" alt="Candlestick chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="2760" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/candlestick-selected.png" alt="Candlestick chart with a selected session tooltip on a physical Samsung device" width="1344" height="2760" /><figcaption>Android · Candle selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/candlestick.png" alt="Candlestick chart with a focused OHLC domain in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/candlestick-selected.png" alt="Candlestick chart after selecting a candle in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS · Candle selection</figcaption></figure></div>
+
+LTTB sampling is intentionally rejected because it can hide OHLC extremes. Selection reports close as the primary value while preserving the OHLC fields in the chart contract.
+
+## Variants
+
+Use date or datetime x values. Version 1 supports one ordered series so each candle remains unambiguous.
+
+## Customization
+
+Set rising, falling, and neutral colors plus wick width through the `candlestick` style section.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+Tap or scrub returns the point identity and close as the primary selection value; viewport pan and zoom use the Cartesian contract.
+
+## Empty and error states
+
+No sessions renders `empty-label`. Invalid OHLC ranges and multiple series are rejected; native contract failures render `error-label`.
+
+## Accessibility
+
+Use labels that identify the trading session and provide nearby detail when users need all four OHLC values.
+
+## API
+
+Each point requires `label`, `open`, `high`, `low`, `close`, and a typed `x` for non-category axes. Add an explicit `id` to retain selection when points are reordered.
+
+## Troubleshooting
+
+If a point is rejected, verify `low < high` and `low ≤ open/close ≤ high`. LTTB is unavailable by design.

@@ -1,0 +1,63 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+<Layout>
+  <main id="main-content" class="not-found">
+    <p class="eyebrow">404</p>
+    <h1>Page not found</h1>
+    <p>
+      The page may have moved. Return to the documentation to find the chart or
+      guide you need.
+    </p>
+    <a href={`${base}/getting-started/overview/`}>Open the documentation</a>
+  </main>
+</Layout>
+
+<style>
+  .not-found {
+    box-sizing: border-box;
+    display: grid;
+    min-height: 100vh;
+    place-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    color: #f8fafc;
+    background: #080808;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .not-found > * {
+    margin: 0;
+  }
+  .eyebrow {
+    color: #81e6d9;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+  }
+  h1 {
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    line-height: 1;
+  }
+  p {
+    max-width: 36rem;
+    color: #cbd5e1;
+    font-size: 1.1rem;
+    line-height: 1.7;
+  }
+  a {
+    width: fit-content;
+    color: #080808;
+    background: #81e6d9;
+    padding: 0.8rem 1rem;
+    border-radius: 0.65rem;
+    font-weight: 800;
+    text-decoration: none;
+  }
+  a:focus-visible {
+    outline: 3px solid #f8fafc;
+    outline-offset: 4px;
+  }
+</style>

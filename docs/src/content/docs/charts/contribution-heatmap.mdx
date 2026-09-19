@@ -1,0 +1,60 @@
+---
+title: Contribution heatmap
+description: Show daily activity intensity across a bounded calendar window.
+sidebar: { order: 10 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/contribution-heatmap.blade.php?raw";
+
+Use a contribution heatmap to reveal streaks, seasonality, and gaps. Do not use it when exact comparison between distant days is the main task.
+
+## When to use
+
+Choose a heatmap for daily intensity, streaks, gaps, and seasonal patterns across a bounded window.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+Each value contains a stable `id`, ISO `date`, non-negative `value`, and optional label.
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/contribution-heatmap.png" alt="Contribution heatmap rendered by NativePHP Charts on a physical Samsung device" width="1344" height="700" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/contribution-heatmap-selected.png" alt="Contribution heatmap after selecting a day on a physical Samsung device" width="1344" height="700" /><figcaption>Android · Day selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/contribution-heatmap.png" alt="Contribution heatmap running in the generated NativePHP iOS shell" width="1178" height="580" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/contribution-heatmap-selected.png" alt="Contribution heatmap after selecting a day in the generated NativePHP iOS shell" width="1178" height="580" /><figcaption>iOS · Day selection</figcaption></figure></div>
+
+The native accessibility representation exposes each populated visible day as one selectable item. Duplicate dates, negative values, or invalid ISO dates reject the snapshot; valid dates outside the configured window remain outside the visible grid.
+
+## Variants
+
+Choose a 7–371 day window, Sunday or Monday week start, and independent month and weekday labels.
+
+## Customization
+
+Provide 2–9 scale colors, an empty color, theme, preset, and semantic cell size, gap, and radius.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+`_select` returns the stable day ID, ISO date x value, raw count, localized value, and label.
+
+## Empty and error states
+
+No visible values renders `empty-label`. Duplicate dates and negative values are rejected; out-of-window dates are ignored by the visible grid, and native failures render `error-label`.
+
+## Accessibility
+
+Every populated day is a native selectable item. Provide labels that include enough date and count context outside color intensity.
+
+## API
+
+Required `values` contain `id`, ISO `date`, non-negative `value`, and optional `label`. Specialized props are `end-date`, `days`, `week-starts-on`, `colors`, `empty-color`, `show-month-labels`, and `show-weekday-labels`.
+
+## Troubleshooting
+
+If a day is missing, verify it falls within the inclusive window ending at `end-date` and uses `YYYY-MM-DD`.

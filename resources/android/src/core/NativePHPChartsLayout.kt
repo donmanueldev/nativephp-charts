@@ -36,17 +36,21 @@ internal object NativePHPChartsLayoutEngine {
         axisLabelHeight: Float,
         viewportOverride: NativePHPChartsDomain? = null,
     ): NativePHPChartsLayout {
-        val values = when {
+        val allPoints = configuration.series.flatMap(NativePHPChartsSeries::points)
+        val geometryRequiresZero = configuration.kind == NativePHPChartsKind.Area
+        val automaticDomain = NativePHPChartsPerformance.trace("NPC.layout.values") { when {
             configuration.kind == NativePHPChartsKind.Area && configuration.areaMode == "stacked" ||
                 configuration.kind == NativePHPChartsKind.Bar && configuration.barMode == "stacked" -> {
-                stackedGeometryValues(configuration.series, formatting)
+                domain(
+                    stackedGeometryValues(configuration.series, formatting),
+                    configuration.beginAtZero || geometryRequiresZero,
+                )
             }
-            else -> configuration.series.flatMap { series ->
-                series.points.flatMap { point -> listOfNotNull(point.value, point.errorMin, point.errorMax) }
-            }
-        }
-        val geometryRequiresZero = configuration.kind == NativePHPChartsKind.Area
-        val automaticDomain = domain(values, configuration.beginAtZero || geometryRequiresZero)
+            else -> pointDomain(
+                allPoints,
+                configuration.beginAtZero || geometryRequiresZero,
+            )
+        } }
         val domain = explicitDomain(
             automaticDomain,
             configuration.yAxis.minimum,
@@ -56,11 +60,20 @@ internal object NativePHPChartsLayoutEngine {
         val xAxisVisible = configuration.xAxis.visible ?: configuration.style.axisVisible ?: legacyAxisVisible
         val yAxisVisible = configuration.yAxis.visible ?: configuration.style.axisVisible ?: legacyAxisVisible
         val isHorizontalBar = configuration.kind == NativePHPChartsKind.Bar && configuration.barOrientation == "horizontal"
-        val categories = configuration.series.flatMap(NativePHPChartsSeries::points)
-            .distinctBy { it.x?.toString() ?: it.label }
-        val categoryIndexes = categories.mapIndexed { index, point ->
-            (point.x?.toString() ?: point.label) to index
-        }.toMap()
+        val needsCategories = configuration.xAxis.type == NativePHPChartsXType.Category ||
+            configuration.kind == NativePHPChartsKind.Bar
+        val categories = NativePHPChartsPerformance.trace("NPC.layout.categories") {
+            if (needsCategories) {
+                allPoints.distinctBy { it.x?.toString() ?: it.label }
+            } else {
+                emptyList()
+            }
+        }
+        val categoryIndexes = NativePHPChartsPerformance.trace("NPC.layout.category-index") {
+            categories.mapIndexed { index, point ->
+                (point.x?.toString() ?: point.label) to index
+            }.toMap()
+        }
         val yLabelCount = configuration.yAxis.labelCount.coerceIn(2, 12)
         val yLabelValues = configuration.yAxis.interval?.let { interval ->
             ticks(domain, interval).asReversed()
@@ -98,11 +111,16 @@ internal object NativePHPChartsLayoutEngine {
         val plot = Rect(left, top, right, bottom)
         val baselineValue = configuration.yAxis.baseline ?: 0.0
         val baselineY = yFor(baselineValue, domain, plot).coerceIn(plot.top, plot.bottom)
-        val numericX = configuration.series.flatMap(NativePHPChartsSeries::points).mapNotNull(formatting::xNumeric)
-        val xMinimum = numericX.minOrNull()
-        val xMaximum = numericX.maxOrNull()
+        val numericPoints = NativePHPChartsPerformance.trace("NPC.layout.numeric-x") {
+            allPoints.mapNotNull { point -> formatting.xNumeric(point)?.let { it to point } }
+        }
+        val xMinimum = numericPoints.minOfOrNull(Pair<Double, NativePHPChartsPoint>::first)
+        val xMaximum = numericPoints.maxOfOrNull(Pair<Double, NativePHPChartsPoint>::first)
         val numericPadding = if (configuration.kind == NativePHPChartsKind.Bar) {
-            numericX.distinct().sorted().zipWithNext { first, second -> second - first }
+            numericPoints.map(Pair<Double, NativePHPChartsPoint>::first)
+                .distinct()
+                .sorted()
+                .zipWithNext { first, second -> second - first }
                 .filter { it > 0.0 }
                 .minOrNull()
                 ?.div(2.0)
@@ -154,60 +172,65 @@ internal object NativePHPChartsLayoutEngine {
         fun valueX(value: Double): Float =
             plot.left + (((value - domain.minimum) / domain.span).toFloat() * plot.width)
 
-        val data = when (configuration.kind) {
-            NativePHPChartsKind.Bar -> if (isHorizontalBar && configuration.barMode == "stacked") {
-                stackedHorizontalBars(configuration, formatting, plot, density, ::categoryY, ::valueX)
-            } else if (isHorizontalBar) {
-                groupedHorizontalBars(configuration, plot, categoryIndexes, density, ::categoryY, ::valueX)
-            } else if (configuration.barMode == "stacked") {
-                stackedBars(configuration, formatting, plot, domain, density, ::xFor)
-            } else {
-                groupedBars(
+        val data = NativePHPChartsPerformance.trace("NPC.layout.data") {
+            val rawData = when (configuration.kind) {
+                NativePHPChartsKind.Bar -> if (isHorizontalBar && configuration.barMode == "stacked") {
+                    stackedHorizontalBars(configuration, formatting, plot, density, ::categoryY, ::valueX)
+                } else if (isHorizontalBar) {
+                    groupedHorizontalBars(configuration, plot, categoryIndexes, density, ::categoryY, ::valueX)
+                } else if (configuration.barMode == "stacked") {
+                    stackedBars(configuration, formatting, plot, domain, density, ::xFor)
+                } else {
+                    groupedBars(
+                        configuration,
+                        plot,
+                        domain,
+                        categoryIndexes,
+                        density,
+                        ::xFor,
+                    )
+                }
+                NativePHPChartsKind.Area -> areaData(configuration, formatting, domain, plot, ::xFor)
+                NativePHPChartsKind.Candlestick -> candlestickData(
                     configuration,
                     plot,
                     domain,
-                    categoryIndexes,
                     density,
-                    ::xFor,
+                    xFor = ::xFor,
                 )
-            }
-            NativePHPChartsKind.Area -> areaData(configuration, formatting, domain, plot, ::xFor)
-            NativePHPChartsKind.Candlestick -> candlestickData(
-                configuration = configuration,
-                plot = plot,
-                domain = domain,
-                density = density,
-                xFor = ::xFor,
-            )
-            NativePHPChartsKind.Line, NativePHPChartsKind.Scatter -> configuration.series.flatMap { series ->
-                series.points.map { point ->
-                    NativePHPChartsDatum(series, point, Offset(xFor(point), yFor(point.value, domain, plot)))
+                NativePHPChartsKind.Line, NativePHPChartsKind.Scatter -> configuration.series.flatMap { series ->
+                    series.points.map { point ->
+                        NativePHPChartsDatum(series, point, Offset(xFor(point), yFor(point.value, domain, plot)))
+                    }
                 }
             }
-        }.map { datum ->
-            if (isHorizontalBar) {
-                datum.copy(
-                    errorMinX = datum.point.errorMin?.let(::valueX),
-                    errorMaxX = datum.point.errorMax?.let(::valueX),
-                )
+            if (allPoints.none { it.errorMin != null || it.errorMax != null }) {
+                rawData
             } else {
-                datum.copy(
-                    errorMinY = datum.point.errorMin?.let { yFor(it, domain, plot) },
-                    errorMaxY = datum.point.errorMax?.let { yFor(it, domain, plot) },
-                )
+                rawData.map { datum ->
+                    if (isHorizontalBar) {
+                        datum.copy(
+                            errorMinX = datum.point.errorMin?.let(::valueX),
+                            errorMaxX = datum.point.errorMax?.let(::valueX),
+                        )
+                    } else {
+                        datum.copy(
+                            errorMinY = datum.point.errorMin?.let { yFor(it, domain, plot) },
+                            errorMaxY = datum.point.errorMax?.let { yFor(it, domain, plot) },
+                        )
+                    }
+                }
             }
         }
-        val xLabelPoints = if (configuration.xAxis.type == NativePHPChartsXType.Category) {
+        val xLabelPoints = NativePHPChartsPerformance.trace("NPC.layout.label-points") { if (configuration.xAxis.type == NativePHPChartsXType.Category) {
             categories
         } else {
-            configuration.series
-                .flatMap(NativePHPChartsSeries::points)
-                .mapNotNull { point -> formatting.xNumeric(point)?.let { value -> value to point } }
+            numericPoints
                 .filter { (value, _) -> xDomain == null || value in xDomain.minimum..xDomain.maximum }
-                .sortedBy { (value, _) -> value }
+                .let(::nativePHPChartsEnsureSortedNumericPoints)
                 .distinctBy { (value, _) -> value }
                 .map { (_, point) -> point }
-        }
+        } }
         val desiredLabels = configuration.xAxis.labelCount
             .coerceIn(2, 12)
             .coerceAtMost(xLabelPoints.size.coerceAtLeast(1))
@@ -289,6 +312,13 @@ internal object NativePHPChartsLayoutEngine {
             NativePHPChartsAnnotationGeometry(annotation, physicalAxis, min(start, end), max(start, end))
         }
 
+        val dataBySeries = NativePHPChartsPerformance.trace("NPC.layout.group-series") {
+            data.groupBy { it.series.id }
+        }
+        val hitIndex = NativePHPChartsPerformance.trace("NPC.layout.hit-index") {
+            NativePHPChartsHitIndex.build(data)
+        }
+
         return NativePHPChartsLayout(
             plot = plot,
             domain = domain,
@@ -297,11 +327,11 @@ internal object NativePHPChartsLayoutEngine {
             valueBaselineX = valueBaselineX,
             baselineY = baselineY,
             data = data,
-            dataBySeries = data.groupBy { it.series.id },
+            dataBySeries = dataBySeries,
             xLabels = labels,
             yLabels = yLabels,
             annotations = annotationGeometry,
-            hitIndex = NativePHPChartsHitIndex.build(data),
+            hitIndex = hitIndex,
         )
     }
 
@@ -549,8 +579,16 @@ internal object NativePHPChartsLayoutEngine {
     }
 
     private fun domain(values: List<Double>, beginAtZero: Boolean): NativePHPChartsDomain {
-        var minimum = values.minOrNull() ?: 0.0
-        var maximum = values.maxOrNull() ?: 0.0
+        return paddedDomain(values.minOrNull() ?: 0.0, values.maxOrNull() ?: 0.0, beginAtZero)
+    }
+
+    private fun paddedDomain(
+        initialMinimum: Double,
+        initialMaximum: Double,
+        beginAtZero: Boolean,
+    ): NativePHPChartsDomain {
+        var minimum = initialMinimum
+        var maximum = initialMaximum
         if (beginAtZero) {
             minimum = min(minimum, 0.0)
             maximum = max(maximum, 0.0)
@@ -565,6 +603,23 @@ internal object NativePHPChartsLayoutEngine {
             maximum += padding
         }
         return NativePHPChartsDomain(minimum, maximum)
+    }
+
+    private fun pointDomain(
+        points: List<NativePHPChartsPoint>,
+        beginAtZero: Boolean,
+    ): NativePHPChartsDomain {
+        if (points.isEmpty()) return domain(emptyList(), beginAtZero)
+
+        var minimum = Double.POSITIVE_INFINITY
+        var maximum = Double.NEGATIVE_INFINITY
+        points.forEach { point ->
+            minimum = min(minimum, point.value)
+            maximum = max(maximum, point.value)
+            point.errorMin?.let { minimum = min(minimum, it) }
+            point.errorMax?.let { maximum = max(maximum, it) }
+        }
+        return paddedDomain(minimum, maximum, beginAtZero)
     }
 
     private fun explicitDomain(
@@ -620,4 +675,16 @@ internal object NativePHPChartsLayoutEngine {
         if (size <= count) return (0 until size).toList()
         return (0 until count).map { index -> (index * (size - 1).toFloat() / (count - 1)).toInt() }.distinct()
     }
+}
+
+private fun nativePHPChartsEnsureSortedNumericPoints(
+    points: List<Pair<Double, NativePHPChartsPoint>>,
+): List<Pair<Double, NativePHPChartsPoint>> {
+    for (index in 1 until points.size) {
+        if (points[index - 1].first > points[index].first) {
+            return points.sortedBy(Pair<Double, NativePHPChartsPoint>::first)
+        }
+    }
+
+    return points
 }

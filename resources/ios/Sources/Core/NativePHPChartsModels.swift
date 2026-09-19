@@ -20,7 +20,7 @@ enum NativePHPChartsXAxisType: String, Codable {
 ///
 /// Keeping numbers and strings distinct preserves category/date identities while allowing
 /// numeric-looking strings to participate in numeric compatibility fallbacks.
-enum NativePHPChartsWireValue: Hashable, Codable {
+enum NativePHPChartsWireValue: Hashable, Codable, Sendable {
     case string(String)
     case number(Double)
 
@@ -60,7 +60,7 @@ enum NativePHPChartsWireValue: Hashable, Codable {
     }
 }
 
-struct NativePHPChartsWirePoint: Decodable {
+struct NativePHPChartsWirePoint: Decodable, Sendable {
     let id: String?
     let label: String
     let value: Double
@@ -81,10 +81,10 @@ struct NativePHPChartsWirePoint: Decodable {
     }
 }
 
-struct NativePHPChartsWireSeries: Decodable {
+struct NativePHPChartsWireSeries: Decodable, Sendable {
     let id: String
     let name: String
-    let color: String
+    let color: String?
     let points: [NativePHPChartsWirePoint]
     let style: NativePHPChartsStyle?
     let fillTo: String?
@@ -372,14 +372,25 @@ struct NativePHPChartsDataSet {
     static func decode(
         seriesJSON: String,
         xAxis: NativePHPChartsAxisConfiguration,
-        formatter: NativePHPChartsFormatter
+        formatter: NativePHPChartsFormatter,
+        palette: [String] = NativePHPChartsRuntime.palette(preset: "default")
     ) -> NativePHPChartsDataSet {
-        guard let data = seriesJSON.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode([NativePHPChartsWireSeries].self, from: data)
+        guard let decoded = decodeWireSeries(seriesJSON)
         else {
             return NativePHPChartsDataSet(series: [], xType: xAxis.type, categoryLabels: [:])
         }
 
+        return decode(series: decoded, xAxis: xAxis, formatter: formatter, palette: palette)
+    }
+
+    static func decode(
+        series decoded: [NativePHPChartsWireSeries],
+        xAxis: NativePHPChartsAxisConfiguration,
+        formatter: NativePHPChartsFormatter,
+        palette: [String]
+    ) -> NativePHPChartsDataSet {
+
+        let effectivePalette = palette.isEmpty ? NativePHPChartsRuntime.palette(preset: "default") : palette
         var categoryIndexes: [String: Int] = [:]
         var categoryLabels: [Int: String] = [:]
 
@@ -432,7 +443,7 @@ struct NativePHPChartsDataSet {
             return NativePHPChartsSeries(
                 id: wireSeries.id,
                 name: wireSeries.name,
-                colorValue: wireSeries.color,
+                colorValue: wireSeries.color ?? effectivePalette[seriesIndex % effectivePalette.count],
                 points: points,
                 index: seriesIndex,
                 style: wireSeries.style,
@@ -441,5 +452,59 @@ struct NativePHPChartsDataSet {
         }
 
         return NativePHPChartsDataSet(series: series, xType: xAxis.type, categoryLabels: categoryLabels)
+    }
+
+    static func validate(
+        seriesJSON: String,
+        xAxis: NativePHPChartsAxisConfiguration,
+        formatter: NativePHPChartsFormatter,
+        kind: NativePHPChartsKind
+    ) -> Bool {
+        guard let decoded = decodeWireSeries(seriesJSON) else { return false }
+        return validate(series: decoded, xAxis: xAxis, formatter: formatter, kind: kind)
+    }
+
+    static func validate(
+        series decoded: [NativePHPChartsWireSeries],
+        xAxis: NativePHPChartsAxisConfiguration,
+        formatter: NativePHPChartsFormatter,
+        kind: NativePHPChartsKind
+    ) -> Bool {
+
+        var seriesIDs: Set<String> = []
+        var selectionIDs: Set<String> = []
+        for series in decoded {
+            guard series.id.isEmpty == false, seriesIDs.insert(series.id).inserted else { return false }
+            for (index, point) in series.points.enumerated() {
+                let pointID = (point.id?.isEmpty == false ? point.id : nil) ?? "compat-\(series.id)-\(index)"
+                let selectionID = "\(series.id.utf8.count):\(series.id)\(pointID)"
+                guard selectionIDs.insert(selectionID).inserted,
+                      point.value.isFinite,
+                      [point.errorMin, point.errorMax, point.open, point.high, point.low, point.close]
+                        .compactMap({ $0 }).allSatisfy(\.isFinite)
+                else { return false }
+
+                switch xAxis.type {
+                case .category:
+                    break
+                case .number:
+                    guard point.x?.numberValue?.isFinite == true else { return false }
+                case .date, .datetime:
+                    guard point.x.flatMap({ formatter.date(from: $0, type: xAxis.type) }) != nil else { return false }
+                }
+
+                if kind == .candlestick {
+                    guard let open = point.open, let high = point.high, let low = point.low, let close = point.close,
+                          low <= min(open, close), high >= max(open, close), low <= high
+                    else { return false }
+                }
+            }
+        }
+        return true
+    }
+
+    static func decodeWireSeries(_ json: String) -> [NativePHPChartsWireSeries]? {
+        guard let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode([NativePHPChartsWireSeries].self, from: data)
     }
 }

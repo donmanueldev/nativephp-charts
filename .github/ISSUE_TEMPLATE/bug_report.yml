@@ -86,6 +86,8 @@ body:
         - DonutChart
         - RadarChart
         - CandlestickChart
+        - ProgressChart
+        - ContributionHeatmap
         - Multiple components
     validations:
       required: true

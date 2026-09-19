@@ -1,0 +1,56 @@
+---
+title: Progress chart
+description: Compare several bounded completion values as concentric rings.
+sidebar: { order: 9 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/progress.blade.php?raw";
+
+Use progress for a small ordered set of values between `0` and `1`. It is not a replacement for an indeterminate loading indicator.
+
+## When to use
+
+Choose progress for several bounded goals that share a clear completion scale.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/progress.png" alt="Progress chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="2000" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/progress-selected.png" alt="Progress chart with a selected ring on a physical Samsung device" width="1344" height="2000" /><figcaption>Android · Ring selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/progress.png" alt="Progress chart running in the generated NativePHP iOS shell" width="1178" height="1120" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/progress-selected.png" alt="Progress chart after selecting a ring in the generated NativePHP iOS shell" width="1178" height="1120" /><figcaption>iOS · Ring selection</figcaption></figure></div>
+
+## Variants
+
+Use one ring for a single goal or concentric rings for a short ordered set of related metrics.
+
+## Customization
+
+Configure semantic track color, ring thickness, spacing, and line termination through `style`. Theme and preset values apply before metric-level color overrides.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+`_select` emits the stable metric ID, label, value, localized value, and original index.
+
+## Empty and error states
+
+No metrics renders `empty-label`. Values outside `0...1`, duplicate IDs, and malformed colors are rejected; native failures render `error-label`.
+
+## Accessibility
+
+Metric labels must make sense without the ring. Keep `center-label` concise and include the chart purpose in `a11y-label`.
+
+## API
+
+Required `metrics` contain `id`, `label`, `value`, and optional `color`. Specialized props are `center-label` and the `ring` style section.
+
+## Troubleshooting
+
+If a percentage is rejected, pass its normalized value (`0.92`), not the displayed percentage (`92`).

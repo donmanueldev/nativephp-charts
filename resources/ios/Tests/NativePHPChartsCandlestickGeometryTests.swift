@@ -20,7 +20,7 @@ final class NativePHPChartsCandlestickGeometryTests: XCTestCase {
         XCTAssertEqual(geometry.cornerRadius, 7)
     }
 
-    func testGeometryUsesTheSameDefaultBodyRatioAsRenderingAndRejectsIncompleteOHLC() throws {
+    func testGeometryUsesTheSameDefaultBodyWidthAsRenderingAndRejectsIncompleteOHLC() throws {
         let complete = makePoint(open: 12, high: 14, low: 8, close: 10)
         let incomplete = makePoint(open: 12, high: nil, low: 8, close: 10)
 
@@ -33,7 +33,7 @@ final class NativePHPChartsCandlestickGeometryTests: XCTestCase {
         )
 
         XCTAssertEqual(geometry.bodyBounds, 10...12)
-        XCTAssertEqual(geometry.bodyWidth, .ratio(0.62))
+        XCTAssertEqual(geometry.bodyWidth, .fixed(12))
         XCTAssertNil(
             NativePHPChartsCandlestickGeometry(
                 point: incomplete,

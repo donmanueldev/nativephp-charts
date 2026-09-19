@@ -65,12 +65,6 @@ final class ChartDataNormalizer
             $seriesIds[$id] = true;
 
             $name = self::requiredString($item, 'name', "series '{$id}'", $chartName);
-            $color = ColorNormalizer::normalize(
-                self::requiredString($item, 'color', "series '{$id}'", $chartName),
-                $chartName,
-                "series '{$id}'",
-            );
-
             if (! array_key_exists('points', $item) || ! is_array($item['points'])) {
                 throw new InvalidArgumentException("The {$chartName} points for series '{$id}' must be an array.");
             }
@@ -100,7 +94,10 @@ final class ChartDataNormalizer
                 $points[] = $normalizedPoint;
             }
 
-            $normalizedSeries = ['id' => $id, 'name' => $name, 'color' => $color, 'points' => $points];
+            $normalizedSeries = ['id' => $id, 'name' => $name, 'points' => $points];
+            if (array_key_exists('color', $item)) {
+                $normalizedSeries['color'] = ColorNormalizer::normalize($item['color'], $chartName, "series '{$id}'");
+            }
             if (array_key_exists('style', $item)) {
                 if (! is_array($item['style'])) {
                     throw new InvalidArgumentException("The {$chartName} style for series '{$id}' must be an array.");

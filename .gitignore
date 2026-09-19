@@ -5,4 +5,7 @@
 *.log
 /.build/
 resources/ios/.build/
-android-harness/
+.idea/
+*.iml
+.vscode/
+.playwright-mcp

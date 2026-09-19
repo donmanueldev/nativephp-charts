@@ -468,21 +468,21 @@ struct NativePHPChartsPlot: View {
     private var gridColor: Color {
         snapshot.configuration.style.color(
             snapshot.configuration.style.grid.color,
-            fallback: .secondary.opacity(0.16)
+            fallback: snapshot.configuration.style.color(snapshot.configuration.theme?.grid, fallback: .secondary.opacity(0.16))
         )
     }
 
     private var axisColor: Color {
         snapshot.configuration.style.color(
             snapshot.configuration.style.axis.color,
-            fallback: .secondary.opacity(0.35)
+            fallback: snapshot.configuration.style.color(snapshot.configuration.theme?.muted, fallback: .secondary.opacity(0.35))
         )
     }
 
     private var axisLabelColor: Color {
         snapshot.configuration.style.color(
             snapshot.configuration.style.axis.labelColor,
-            fallback: .secondary
+            fallback: snapshot.configuration.style.color(snapshot.configuration.theme?.foreground, fallback: .secondary)
         )
     }
 

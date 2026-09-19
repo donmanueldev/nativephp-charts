@@ -1,0 +1,56 @@
+---
+title: Area chart
+description: Emphasize magnitude or composition across an ordered domain.
+sidebar: { order: 2 }
+---
+
+import { Code } from "@astrojs/starlight/components";
+import example from "../../../../examples/area.blade.php?raw";
+
+Use area for magnitude over time. Stacking answers composition questions; overlaying answers direct trend comparison.
+
+## When to use
+
+Choose area when magnitude is part of the message. Choose line when the filled baseline would exaggerate differences.
+
+## Minimal example
+
+Add this element to a native Blade view after [installing the package](/nativephp-charts/getting-started/installation/). The example includes its data; replace the values with your own.
+
+<Code code={example} lang="blade" />
+
+## Native preview
+
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/area.png" alt="Area chart rendered by NativePHP Charts on a physical Samsung device" width="1344" height="2760" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/area-selected.png" alt="Area chart after selecting a point on a physical Samsung device" width="1344" height="2760" /><figcaption>Android · Point selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/area.png" alt="Area chart running in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/area-selected.png" alt="Area chart after selecting a point in the generated NativePHP iOS shell" width="1178" height="1304" /><figcaption>iOS · Point selection</figcaption></figure></div>
+
+## Variants
+
+`area-mode="overlay"` compares shapes; `area-mode="stacked"` shows a changing total and its composition.
+
+## Customization
+
+The area fill, boundary line, points, grid, axes, theme, and preset remain semantic across both renderers.
+
+See the [style options reference](/nativephp-charts/reference/api/#style-options) for supported keys and ranges.
+
+## Interaction
+
+To handle selection, add `_select="selectPoint"` and define the method shown in [Callbacks and interactions](/nativephp-charts/guides/callbacks-interactions/).
+
+Use stable point IDs for selection and use a numeric, date, or datetime viewport only when users need to pan or zoom.
+
+## Empty and error states
+
+Empty series render `empty-label`. Invalid PHP data raises an `InvalidArgumentException`; a snapshot rejected by the native renderer displays `error-label`.
+
+## Accessibility
+
+Describe each series and its unit. Do not rely on fill color alone; preserve distinct legend names.
+
+## API
+
+Area adds `area-mode` (or `stacking`) and the `area` style section to the common Cartesian contract.
+
+## Troubleshooting
+
+If a stack appears wrong, confirm every series uses the same ordered x domain. See [themes](/nativephp-charts/guides/themes/) and [accessibility](/nativephp-charts/guides/accessibility/).
