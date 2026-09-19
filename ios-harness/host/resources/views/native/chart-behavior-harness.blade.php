@@ -1,6 +1,6 @@
 <native:top-bar title="iOS chart behavior" subtitle="Generated-shell acceptance harness" />
 
-<native:scroll-view ref="ios-chart-behavior-screen" fill class="bg-theme-background">
+<native:scroll-view ref="ios-chart-behavior-screen" class="w-full h-full bg-theme-background">
     <native:column class="w-full p-4 gap-4">
         <native:text class="text-sm text-theme-on-surface-variant">The controls mutate one real NativePHP chart while XCTest observes native semantics and callback counts.</native:text>
         <native:button @tap="openGallery" variant="secondary">Open chart gallery</native:button>

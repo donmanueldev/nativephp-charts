@@ -119,6 +119,7 @@ jobs:
         env:
           NATIVEPHP_APP_ID: dev.nativephp.charts.ci
           NATIVEPHP_SHELL_HOST: ${{ runner.temp }}/nativephp-charts-ios-shell
+          NATIVEPHP_START_URL: /
         working-directory: ${{ runner.temp }}/nativephp-charts-ios-shell
         run: |
           php artisan native:install ios --no-interaction

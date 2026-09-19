@@ -1,6 +1,6 @@
 <native:top-bar title="Native chart gallery" subtitle="Fresh generated-shell evidence" />
 
-<native:scroll-view ref="ios-chart-gallery-screen" fill class="bg-theme-background">
+<native:scroll-view ref="ios-chart-gallery-screen" class="w-full h-full bg-theme-background">
     <native:column class="w-full p-4 gap-3">
         <native:row class="w-full gap-2">
             <native:button @tap="previousChart" variant="secondary">Previous chart</native:button>

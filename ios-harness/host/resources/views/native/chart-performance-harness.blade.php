@@ -1,6 +1,6 @@
 <native:top-bar title="iOS chart performance" subtitle="Generated-shell density harness" />
 
-<native:scroll-view ref="ios-chart-performance-screen" fill class="bg-theme-background">
+<native:scroll-view ref="ios-chart-performance-screen" class="w-full h-full bg-theme-background">
     <native:column class="w-full p-4 gap-4">
         <native:text class="text-sm text-theme-on-surface-variant">This deterministic line fixture supports simulator triage and physical Instruments captures. Simulator timings are never accepted as physical baselines.</native:text>
 
