@@ -25,4 +25,4 @@ Charts expose native accessibility elements to VoiceOver and TalkBack. Provide c
 - Respect the operating system's reduced-motion preference even when `animated` is enabled.
 - Pair dense or comparison-critical visualizations with a readable text summary or table.
 
-Accessibility metadata in source is only a contract. Record separate VoiceOver and TalkBack evidence from installed native builds.
+Test the labels, focus order, enlarged text, and reduced-motion behavior in the screen where the chart ships. The surrounding native layout determines the final reading and gesture order.

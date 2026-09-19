@@ -38,5 +38,3 @@ Use Android Studio's profiler or Perfetto on Android and Instruments on iOS. Sim
 PHP validation checks data shapes and options. A successful native build checks compilation. Neither verifies how gestures, scrolling, or accessibility behave in your screen.
 
 Before shipping, test empty and populated data, updates and reordered IDs, selection, navigation away and back, and enabled viewport gestures. Check VoiceOver or TalkBack, larger text, light and dark appearance, and reduced motion on each platform you support.
-
-The chart guides show native previews of default and selected states. Those images demonstrate appearance; they are not a performance benchmark or a guarantee for your app's device and dataset.

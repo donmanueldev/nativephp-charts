@@ -29,7 +29,7 @@ These attributes are accepted by all ten chart elements.
 | `theme` | `light`, `dark`, `system` | `system` |
 | `preset` | Built-in or application-defined preset name | `default` |
 | `style` | Array of chart-specific style sections; see below | `[]` |
-| `legend` | Array of visibility, placement, and text options | Automatic visibility |
+| `legend` | Array of visibility, placement, and text options | `'auto'`: visible when the chart has more than one legend item |
 | `locale` | BCP-47 locale tag, such as `en-US` or `es-NI` | System locale |
 | `value-format` | `number`, `currency`, `percent` | `number` |
 | `currency-code` | Three-letter currency code; required for `currency` | Unset |

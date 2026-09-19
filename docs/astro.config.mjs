@@ -27,7 +27,7 @@ export default defineConfig({
         },
         { label: 'Charts', items: [{ autogenerate: { directory: 'charts' } }] },
         { label: 'Guides', items: [{ autogenerate: { directory: 'guides' } }] },
-        { label: 'Reference', items: [{ label: 'API reference', slug: 'reference/api' }] },
+        { label: 'Reference', items: [{ label: 'API reference', slug: 'reference/api' }, { label: 'Blade and PHP equivalence', slug: 'reference/blade-php' }] },
         { label: 'Showcase', items: [{ label: 'Apps using NativePHP Charts', slug: 'apps' }] },
       ],
     }),
