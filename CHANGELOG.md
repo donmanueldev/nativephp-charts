@@ -8,10 +8,7 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 - Native progress and contribution heatmap charts with selection, reduced-motion behavior, empty/error states, and accessible summaries.
 - Semantic `light`, `dark`, and `system` themes with built-in and application-defined presets.
-- Versioned Android and generated-shell iOS behavior harnesses, plus an Astro/Starlight documentation application.
-- A versioned physical-performance evidence schema and regression comparator for latency, memory, payload, slow-frame, and callback measurements.
-- A fail-closed Android physical recorder that correlates Logcat, Perfetto FrameTimeline, and `TOTAL RSS` across five cold runs per density.
-- A deterministic installed-app Android gallery and capture command for all ten chart families.
+- An Astro/Starlight documentation application.
 
 ### Changed
 

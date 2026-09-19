@@ -188,7 +188,7 @@ it('preserves progress and contribution selection payloads in contract v1', func
 
 it('accepts the shared native selection fixtures without changing their version 1 shape', function () {
     $fixtures = json_decode(
-        file_get_contents(__DIR__.'/../fixtures/contracts/chart_contract_fixtures.json'),
+        file_get_contents(__DIR__.'/../tests/Fixtures/chart_contract_fixtures.json'),
         true,
         flags: JSON_THROW_ON_ERROR,
     );

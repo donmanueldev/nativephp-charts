@@ -548,25 +548,21 @@ Blade uses kebab case. The fluent PHP API uses camelCase methods such as `series
 - Category x-axes do not accept an explicit numeric/date domain.
 - Unknown axis, legend, style, series, point, and segment options are rejected instead of silently ignored.
 
-### Accessibility and performance
+### Accessibility
 
 - Always provide a localized `a11y-label` describing the chart's purpose.
 - Use stable IDs so selection remains deterministic across updates and reordering.
 - Native renderers bound large accessibility summaries instead of reading an unbounded dataset.
-- Native rendering is not a promise of unlimited data. Validate realistic and worst-case datasets on every target device.
-- The native validation workflow covers VoiceOver, TalkBack, text scaling, gestures, and performance behavior across the supported platforms.
+- Validate realistic and worst-case datasets on every target device.
 
-### Testing and evidence
+### Testing
 
 ```bash
 composer test
-gradle --project-dir android-harness testDebugUnitTest assembleDebug
-gradle --project-dir android-harness connectedDebugAndroidTest
 swift test
-scripts/run-generated-ios-ui-tests.sh /path/to/generated/nativephp/ios
 ```
 
-PHP tests prove normalization, serialization, compatibility, and callback registration. The Android harness and Swift host prove native source behavior; CI additionally runs Compose behavior on an emulator. Generated-shell jobs create clean Laravel hosts: Android verifies renderer registration and compilation, while iOS compiles an unsigned arm64 device product and runs XCTest UI selection, viewport, scrolling, mutation, reopening, all ten chart-gallery interactions, and deterministic 100/1,000/10,000-point transport. CI retains the iOS `.xcresult`, test summary, and twenty validated default/selected screenshots.
+PHP tests cover normalization, serialization, compatibility, and callback registration. Swift tests cover the iOS renderer source.
 
 
 ## Platform and frontend scope

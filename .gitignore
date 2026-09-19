@@ -5,16 +5,7 @@
 *.log
 /.build/
 resources/ios/.build/
-android-harness/.gradle/
-android-harness/.kotlin/
-android-harness/build/
-android-harness/app/build/
-android-harness/local.properties
 .idea/
 *.iml
 .vscode/
-scripts/**
-android-harness/**
-ios-harness/**
-fixtures
 .playwright-mcp

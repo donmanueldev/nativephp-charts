@@ -68,7 +68,7 @@ struct NativePHPChartsSharedFixtureTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let data = try Data(contentsOf: root.appendingPathComponent("fixtures/contracts/chart_contract_fixtures.json"))
+        let data = try Data(contentsOf: root.appendingPathComponent("tests/Fixtures/chart_contract_fixtures.json"))
         return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
