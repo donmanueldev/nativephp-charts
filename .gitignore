@@ -16,6 +16,5 @@ android-harness/local.properties
 scripts/**
 android-harness/**
 ios-harness/**
-performance/**
 fixtures
 .playwright-mcp
