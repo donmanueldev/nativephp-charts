@@ -56,6 +56,7 @@ internal object NativePHPChartsDecoder {
             emptyLabel = input.emptyLabel,
             errorLabel = input.errorLabel,
             accessibilityLabel = input.accessibilityLabel,
+            backgroundColor = chartColor(theme.background, Color.Transparent),
             locale = input.locale,
             onSelect = input.onSelect,
             onViewportChange = input.onViewportChange,

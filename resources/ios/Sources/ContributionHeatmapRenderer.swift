@@ -195,7 +195,7 @@ struct NativePHPChartsContributionHeatmapRenderer: View {
     var body: some View {
         Group {
             if snapshot.availability != .available { unavailableState }
-            else if snapshot.values.isEmpty { emptyState }
+            else if hasVisibleValues == false { emptyState }
             else { content }
         }
         .task(id: wireInput) {
@@ -238,6 +238,15 @@ struct NativePHPChartsContributionHeatmapRenderer: View {
         }
         .accessibilityRepresentation {
             NativePHPChartsAccessibilityRepresentation(label: snapshot.input.accessibilityLabel, value: accessibilitySummary, actions: accessibilityActions, onSelect: select)
+        }
+    }
+
+    private var hasVisibleValues: Bool {
+        guard let end = snapshot.endDate else { return false }
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        guard let start = calendar.date(byAdding: .day, value: -(snapshot.input.days - 1), to: end) else { return false }
+        return snapshot.values.contains { value in
+            NativePHPChartsContributionSnapshot.parseDate(value.date).map { $0 >= start && $0 <= end } ?? false
         }
     }
 

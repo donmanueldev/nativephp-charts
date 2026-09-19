@@ -3,8 +3,10 @@ package com.donmanueldev.plugins.nativephp_charts.ui
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +37,7 @@ import com.nativephp.mobile.ui.nativerender.NativeUIBridge
 import com.nativephp.mobile.ui.nativerender.NativeUINode
 import org.json.JSONObject
 import java.text.NumberFormat
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -74,7 +77,7 @@ private fun NativePHPChartsProgressPlot(
     val interactionReady = progress.value >= 0.999f
     var selectedId by remember { mutableStateOf<String?>(null) }
     val selected = configuration.metrics.firstOrNull { it.id == selectedId }
-    val percent = remember { NumberFormat.getPercentInstance() }
+    val percent = remember(configuration.locale) { NumberFormat.getPercentInstance(configuration.locale.takeIf(String::isNotBlank)?.let(Locale::forLanguageTag) ?: Locale.getDefault()) }
     LaunchedEffect(configuration.animationKey, shouldAnimate) {
         if (shouldAnimate) {
             progress.snapTo(0f)
@@ -106,7 +109,8 @@ private fun NativePHPChartsProgressPlot(
     val previous = configuration.metrics.getOrNull(selectedIndex - 1)
     val next = configuration.metrics.getOrNull(if (selectedIndex < 0) 0 else selectedIndex + 1)
 
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Column(modifier.fillMaxSize().background(configuration.backgroundColor)) {
+    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
         Canvas(
             Modifier.fillMaxSize()
                 .semantics {
@@ -123,18 +127,19 @@ private fun NativePHPChartsProgressPlot(
                 .pointerInput(configuration.metrics, interactionReady) {
                     detectTapGestures { location ->
                         if (!interactionReady) return@detectTapGestures
-                        progressMetricAt(configuration.metrics, size.width, size.height, density, location)?.let(::select)
+                        progressMetricAt(configuration.metrics, size.width, size.height, density, configuration.ringWidth, configuration.ringGap, location)?.let(::select)
                     }
                 },
         ) {
-            val ringWidth = 12.dp.toPx().coerceAtMost(min(size.width, size.height) / (configuration.metrics.size * 2f + 1f))
-            val gap = 7.dp.toPx()
+            val ringWidth = configuration.ringWidth.dp.toPx().coerceAtMost(min(size.width, size.height) / (configuration.metrics.size * 2f + 1f))
+            val gap = configuration.ringGap.dp.toPx()
+            val cap = when (configuration.ringCap) { "butt" -> StrokeCap.Butt; "square" -> StrokeCap.Square; else -> StrokeCap.Round }
             val outerRadius = (min(size.width, size.height) / 2f) - ringWidth
             configuration.metrics.forEachIndexed { index, metric ->
                 val radius = outerRadius - index * (ringWidth + gap)
                 if (radius <= ringWidth) return@forEachIndexed
                 val bounds = Rect(center - Offset(radius, radius), Size(radius * 2, radius * 2))
-                drawArc(configuration.trackColor, -90f, 360f, false, bounds.topLeft, bounds.size, style = Stroke(ringWidth, cap = StrokeCap.Round))
+                drawArc(configuration.trackColor, -90f, 360f, false, bounds.topLeft, bounds.size, style = Stroke(ringWidth, cap = cap))
                 drawArc(
                     metric.color,
                     -90f,
@@ -142,7 +147,7 @@ private fun NativePHPChartsProgressPlot(
                     false,
                     bounds.topLeft,
                     bounds.size,
-                    style = Stroke(ringWidth, cap = StrokeCap.Round),
+                    style = Stroke(ringWidth, cap = cap),
                 )
                 if (metric.id == selectedId) {
                     drawArc(metric.color.copy(alpha = 0.28f), -90f, 360f, false, bounds.topLeft, bounds.size, style = Stroke(ringWidth + 6.dp.toPx()))
@@ -150,6 +155,8 @@ private fun NativePHPChartsProgressPlot(
             }
         }
         if (configuration.centerLabel.isNotBlank()) Text(configuration.centerLabel)
+    }
+    if (configuration.legendVisible) configuration.metrics.forEach { metric -> Text("${metric.label}: ${percent.format(metric.value)}") }
     }
 }
 
@@ -159,10 +166,12 @@ internal fun progressMetricIndexAt(
     height: Float,
     density: Float,
     location: Offset,
+    ringWidthDp: Float = 12f,
+    gapDp: Float = 7f,
 ): Int? {
     if (metricCount <= 0 || width <= 0 || height <= 0) return null
-    val ringWidth = (12f * density).coerceAtMost(min(width, height) / (metricCount * 2f + 1f))
-    val gap = 7f * density
+    val ringWidth = (ringWidthDp * density).coerceAtMost(min(width, height) / (metricCount * 2f + 1f))
+    val gap = gapDp * density
     val outerRadius = min(width, height) / 2f - ringWidth
     val distance = (location - Offset(width / 2f, height / 2f)).getDistance()
     return (0 until metricCount).firstOrNull { index ->
@@ -176,6 +185,8 @@ private fun progressMetricAt(
     width: Int,
     height: Int,
     density: Float,
+    ringWidthDp: Float,
+    gapDp: Float,
     location: Offset,
 ): NativePHPChartsProgressMetric? =
-    progressMetricIndexAt(metrics.size, width.toFloat(), height.toFloat(), density, location)?.let(metrics::getOrNull)
+    progressMetricIndexAt(metrics.size, width.toFloat(), height.toFloat(), density, location, ringWidthDp, gapDp)?.let(metrics::getOrNull)

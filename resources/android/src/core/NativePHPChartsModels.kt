@@ -174,6 +174,7 @@ internal data class NativePHPChartsConfiguration(
     val emptyLabel: String,
     val errorLabel: String,
     val accessibilityLabel: String,
+    val backgroundColor: Color,
     val locale: String,
     val onSelect: Int,
     val onViewportChange: Int,

@@ -1,6 +1,7 @@
 package com.donmanueldev.plugins.nativephp_charts.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -65,13 +66,13 @@ private fun NativePHPChartsContent(
 ) {
     val position = configuration.legend.position
     if (configuration.legendVisible && position in setOf("leading", "trailing")) {
-        Row(modifier = modifier.fillMaxSize()) {
+        Row(modifier = modifier.fillMaxSize().background(configuration.backgroundColor)) {
             if (position == "leading") NativePHPChartsLegendView(configuration, false)
             NativePHPChartsPlot(node, configuration, formatting, Modifier.weight(1f).fillMaxSize())
             if (position == "trailing") NativePHPChartsLegendView(configuration, false)
         }
     } else {
-        Column(modifier = modifier.fillMaxSize()) {
+        Column(modifier = modifier.fillMaxSize().background(configuration.backgroundColor)) {
             if (configuration.legendVisible && position == "top") NativePHPChartsLegendView(configuration, true)
             NativePHPChartsPlot(node, configuration, formatting, Modifier.weight(1f).fillMaxWidth())
             if (configuration.legendVisible && position != "top") NativePHPChartsLegendView(configuration, true)

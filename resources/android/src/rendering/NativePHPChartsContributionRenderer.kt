@@ -4,6 +4,7 @@ import android.graphics.Paint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
@@ -65,11 +66,12 @@ internal fun nativePHPChartsContributionLayout(
     val columns = ceil((startOffset + configuration.days) / 7.0).toInt().coerceAtLeast(1)
     val left = if (configuration.showWeekdayLabels) 30f * density else 0f
     val top = if (configuration.showMonthLabels) 20f * density else 0f
-    val gap = 3f * density
-    val cell = minOf(
+    val gap = configuration.cellGap * density
+    val available = minOf(
         (size.width - left - gap * (columns - 1)).coerceAtLeast(1f) / columns,
         (size.height - top - gap * 6).coerceAtLeast(1f) / 7f,
     ).coerceAtLeast(1f)
+    val cell = minOf(configuration.cellSize?.times(density) ?: available, available)
     val byDate = configuration.visibleValues.associateBy { it.date }
     val cells = (0 until configuration.days).map { dayIndex ->
         val slot = startOffset + dayIndex
@@ -104,7 +106,7 @@ internal fun NativePHPChartsContributionRender(node: NativeUINode, modifier: Mod
         is NativePHPChartsAsyncState.Ready -> Unit
     }
     val configuration = (decoded as NativePHPChartsAsyncState.Ready).value
-    if (configuration.values.isEmpty()) {
+    if (configuration.visibleValues.isEmpty()) {
         NativePHPChartsEmpty(modifier, configuration.accessibilityLabel, configuration.emptyLabel)
         return
     }
@@ -128,7 +130,7 @@ private fun NativePHPChartsContributionPlot(
         nativePHPChartsContributionLayout(configuration, canvasSize, density.density)
     }
     val selected = configuration.visibleValues.firstOrNull { it.id == selectedId }
-    val formatter = remember { NumberFormat.getNumberInstance() }
+    val formatter = remember(configuration.locale) { NumberFormat.getNumberInstance(configuration.locale.takeIf(String::isNotBlank)?.let(Locale::forLanguageTag) ?: Locale.getDefault()) }
     val labelPaint = remember(density) {
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.GRAY
@@ -172,7 +174,7 @@ private fun NativePHPChartsContributionPlot(
     val maximum = max(configuration.visibleValues.maxOfOrNull { it.value } ?: 0.0, 1.0)
 
     Canvas(
-        modifier
+        modifier.background(configuration.backgroundColor)
             .onSizeChanged { canvasSize = it }
             .semantics {
                 contentDescription = summary

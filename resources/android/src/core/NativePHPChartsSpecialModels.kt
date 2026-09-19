@@ -19,11 +19,17 @@ internal data class NativePHPChartsProgressConfiguration(
     val metrics: List<NativePHPChartsProgressMetric>,
     val centerLabel: String,
     val trackColor: Color,
+    val backgroundColor: Color,
+    val ringWidth: Float,
+    val ringGap: Float,
+    val ringCap: String,
     val animated: Boolean,
     val emptyLabel: String,
     val errorLabel: String,
     val accessibilityLabel: String,
     val onSelect: Int,
+    val locale: String,
+    val legendVisible: Boolean,
 ) {
     val animationKey: Int = metrics.hashCode()
 }
@@ -32,9 +38,14 @@ internal data class NativePHPChartsProgressWireInput(
     val contractVersion: Int,
     val metricsJson: String,
     val centerLabel: String,
+    val styleJson: String,
+    val legendJson: String,
     val themeMode: String,
     val themeJson: String,
     val preset: String,
+    val locale: String,
+    val minimumFractionDigits: Int,
+    val maximumFractionDigits: Int,
     val animated: Boolean,
     val emptyLabel: String,
     val errorLabel: String,
@@ -47,9 +58,14 @@ internal data class NativePHPChartsProgressWireInput(
                 contractVersion = props.getInt("contract_version", 0),
                 metricsJson = props.getString("metrics_json", "[]"),
                 centerLabel = props.getString("center_label", ""),
+                styleJson = props.getString("style_json", "{}"),
+                legendJson = props.getString("legend_json", "{}"),
                 themeMode = props.getString("theme_mode", "system"),
                 themeJson = props.getString("theme_json", "{}"),
                 preset = props.getString("preset", "default"),
+                locale = props.getString("locale", ""),
+                minimumFractionDigits = props.getInt("minimum_fraction_digits", -1),
+                maximumFractionDigits = props.getInt("maximum_fraction_digits", -1),
                 animated = props.getBool("animated", true),
                 emptyLabel = props.getString("empty_label", "No data"),
                 errorLabel = props.getString("error_label", "Chart unavailable"),
@@ -66,6 +82,8 @@ internal fun decodeNativePHPChartsProgress(
 ): NativePHPChartsDecodeResult<NativePHPChartsProgressConfiguration> {
     nativePHPChartsContractFailure(input.contractVersion)?.let { return it }
     val theme = nativePHPChartsTheme(input.themeJson, input.themeMode, systemDark)
+    val ring = input.styleJson.asObject()?.optJSONObject("ring")
+    val legend = input.legendJson.asObject()
     val root = runCatching { JSONArray(input.metricsJson) }.getOrNull()
         ?: return NativePHPChartsDecodeResult.Failure("malformed_progress_snapshot")
     val seen = mutableSetOf<String>()
@@ -100,11 +118,17 @@ internal fun decodeNativePHPChartsProgress(
             metrics = metrics,
             centerLabel = input.centerLabel,
             trackColor = chartColor(theme.track, Color.Gray.copy(alpha = 0.18f)),
+            backgroundColor = chartColor(theme.background, Color.Transparent),
+            ringWidth = ring?.optDouble("width", 12.0)?.toFloat()?.coerceAtLeast(1f) ?: 12f,
+            ringGap = ring?.optDouble("gap", 7.0)?.toFloat()?.coerceAtLeast(0f) ?: 7f,
+            ringCap = ring?.optString("cap", "round") ?: "round",
             animated = input.animated,
             emptyLabel = input.emptyLabel,
             errorLabel = input.errorLabel,
             accessibilityLabel = input.accessibilityLabel,
             onSelect = input.onSelect,
+            locale = input.locale,
+            legendVisible = when (legend?.opt("visible")) { is Boolean -> legend.optBoolean("visible"); else -> metrics.size > 1 },
         ),
     )
 }
@@ -124,6 +148,9 @@ internal data class NativePHPChartsContributionConfiguration(
     val weekStartsOn: Int,
     val colors: List<Color>,
     val emptyColor: Color,
+    val backgroundColor: Color,
+    val cellSize: Float?,
+    val cellGap: Float,
     val showMonthLabels: Boolean,
     val showWeekdayLabels: Boolean,
     val animated: Boolean,
@@ -131,6 +158,7 @@ internal data class NativePHPChartsContributionConfiguration(
     val errorLabel: String,
     val accessibilityLabel: String,
     val onSelect: Int,
+    val locale: String,
 ) {
     val startDate: LocalDate = endDate.minusDays((days - 1).toLong())
     val visibleValues: List<NativePHPChartsContributionValue> = values.filter { it.date in startDate..endDate }
@@ -140,6 +168,7 @@ internal data class NativePHPChartsContributionConfiguration(
 internal data class NativePHPChartsContributionWireInput(
     val contractVersion: Int,
     val valuesJson: String,
+    val styleJson: String,
     val endDate: String,
     val days: Int,
     val weekStartsOn: Int,
@@ -150,6 +179,9 @@ internal data class NativePHPChartsContributionWireInput(
     val themeMode: String,
     val themeJson: String,
     val preset: String,
+    val locale: String,
+    val minimumFractionDigits: Int,
+    val maximumFractionDigits: Int,
     val animated: Boolean,
     val emptyLabel: String,
     val errorLabel: String,
@@ -161,6 +193,7 @@ internal data class NativePHPChartsContributionWireInput(
             NativePHPChartsContributionWireInput(
                 contractVersion = props.getInt("contract_version", 0),
                 valuesJson = props.getString("values_json", "[]"),
+                styleJson = props.getString("style_json", "{}"),
                 endDate = props.getString("end_date", ""),
                 days = props.getInt("days", 365),
                 weekStartsOn = props.getInt("week_starts_on", 0),
@@ -171,6 +204,9 @@ internal data class NativePHPChartsContributionWireInput(
                 themeMode = props.getString("theme_mode", "system"),
                 themeJson = props.getString("theme_json", "{}"),
                 preset = props.getString("preset", "default"),
+                locale = props.getString("locale", ""),
+                minimumFractionDigits = props.getInt("minimum_fraction_digits", -1),
+                maximumFractionDigits = props.getInt("maximum_fraction_digits", -1),
                 animated = props.getBool("animated", true),
                 emptyLabel = props.getString("empty_label", "No data"),
                 errorLabel = props.getString("error_label", "Chart unavailable"),
@@ -210,6 +246,7 @@ internal fun decodeNativePHPChartsContribution(
         }
     }
     val theme = nativePHPChartsTheme(input.themeJson, input.themeMode, systemDark)
+    val cell = input.styleJson.asObject()?.optJSONObject("cell")
     val defaultColors = listOf("#DCFCE7", "#86EFAC", "#22C55E", "#15803D")
     val colorStrings = runCatching { JSONArray(input.colorsJson) }.getOrNull()?.let { array ->
         (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }
@@ -225,6 +262,9 @@ internal fun decodeNativePHPChartsContribution(
             weekStartsOn = input.weekStartsOn,
             colors = colors,
             emptyColor = chartColor(input.emptyColor.ifBlank { theme.track }, Color.Gray.copy(alpha = 0.16f)),
+            backgroundColor = chartColor(theme.background, Color.Transparent),
+            cellSize = cell?.takeIf { it.has("size") }?.optDouble("size")?.toFloat()?.coerceAtLeast(1f),
+            cellGap = cell?.optDouble("gap", 3.0)?.toFloat()?.coerceAtLeast(0f) ?: 3f,
             showMonthLabels = input.showMonthLabels,
             showWeekdayLabels = input.showWeekdayLabels,
             animated = input.animated,
@@ -232,6 +272,7 @@ internal fun decodeNativePHPChartsContribution(
             errorLabel = input.errorLabel,
             accessibilityLabel = input.accessibilityLabel,
             onSelect = input.onSelect,
+            locale = input.locale,
         ),
     )
 }

@@ -13,7 +13,9 @@ internal data class NativePHPChartsTheme(
     val palette: List<String> = emptyList(),
 ) {
     fun color(index: Int, fallback: Color): Color =
-        palette.getOrNull(index)?.let { chartColor(it, fallback) } ?: fallback
+        palette.takeIf { it.isNotEmpty() }?.let { colors ->
+            chartColor(colors[index.mod(colors.size)], fallback)
+        } ?: fallback
 }
 
 internal fun nativePHPChartsTheme(json: String, mode: String, systemDark: Boolean): NativePHPChartsTheme {

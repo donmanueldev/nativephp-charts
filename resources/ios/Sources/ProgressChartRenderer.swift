@@ -32,6 +32,9 @@ struct NativePHPChartsProgressWireInput: Equatable, Sendable {
     let themeMode: String
     let preset: String
     let themeJSON: String
+    let locale: String
+    let minimumFractionDigits: Int
+    let maximumFractionDigits: Int
     let errorLabel: String
     let emptyLabel: String
     let accessibilityLabel: String
@@ -47,6 +50,9 @@ struct NativePHPChartsProgressWireInput: Equatable, Sendable {
         themeMode = node.props.getString("theme_mode", default: "system")
         preset = node.props.getString("preset", default: "default")
         themeJSON = node.props.getString("theme_json", default: "{}")
+        locale = node.props.getString("locale", default: "")
+        minimumFractionDigits = node.props.getInt("minimum_fraction_digits", default: -1)
+        maximumFractionDigits = node.props.getInt("maximum_fraction_digits", default: -1)
         errorLabel = node.props.getString("error_label", default: "Chart unavailable")
         emptyLabel = node.props.getString("empty_label", default: "No data")
         accessibilityLabel = node.props.getString("a11y_label", default: "Progress chart")
@@ -60,7 +66,7 @@ struct NativePHPChartsProgressWireInput: Equatable, Sendable {
 
     private init(contractVersion: Int, metricsJSON: String) {
         self.contractVersion = contractVersion; self.metricsJSON = metricsJSON
-        centerLabel = ""; styleJSON = "{}"; legendJSON = "{}"; themeMode = "system"; preset = "default"; themeJSON = "{}"
+        centerLabel = ""; styleJSON = "{}"; legendJSON = "{}"; themeMode = "system"; preset = "default"; themeJSON = "{}"; locale = ""; minimumFractionDigits = -1; maximumFractionDigits = -1
         errorLabel = "Chart unavailable"; emptyLabel = "No data"; accessibilityLabel = "Progress chart"
         animated = true; onSelect = 0
     }
@@ -258,12 +264,22 @@ struct NativePHPChartsProgressChartRenderer: View {
         NativeElementBridge.sendTextChangeEvent(snapshot.input.onSelect, nodeId: node.id, text: json)
     }
 
-    private var accessibilitySummary: String { snapshot.metrics.map { "\($0.label): \($0.value.formatted(.percent))" }.joined(separator: ". ") }
+    private var formatter: NumberFormatter {
+        let formatter = NumberFormatter(); formatter.numberStyle = .percent
+        formatter.locale = snapshot.input.locale.isEmpty ? .current : Locale(identifier: snapshot.input.locale)
+        if snapshot.input.minimumFractionDigits >= 0 { formatter.minimumFractionDigits = snapshot.input.minimumFractionDigits }
+        if snapshot.input.maximumFractionDigits >= 0 { formatter.maximumFractionDigits = snapshot.input.maximumFractionDigits }
+        return formatter
+    }
+    private func formatted(_ value: Double) -> String { formatter.string(from: NSNumber(value: value)) ?? value.formatted(.percent) }
+    private var accessibilitySummary: String { snapshot.metrics.map { "\($0.label): \(formatted($0.value))" }.joined(separator: ". ") }
     private var accessibilityActions: [NativePHPChartsAccessibilityAction<NativePHPChartsProgressMetric>] {
         let index = snapshot.metrics.firstIndex { $0.id == selectedID }
-        let candidates = [index.flatMap { $0 > 0 ? snapshot.metrics[$0 - 1] : nil }, index.map { $0 + 1 }.flatMap { $0 < snapshot.metrics.count ? snapshot.metrics[$0] : nil } ?? (index == nil ? snapshot.metrics.first : nil)]
-        return candidates.compactMap { $0 }.enumerated().map { offset, metric in
-            .init(dataID: snapshot.animationID, direction: offset == 0 && index != nil ? .previous : .next, targetID: metric.id, label: "\(metric.label), \(metric.value.formatted(.percent))", target: metric)
+        let previous = index.flatMap { $0 > 0 ? snapshot.metrics[$0 - 1] : nil }
+        let next = index.map { $0 + 1 }.flatMap { $0 < snapshot.metrics.count ? snapshot.metrics[$0] : nil }
+            ?? (index == nil ? snapshot.metrics.first : nil)
+        return [(previous, NativePHPChartsAccessibilityAction<NativePHPChartsProgressMetric>.Direction.previous), (next, .next)].compactMap { metric, direction in
+            metric.map { .init(dataID: snapshot.animationID, direction: direction, targetID: $0.id, label: "\($0.label), \(formatted($0.value))", target: $0) }
         }
     }
 
