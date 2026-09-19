@@ -38,6 +38,9 @@ struct NativePHPChartsContributionWireInput: Equatable, Sendable {
     let themeMode: String
     let preset: String
     let themeJSON: String
+    let locale: String
+    let minimumFractionDigits: Int
+    let maximumFractionDigits: Int
     let errorLabel: String
     let emptyLabel: String
     let accessibilityLabel: String
@@ -58,6 +61,9 @@ struct NativePHPChartsContributionWireInput: Equatable, Sendable {
         themeMode = node.props.getString("theme_mode", default: "system")
         preset = node.props.getString("preset", default: "default")
         themeJSON = node.props.getString("theme_json", default: "{}")
+        locale = node.props.getString("locale", default: "")
+        minimumFractionDigits = node.props.getInt("minimum_fraction_digits", default: -1)
+        maximumFractionDigits = node.props.getInt("maximum_fraction_digits", default: -1)
         errorLabel = node.props.getString("error_label", default: "Chart unavailable")
         emptyLabel = node.props.getString("empty_label", default: "No data")
         accessibilityLabel = node.props.getString("a11y_label", default: "Contribution heatmap")
@@ -72,7 +78,7 @@ struct NativePHPChartsContributionWireInput: Equatable, Sendable {
     private init(contractVersion: Int, valuesJSON: String) {
         self.contractVersion = contractVersion; self.valuesJSON = valuesJSON
         styleJSON = "{}"; endDate = "2026-12-31"; days = 365; weekStartsOn = 0; colorsJSON = "[]"; emptyColor = ""
-        showMonthLabels = true; showWeekdayLabels = true; themeMode = "system"; preset = "default"; themeJSON = "{}"
+        showMonthLabels = true; showWeekdayLabels = true; themeMode = "system"; preset = "default"; themeJSON = "{}"; locale = ""; minimumFractionDigits = -1; maximumFractionDigits = -1
         errorLabel = "Chart unavailable"; emptyLabel = "No data"; accessibilityLabel = "Contribution heatmap"
         animated = true; onSelect = 0
     }
@@ -161,7 +167,7 @@ struct NativePHPChartsContributionStyle: Decodable {
 }
 
 enum NativePHPChartsContributionSelection {
-    static func payload(value: NativePHPChartsContributionValue) -> NativePHPChartsSelectionPayload {
+    static func payload(value: NativePHPChartsContributionValue, localizedValue: String? = nil) -> NativePHPChartsSelectionPayload {
         let label = value.label ?? value.date
         return NativePHPChartsSelectionPayload(
             chartType: "contribution_heatmap",
@@ -173,7 +179,7 @@ enum NativePHPChartsContributionSelection {
             x: .string(value.date),
             label: label,
             value: value.value,
-            localizedValue: value.value.formatted()
+            localizedValue: localizedValue ?? value.value.formatted()
         )
     }
 }
@@ -302,18 +308,26 @@ struct NativePHPChartsContributionHeatmapRenderer: View {
         guard selectedID != value?.id else { return }
         selectedID = value?.id
         guard let value, snapshot.input.onSelect > 0,
-              let json = NativePHPChartsContributionSelection.payload(value: value).json()
+              let json = NativePHPChartsContributionSelection.payload(value: value, localizedValue: formatted(value.value)).json()
         else { return }
         NativeElementBridge.sendTextChangeEvent(snapshot.input.onSelect, nodeId: node.id, text: json)
     }
 
-    private var accessibilitySummary: String { snapshot.values.prefix(31).map { "\($0.label ?? $0.date): \($0.value.formatted())" }.joined(separator: ". ") }
+    private var formatter: NumberFormatter {
+        let formatter = NumberFormatter(); formatter.numberStyle = .decimal
+        formatter.locale = snapshot.input.locale.isEmpty ? .current : Locale(identifier: snapshot.input.locale)
+        if snapshot.input.minimumFractionDigits >= 0 { formatter.minimumFractionDigits = snapshot.input.minimumFractionDigits }
+        if snapshot.input.maximumFractionDigits >= 0 { formatter.maximumFractionDigits = snapshot.input.maximumFractionDigits }
+        return formatter
+    }
+    private func formatted(_ value: Double) -> String { formatter.string(from: NSNumber(value: value)) ?? value.formatted() }
+    private var accessibilitySummary: String { snapshot.values.prefix(31).map { "\($0.label ?? $0.date): \(formatted($0.value))" }.joined(separator: ". ") }
     private var accessibilityActions: [NativePHPChartsAccessibilityAction<NativePHPChartsContributionValue>] {
         let index = snapshot.values.firstIndex { $0.id == selectedID }
         let previous = index.flatMap { $0 > 0 ? snapshot.values[$0 - 1] : nil }
         let next = index.map { $0 + 1 }.flatMap { $0 < snapshot.values.count ? snapshot.values[$0] : nil } ?? (index == nil ? snapshot.values.first : nil)
         return [(previous, NativePHPChartsAccessibilityAction<NativePHPChartsContributionValue>.Direction.previous), (next, .next)].compactMap { value, direction in
-            value.map { .init(dataID: snapshot.animationID, direction: direction, targetID: $0.id, label: "\($0.label ?? $0.date), \($0.value.formatted())", target: $0) }
+            value.map { .init(dataID: snapshot.animationID, direction: direction, targetID: $0.id, label: "\($0.label ?? $0.date), \(formatted($0.value))", target: $0) }
         }
     }
 

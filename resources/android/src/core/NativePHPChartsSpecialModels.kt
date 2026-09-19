@@ -29,6 +29,8 @@ internal data class NativePHPChartsProgressConfiguration(
     val accessibilityLabel: String,
     val onSelect: Int,
     val locale: String,
+    val minimumFractionDigits: Int,
+    val maximumFractionDigits: Int,
     val legendVisible: Boolean,
 ) {
     val animationKey: Int = metrics.hashCode()
@@ -128,6 +130,8 @@ internal fun decodeNativePHPChartsProgress(
             accessibilityLabel = input.accessibilityLabel,
             onSelect = input.onSelect,
             locale = input.locale,
+            minimumFractionDigits = input.minimumFractionDigits,
+            maximumFractionDigits = input.maximumFractionDigits,
             legendVisible = when (legend?.opt("visible")) { is Boolean -> legend.optBoolean("visible"); else -> metrics.size > 1 },
         ),
     )
@@ -159,6 +163,8 @@ internal data class NativePHPChartsContributionConfiguration(
     val accessibilityLabel: String,
     val onSelect: Int,
     val locale: String,
+    val minimumFractionDigits: Int,
+    val maximumFractionDigits: Int,
 ) {
     val startDate: LocalDate = endDate.minusDays((days - 1).toLong())
     val visibleValues: List<NativePHPChartsContributionValue> = values.filter { it.date in startDate..endDate }
@@ -273,6 +279,8 @@ internal fun decodeNativePHPChartsContribution(
             accessibilityLabel = input.accessibilityLabel,
             onSelect = input.onSelect,
             locale = input.locale,
+            minimumFractionDigits = input.minimumFractionDigits,
+            maximumFractionDigits = input.maximumFractionDigits,
         ),
     )
 }

@@ -130,7 +130,12 @@ private fun NativePHPChartsContributionPlot(
         nativePHPChartsContributionLayout(configuration, canvasSize, density.density)
     }
     val selected = configuration.visibleValues.firstOrNull { it.id == selectedId }
-    val formatter = remember(configuration.locale) { NumberFormat.getNumberInstance(configuration.locale.takeIf(String::isNotBlank)?.let(Locale::forLanguageTag) ?: Locale.getDefault()) }
+    val formatter = remember(configuration.locale, configuration.minimumFractionDigits, configuration.maximumFractionDigits) {
+        NumberFormat.getNumberInstance(configuration.locale.takeIf(String::isNotBlank)?.let(Locale::forLanguageTag) ?: Locale.getDefault()).apply {
+            if (configuration.minimumFractionDigits >= 0) minimumFractionDigits = configuration.minimumFractionDigits
+            if (configuration.maximumFractionDigits >= 0) maximumFractionDigits = configuration.maximumFractionDigits
+        }
+    }
     val labelPaint = remember(density) {
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.GRAY
