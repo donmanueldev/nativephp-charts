@@ -4,6 +4,14 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-01
+
+### Fixed
+
+- Exposed the shared Android JSON decoder extension.
+
+[1.2.1]: https://github.com/donmanueldev/nativephp-charts/compare/v1.2.0...v1.2.1
+
 ## [1.2.0] - 2026-09-18
 
 ### Added
@@ -87,7 +95,7 @@ All notable changes to NativePHP Charts are documented here. The project follows
 
 - Initial native line chart component for NativePHP Mobile.
 
-[Unreleased]: https://github.com/donmanueldev/nativephp-charts/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/donmanueldev/nativephp-charts/compare/v1.2.1...HEAD
 [1.2.0]: https://github.com/donmanueldev/nativephp-charts/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/donmanueldev/nativephp-charts/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/donmanueldev/nativephp-charts/compare/v0.2.0...v1.0.0
