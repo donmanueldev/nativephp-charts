@@ -311,7 +311,7 @@ internal object NativePHPChartsDecoder {
     )
 }
 
-private fun String.asObject(): JSONObject = try {
+internal fun String.asObject(): JSONObject = try {
     JSONObject(this)
 } catch (_: Exception) {
     JSONObject()
