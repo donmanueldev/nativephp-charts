@@ -182,6 +182,42 @@ struct NativePHPChartsBarGeometry: Equatable {
     }
 }
 
+/// The one sign convention between logical bar categories and Swift Charts' physical y axis.
+///
+/// Swift Charts draws larger y values higher, so horizontal bars plot category `c` at
+/// physical y `-c`: the first category sits on top and source order reads top to bottom.
+/// Logical model code (geometry, viewport domains, selection candidates) stays positive;
+/// only values handed to, or read back from, the physical y scale pass through here. Marks,
+/// the y-scale domain, y-axis ticks, the selection anchor, and hit testing all use it.
+///
+/// Screen y grows downward like logical category order, so vertical gestures on horizontal
+/// bars map to the logical viewport without reversal.
+enum NativePHPChartsHorizontalBarAxis {
+    static func physicalY(category: Double) -> Double {
+        -category
+    }
+
+    static func category(physicalY: Double) -> Double {
+        -physicalY
+    }
+
+    static func physicalYDomain(categories: ClosedRange<Double>) -> ClosedRange<Double> {
+        physicalY(category: categories.upperBound)...physicalY(category: categories.lowerBound)
+    }
+
+    static func categories(physicalY lower: Double, _ upper: Double) -> ClosedRange<Double> {
+        let first = category(physicalY: lower)
+        let second = category(physicalY: upper)
+        return min(first, second)...max(first, second)
+    }
+
+    /// Physical Swift Charts coordinates of a horizontal bar's anchor (value on x, category on y).
+    static func physicalAnchor(_ geometry: NativePHPChartsBarGeometry) -> NativePHPChartsPlottedPosition {
+        let anchor = geometry.anchor
+        return NativePHPChartsPlottedPosition(x: anchor.x, y: physicalY(category: anchor.y))
+    }
+}
+
 /// Precomputes stack segments by logical x, with separate accumulators around zero.
 struct NativePHPChartsStackedGeometry {
     let ranges: [ClosedRange<Double>]

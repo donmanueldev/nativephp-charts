@@ -122,9 +122,13 @@ internal class NativePHPChartsFormatting(private val configuration: NativePHPCha
         return xDateFormatter?.format(Date.from(instant))
     }
 
+    /**
+     * PHP emits RFC 3339 datetimes with an explicit numeric offset, so the offset
+     * parser (which also accepts `Z`) runs first; [Instant.parse] is kept as a fallback.
+     */
     private fun parseInstant(raw: String?): Instant? = raw?.let { value ->
-        runCatching { Instant.parse(value) }
-            .getOrElse { runCatching { OffsetDateTime.parse(value).toInstant() }.getOrNull() }
+        runCatching { OffsetDateTime.parse(value).toInstant() }
+            .getOrElse { runCatching { Instant.parse(value) }.getOrNull() }
     }
 }
 

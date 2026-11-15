@@ -41,6 +41,7 @@ final class WirePayloadStore
         $path = $directory.'/series-'.hash('sha256', $json).'.json';
         if (! is_file($path)) {
             self::writeAtomically($path, $json, $chartName);
+            self::removeAbandonedWrites($directory);
         } else {
             @touch($path);
         }
@@ -65,20 +66,28 @@ final class WirePayloadStore
 
     private static function ensureDirectoryExists(string $directory, string $chartName): void
     {
-        if (is_dir($directory)) {
-            return;
-        }
-
-        if (! @mkdir($directory, 0700, true) && ! is_dir($directory)) {
+        if (! is_dir($directory) && ! @mkdir($directory, 0700, true) && ! is_dir($directory)) {
             throw new InvalidArgumentException("The {$chartName} series payload could not be stored safely.");
         }
     }
 
-    /** Write a complete owner-readable payload before atomically exposing its content-addressed path. */
+    /**
+     * Write a complete owner-readable payload before atomically exposing its content-addressed path.
+     *
+     * `tempnam()` silently falls back to the system temp directory when the target is not
+     * writable, so a temporary file created anywhere else is discarded and rejected.
+     */
     private static function writeAtomically(string $path, string $json, string $chartName): void
     {
-        $temporaryPath = tempnam(dirname($path), 'writing-');
+        $directory = dirname($path);
+        $temporaryPath = is_writable($directory) ? @tempnam($directory, 'writing-') : false;
         if ($temporaryPath === false) {
+            throw new InvalidArgumentException("The {$chartName} series payload could not be stored safely.");
+        }
+
+        if (realpath(dirname($temporaryPath)) !== realpath($directory)) {
+            @unlink($temporaryPath);
+
             throw new InvalidArgumentException("The {$chartName} series payload could not be stored safely.");
         }
 
@@ -94,9 +103,25 @@ final class WirePayloadStore
         }
     }
 
+    /**
+     * Remove temporary files left behind by an interrupted write.
+     *
+     * Only files older than the retention window are removed, so a write still in progress is kept.
+     */
+    private static function removeAbandonedWrites(string $directory): void
+    {
+        $cutoff = time() - self::MINIMUM_RETENTION_SECONDS;
+        foreach (glob($directory.'/writing-*') ?: [] as $path) {
+            if (@filemtime($path) < $cutoff) {
+                @unlink($path);
+            }
+        }
+    }
+
     /** Retain the newest bounded set of cached payloads without deleting the active file. */
     private static function removeOldPayloads(string $directory, string $currentPath): void
     {
+        $cutoff = time() - self::MINIMUM_RETENTION_SECONDS;
         $paths = glob($directory.'/series-*.json') ?: [];
         if (count($paths) <= self::RETAINED_PAYLOADS) {
             return;
@@ -104,7 +129,6 @@ final class WirePayloadStore
 
         usort($paths, static fn (string $left, string $right): int => filemtime($right) <=> filemtime($left));
 
-        $cutoff = time() - self::MINIMUM_RETENTION_SECONDS;
         foreach (array_slice($paths, self::RETAINED_PAYLOADS) as $path) {
             if ($path !== $currentPath && filemtime($path) < $cutoff) {
                 @unlink($path);

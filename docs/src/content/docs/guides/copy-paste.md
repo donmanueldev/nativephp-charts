@@ -1,7 +1,7 @@
 ---
-title: Copy-paste examples
-description: Complete Blade and NativeComponent examples for common chart screens.
-sidebar: { order: 2 }
+title: Copy-paste NativePHP chart examples
+description: "Copy-ready NativePHP Mobile screens with Blade views and NativeComponent classes for revenue trends, store comparisons, goals, and habit heatmaps."
+sidebar: { order: 2, label: "Copy-paste examples" }
 ---
 
 Each example has the data owned by the `NativeComponent`, the chart in Blade, and a concrete interaction outcome. Replace the query and labels, but preserve the data shape and stable IDs.

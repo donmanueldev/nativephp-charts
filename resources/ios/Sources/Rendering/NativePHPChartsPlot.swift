@@ -5,7 +5,8 @@ import SwiftUI
 ///
 /// `viewportDomain` always represents logical x. Vertical Cartesian charts map it to the
 /// physical x scale; horizontal bars map it to the physical y scale while the value domain
-/// moves to physical x. Marks and the overlay share the snapshot geometry for parity.
+/// moves to physical x, mirrored through `NativePHPChartsHorizontalBarAxis` so categories
+/// read top to bottom. Marks and the overlay share the snapshot geometry for parity.
 struct NativePHPChartsPlot: View {
     let nodeID: Int
     let kind: NativePHPChartsKind
@@ -27,6 +28,8 @@ struct NativePHPChartsPlot: View {
         self.kind = kind
         self.snapshot = snapshot
         _selectedPointID = selectedPointID
+        // A non-animated chart is fully revealed on its first frame instead of one task later.
+        _revealProgress = State(initialValue: snapshot.configuration.animated ? 0 : 1)
         _viewportDomain = State(initialValue: Self.configuredViewportDomain(snapshot: snapshot))
     }
 
@@ -48,7 +51,7 @@ struct NativePHPChartsPlot: View {
 
             if let xBaseline, xAxisVisible, snapshot.domain.x.contains(xBaseline) {
                 if isHorizontalBar {
-                    RuleMark(y: .value("X baseline", xBaseline))
+                    RuleMark(y: .value("X baseline", NativePHPChartsHorizontalBarAxis.physicalY(category: xBaseline)))
                         .foregroundStyle(axisColor)
                         .lineStyle(StrokeStyle(lineWidth: snapshot.configuration.style.grid.width ?? 1))
                 } else {
@@ -66,7 +69,7 @@ struct NativePHPChartsPlot: View {
             )
         }
         .chartXScale(domain: horizontalDomain ?? viewportDomain ?? categoryDomain)
-        .chartYScale(domain: isHorizontalBar ? (viewportDomain ?? categoryDomain) : snapshot.domain.y)
+        .chartYScale(domain: physicalYDomain)
         .chartLegend(.hidden)
         .chartPlotStyle { plotArea in
             plotArea.clipped()
@@ -144,6 +147,12 @@ struct NativePHPChartsPlot: View {
             barMode: snapshot.configuration.barMode,
             fallback: viewportDomain ?? snapshot.domain.x
         )
+    }
+
+    /// Horizontal bars put the mirrored logical category domain on the physical y scale.
+    private var physicalYDomain: ClosedRange<Double> {
+        guard isHorizontalBar else { return snapshot.domain.y }
+        return NativePHPChartsHorizontalBarAxis.physicalYDomain(categories: viewportDomain ?? categoryDomain)
     }
 
     private var horizontalDomain: ClosedRange<Double>? {
@@ -283,11 +292,17 @@ struct NativePHPChartsPlot: View {
     @AxisContentBuilder
     private var yAxis: some AxisContent {
         if isHorizontalBar {
-            AxisMarks(values: snapshot.data.axisValues(desiredCount: xLabelCount)) { value in
+            AxisMarks(
+                values: snapshot.data.axisValues(desiredCount: xLabelCount)
+                    .map { NativePHPChartsHorizontalBarAxis.physicalY(category: $0) }
+            ) { value in
                 AxisTick().foregroundStyle(xAxisVisible ? axisColor : .clear)
                 AxisValueLabel {
-                    if let x = value.as(Double.self) {
-                        Text(snapshot.formatter.x(x, data: snapshot.data))
+                    if let physicalY = value.as(Double.self) {
+                        Text(snapshot.formatter.x(
+                            NativePHPChartsHorizontalBarAxis.category(physicalY: physicalY),
+                            data: snapshot.data
+                        ))
                             .font(snapshot.configuration.style.axisFont(scale: spatialAxisFontScale))
                     }
                 }

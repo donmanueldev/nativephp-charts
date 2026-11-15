@@ -1,7 +1,7 @@
 ---
-title: Troubleshooting
-description: Diagnose registration, validation, rendering, payload, and interaction problems.
-sidebar: { order: 6 }
+title: Troubleshooting NativePHP Charts
+description: "Fix common NativePHP Charts problems: unregistered plugins, Chart unavailable errors, empty charts, shifting selections, blocked scrolling, theme colors."
+sidebar: { order: 6, label: "Troubleshooting" }
 ---
 
 ## The component is missing

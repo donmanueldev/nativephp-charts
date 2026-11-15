@@ -154,7 +154,7 @@ struct NativePHPChartsRadarSnapshot {
     let series: [NativePHPChartsRadarSeries]
     let style: NativePHPChartsStyle
     let legend: NativePHPChartsLegendConfiguration
-    let formatter: NativePHPChartsRadarFormatter
+    let formatter: NativePHPChartsRadialFormatter
     let animated: Bool
     let emptyLabel: String
     let accessibilityLabel: String
@@ -189,7 +189,7 @@ struct NativePHPChartsRadarSnapshot {
         series = decodedSeries
         style = decodedStyle
         legend = NativePHPChartsLegendConfiguration.decode(input.legendJSON)
-        formatter = NativePHPChartsRadarFormatter(input: input)
+        formatter = NativePHPChartsRadialFormatter(input: input)
         animated = input.animated
         emptyLabel = input.emptyLabel
         accessibilityLabel = input.accessibilityLabel
@@ -242,25 +242,5 @@ struct NativePHPChartsRadarSnapshot {
                 value.axis == axis.id && value.value.isFinite && value.value >= 0 && value.value <= axis.maximum
             }
         }
-    }
-}
-
-final class NativePHPChartsRadarFormatter {
-    private let numberFormatter: NumberFormatter
-
-    init(input: NativePHPChartsRadarWireInput) {
-        numberFormatter = NativePHPChartsFormatter.makeNumberFormatter(
-            locale: input.locale.isEmpty ? .current : Locale(identifier: input.locale),
-            configuration: NativePHPChartsNumberFormat(
-                style: input.valueFormat,
-                currencyCode: input.currencyCode.isEmpty ? nil : input.currencyCode,
-                minimumFractionDigits: input.minimumFractionDigits >= 0 ? input.minimumFractionDigits : nil,
-                maximumFractionDigits: input.maximumFractionDigits >= 0 ? input.maximumFractionDigits : nil
-            )
-        )
-    }
-
-    func value(_ value: Double) -> String {
-        numberFormatter.string(from: value as NSNumber) ?? String(value)
     }
 }

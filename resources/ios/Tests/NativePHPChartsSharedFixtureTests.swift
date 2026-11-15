@@ -44,7 +44,13 @@ struct NativePHPChartsSharedFixtureTests {
             sourceIndex: try #require(input["index"] as? Int)
         )
 
-        try expectJSON(NativePHPChartsProgressSelection.payload(metric: metric).json(), equals: fixture["expected"])
+        try expectJSON(
+            NativePHPChartsProgressSelection.payload(
+                metric: metric,
+                localizedValue: try #require(input["localized_value"] as? String)
+            ).json(),
+            equals: fixture["expected"]
+        )
     }
 
     @Test("Swift heatmap selection equals the shared fixture")

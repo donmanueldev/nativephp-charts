@@ -1,8 +1,7 @@
 ---
-title: Installation
-description: Install the plugin and render your first chart in a NativePHP Mobile screen.
-sidebar:
-  order: 2
+title: Install NativePHP Charts
+description: "Install NativePHP Charts with Composer, register the plugin in NativePHP Mobile, and render your first native chart in a Blade screen on iOS and Android."
+sidebar: { order: 2 }
 ---
 
 ## Requirements

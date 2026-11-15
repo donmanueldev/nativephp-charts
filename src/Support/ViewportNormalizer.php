@@ -2,7 +2,6 @@
 
 namespace Donmanueldev\NativephpCharts\Support;
 
-use DateTimeImmutable;
 use InvalidArgumentException;
 
 /**
@@ -19,12 +18,17 @@ final class ViewportNormalizer
      * Bounds are all-or-nothing. Enabling the viewport additionally requires them and
      * guarantees `minimum < maximum` in the selected numeric, date, or datetime domain.
      *
+     * `$deferTypedX` exists only for fluent configuration made before the x axis is
+     * configured: flags, keys, pairing, and the span value are still validated, but the
+     * category rejection and typed bound checks are skipped. The caller must normalize
+     * again with the final x type before encoding the wire payload.
+     *
      * @param  array<string, mixed>  $viewport
      * @return array<string, bool|float|int|string>
      *
      * @throws InvalidArgumentException When keys, flags, bounds, or span are incompatible.
      */
-    public static function normalize(array $viewport, string $xType, string $chartName): array
+    public static function normalize(array $viewport, string $xType, string $chartName, bool $deferTypedX = false): array
     {
         self::rejectUnknownKeys($viewport, ['enabled', 'minimum', 'maximum', 'pan', 'zoom', 'minimum_span', 'minimumSpan'], $chartName);
 
@@ -41,7 +45,7 @@ final class ViewportNormalizer
         $hasMinimum = array_key_exists('minimum', $viewport);
         $hasMaximum = array_key_exists('maximum', $viewport);
 
-        if ($enabled && $xType === 'category') {
+        if ($enabled && $xType === 'category' && ! $deferTypedX) {
             throw new InvalidArgumentException("The {$chartName} category x axis does not support a viewport.");
         }
 
@@ -53,10 +57,14 @@ final class ViewportNormalizer
             throw new InvalidArgumentException("The {$chartName} viewport minimum and maximum must be provided together.");
         }
 
-        if ($hasMinimum) {
+        $validatesBounds = $hasMinimum && ! $deferTypedX;
+        if ($hasMinimum && $deferTypedX) {
+            $normalized['minimum'] = $viewport['minimum'];
+            $normalized['maximum'] = $viewport['maximum'];
+        } elseif ($validatesBounds) {
             $minimum = ChartDataNormalizer::normalizeTypedX($viewport['minimum'], $xType, $chartName, 'viewport minimum');
             $maximum = ChartDataNormalizer::normalizeTypedX($viewport['maximum'], $xType, $chartName, 'viewport maximum');
-            if (self::comparable($minimum, $xType) >= self::comparable($maximum, $xType)) {
+            if (TypedXValue::compare($minimum, $maximum, $xType) >= 0) {
                 throw new InvalidArgumentException("The {$chartName} viewport minimum must be less than maximum.");
             }
 
@@ -70,24 +78,13 @@ final class ViewportNormalizer
                 throw new InvalidArgumentException("The {$chartName} viewport minimum span must be greater than zero.");
             }
             ChartDataNormalizer::assertExactNumber($minimumSpan, $chartName, 'viewport minimum span');
-            if ($hasMinimum && (float) $minimumSpan > self::comparable($maximum, $xType) - self::comparable($minimum, $xType)) {
+            if ($validatesBounds && (float) $minimumSpan > TypedXValue::position($maximum, $xType) - TypedXValue::position($minimum, $xType)) {
                 throw new InvalidArgumentException("The {$chartName} viewport minimum span must not exceed the viewport range.");
             }
             $normalized['minimum_span'] = (float) $minimumSpan;
         }
 
         return $normalized;
-    }
-
-    /** Convert typed wire bounds to a scalar solely for ordering and span validation. */
-    private static function comparable(float|int|string $value, string $xType): float
-    {
-        return match ($xType) {
-            'number' => (float) $value,
-            'date' => (float) strtotime((string) $value),
-            'datetime' => (float) (new DateTimeImmutable((string) $value))->format('U.u'),
-            default => 0,
-        };
     }
 
     private static function rejectUnknownKeys(array $viewport, array $allowed, string $chartName): void

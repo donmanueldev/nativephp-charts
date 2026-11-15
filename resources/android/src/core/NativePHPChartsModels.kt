@@ -140,7 +140,6 @@ internal data class NativePHPChartsStyle(
     val candlestickWickWidth: Float = 1.5f,
     val axisVisible: Boolean? = null,
     val axisColor: String? = null,
-    val axisLabelCount: Int? = null,
     val axisFont: String? = null,
     val axisFontSize: Float = 10f,
     val axisLabelColor: String? = null,

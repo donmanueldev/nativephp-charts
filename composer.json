@@ -1,6 +1,6 @@
 {
     "name": "donmanueldev/nativephp-charts",
-    "description": "Native charts for NativePHP Mobile, rendered with Swift Charts and Jetpack Compose Canvas.",
+    "description": "Native iOS and Android charts for NativePHP Mobile and Laravel: line, bar, area, scatter, pie, donut, candlestick, radar, progress and heatmap, rendered with Swift Charts and Jetpack Compose.",
     "type": "nativephp-ui-plugin",
     "license": "MIT",
     "authors": [
@@ -11,19 +11,36 @@
     ],
     "keywords": [
         "nativephp",
-        "mobile",
+        "nativephp-mobile",
+        "nativephp-plugin",
+        "laravel",
+        "laravel-package",
         "charts",
+        "chart",
+        "mobile-charts",
+        "native-charts",
+        "swift-charts",
         "swiftui",
-        "jetpack-compose"
+        "jetpack-compose",
+        "android",
+        "ios",
+        "line-chart",
+        "bar-chart",
+        "pie-chart",
+        "candlestick",
+        "radar-chart",
+        "heatmap"
     ],
     "homepage": "https://donmanueldev.github.io/nativephp-charts/",
     "support": {
         "issues": "https://github.com/donmanueldev/nativephp-charts/issues",
-        "source": "https://github.com/donmanueldev/nativephp-charts"
+        "source": "https://github.com/donmanueldev/nativephp-charts",
+        "docs": "https://donmanueldev.github.io/nativephp-charts/"
     },
     "require": {
         "php": "^8.4",
-        "nativephp/mobile": "^4.0"
+        "nativephp/mobile": "^4.0",
+        "nativephp/mobile-ui": "^0.4"
     },
     "autoload": {
         "psr-4": {

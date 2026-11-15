@@ -1,7 +1,7 @@
 ---
-title: Themes and presets
-description: Choose light or dark appearance, use built-in palettes, and define application presets.
-sidebar: { order: 1 }
+title: Chart themes, dark mode, and presets
+description: "Control light and dark appearance of NativePHP charts, use the default, spectrum, or contrast presets, and register app presets with your own palette."
+sidebar: { order: 1, label: "Themes and presets" }
 ---
 
 Every chart accepts a `theme` and a `preset`:

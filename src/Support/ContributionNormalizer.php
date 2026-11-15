@@ -45,7 +45,7 @@ final class ContributionNormalizer
             if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value) || $value < 0) {
                 throw new InvalidArgumentException("The contribution heatmap value at index {$index} must be a non-negative finite number.");
             }
-            if (is_int($value) && $value > 9_007_199_254_740_991) {
+            if (is_int($value) && $value > ChartDataNormalizer::MAX_EXACT_INTEGER) {
                 throw new InvalidArgumentException("The contribution heatmap value at index {$index} must be within the exact cross-platform integer range.");
             }
 

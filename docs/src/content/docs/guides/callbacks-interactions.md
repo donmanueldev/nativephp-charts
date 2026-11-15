@@ -1,7 +1,7 @@
 ---
-title: Callbacks and interactions
-description: Handle chart selections in a NativeComponent and configure Cartesian chart gestures.
-sidebar: { order: 2 }
+title: Chart selection callbacks and interactions
+description: "Handle chart point selection in a NativePHP NativeComponent with PointSelection, and configure tap or scrub interaction, crosshairs, and tooltips."
+sidebar: { order: 2, label: "Callbacks and interactions" }
 ---
 
 Bind `_select` to a public method on the `NativeComponent` that renders the chart. The method receives the selection as a JSON string. Native selection and tooltip updates do not need to wait for PHP.

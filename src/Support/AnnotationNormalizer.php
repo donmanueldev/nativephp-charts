@@ -2,7 +2,6 @@
 
 namespace Donmanueldev\NativephpCharts\Support;
 
-use DateTimeImmutable;
 use InvalidArgumentException;
 
 /**
@@ -23,12 +22,16 @@ final class AnnotationNormalizer
      * Line annotations contain `value` and `width`; bands contain `from`, `to`, and
      * `opacity`. IDs are unique and non-category ranges must be strictly increasing.
      *
+     * `$deferTypedX` exists only for fluent configuration made before the x axis is
+     * configured: x-axis values are kept as given while every other rule is enforced.
+     * The caller must normalize again with the final x type before wire encoding.
+     *
      * @param  array<int, mixed>  $annotations
      * @return list<array<string, float|int|string>>
      *
      * @throws InvalidArgumentException When identity, axis values, ranges, or styling are invalid.
      */
-    public static function normalize(array $annotations, string $xType, string $chartName): array
+    public static function normalize(array $annotations, string $xType, string $chartName, bool $deferTypedX = false): array
     {
         if (! array_is_list($annotations)) {
             throw new InvalidArgumentException("The {$chartName} annotations must be an ordered list.");
@@ -86,18 +89,18 @@ final class AnnotationNormalizer
                     throw new InvalidArgumentException("The {$chartName} line annotation '{$id}' requires a value.");
                 }
 
-                $item['value'] = self::axisValue($annotation['value'], $axis, $xType, $chartName, $id);
+                $item['value'] = self::axisValue($annotation['value'], $axis, $xType, $chartName, $id, $deferTypedX);
                 $item['width'] = self::number($annotation['width'] ?? 1, $chartName, "annotation '{$id}' width", 0.000_001, 16);
             } else {
                 if (! array_key_exists('from', $annotation) || ! array_key_exists('to', $annotation)) {
                     throw new InvalidArgumentException("The {$chartName} band annotation '{$id}' requires from and to values.");
                 }
 
-                $from = self::axisValue($annotation['from'], $axis, $xType, $chartName, $id);
-                $to = self::axisValue($annotation['to'], $axis, $xType, $chartName, $id);
+                $from = self::axisValue($annotation['from'], $axis, $xType, $chartName, $id, $deferTypedX);
+                $to = self::axisValue($annotation['to'], $axis, $xType, $chartName, $id, $deferTypedX);
                 if ($axis !== 'x' || $xType !== 'category') {
                     $comparisonType = $axis === 'x' ? $xType : 'number';
-                    if (self::compare($from, $to, $comparisonType) >= 0) {
+                    if (TypedXValue::compare($from, $to, $comparisonType) >= 0) {
                         throw new InvalidArgumentException("The {$chartName} band annotation '{$id}' from must be less than to.");
                     }
                 }
@@ -126,9 +129,14 @@ final class AnnotationNormalizer
         string $xType,
         string $chartName,
         string $id,
-    ): float|int|string {
+        bool $deferTypedX,
+    ): mixed {
         if ($axis === 'y') {
             return self::number($value, $chartName, "annotation '{$id}' value");
+        }
+
+        if ($deferTypedX) {
+            return $value;
         }
 
         if ($xType === 'category') {
@@ -161,20 +169,6 @@ final class AnnotationNormalizer
         ChartDataNormalizer::assertExactNumber($value, $chartName, $property);
 
         return $value;
-    }
-
-    /** Compare canonical number, date, datetime, or category values without changing them. */
-    private static function compare(float|int|string $left, float|int|string $right, string $type): int
-    {
-        if ($type === 'number') {
-            return (float) $left <=> (float) $right;
-        }
-
-        if ($type === 'date' || $type === 'category') {
-            return $left <=> $right;
-        }
-
-        return new DateTimeImmutable((string) $left) <=> new DateTimeImmutable((string) $right);
     }
 
     /**

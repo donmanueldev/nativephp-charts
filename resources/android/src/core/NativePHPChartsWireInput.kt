@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
  * render-safe fallback decisions belong to [NativePHPChartsDecoder], while this
  * boundary is responsible only for NativePHP prop defaults, callback ids, and
  * resolving the optional file-backed series transport. [contractVersion] is
- * retained as wire metadata even though the current decoder consumes one shape.
+ * checked by [NativePHPChartsDecoder], which rejects unsupported versions.
  */
 internal data class NativePHPChartsWireInput(
     val contractVersion: Int,

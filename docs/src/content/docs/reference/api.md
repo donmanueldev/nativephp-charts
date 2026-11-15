@@ -1,6 +1,6 @@
 ---
-title: API reference
-description: Blade attributes, data requirements, defaults, and chart-specific options.
+title: NativePHP Charts API reference
+description: "Blade attribute reference for NativePHP Charts: common props, Cartesian axes and series, radial and specialized data, style sections, and validation."
 ---
 
 Use self-closing `<native:… />` elements inside a NativePHP Mobile view. Bind PHP arrays, numbers, and booleans with `:`; pass literal strings without it.

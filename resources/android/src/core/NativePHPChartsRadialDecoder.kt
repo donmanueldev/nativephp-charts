@@ -5,11 +5,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Fail-soft decoder for the pie/donut wire contract.
+ * Decoder for the pie/donut wire contract.
  *
- * Invalid JSON yields an empty chart, invalid or negative segments are skipped,
- * visual bounds are clamped, and pie always forces a zero inner radius. Donut's
- * public radius constraint is enforced again here to keep native rendering safe.
+ * An unsupported contract version, malformed segments JSON, or any invalid or
+ * negative segment fails the whole snapshot (unavailable state). Malformed style
+ * or legend roots fall back to defaults, visual bounds are clamped, and pie always
+ * forces a zero inner radius. Donut's public radius constraint is enforced again
+ * here to keep native rendering safe.
  */
 internal object NativePHPChartsRadialDecoder {
     private val fallbackColors = listOf(

@@ -1,6 +1,6 @@
 ---
-title: Blade and PHP equivalence
-description: Map public Blade attributes to the fluent PHP API.
+title: Blade attributes and fluent PHP API
+description: "Map common NativePHP Charts Blade attributes to their fluent PHP methods so you can build the same native chart from a Blade view or a PHP element class."
 sidebar: { order: 2 }
 ---
 

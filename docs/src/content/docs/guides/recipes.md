@@ -1,7 +1,7 @@
 ---
-title: Application recipes
-description: Build product screens with validated chart data, Blade, and selection state.
-sidebar: { order: 3 }
+title: NativePHP chart recipes for real screens
+description: "Recipes for NativePHP Mobile charts: sales dashboards, budgets, habit tracking, service health, and market prices with validated data and selection."
+sidebar: { order: 3, label: "Application recipes" }
 ---
 
 These recipes show the boundary between application data and the chart contract. Query and authorize data in your component or service, map it to the required shape, then bind the resulting array to Blade.

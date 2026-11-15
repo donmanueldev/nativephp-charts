@@ -195,6 +195,7 @@ abstract class ChartElement extends Element
         $this->applyStringAttributes($attrs, ['empty-label', 'emptyLabel'], 'emptyLabel');
         $this->applyStringAttributes($attrs, ['error-label', 'errorLabel'], 'errorLabel');
         $this->applyStringAttributes($attrs, ['a11y-label', 'a11yLabel'], 'a11yLabel');
+        $this->applyStringAttributes($attrs, ['a11y-hint', 'a11yHint'], 'a11yHint');
         $this->applyStringAttributes($attrs, ['theme'], 'theme');
         $this->applyStringAttributes($attrs, ['preset'], 'preset');
         $this->applyStringAttributes($attrs, ['locale'], 'locale');

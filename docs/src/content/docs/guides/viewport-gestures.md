@@ -1,7 +1,7 @@
 ---
-title: Viewport and gestures
-description: Configure x-axis pan and zoom, range limits, and settled viewport callbacks.
-sidebar: { order: 3 }
+title: Chart pan, zoom, and viewport gestures
+description: "Enable x-axis pan and zoom on NativePHP Cartesian charts, set the initial range and minimum span, and handle settled changes with ViewportChange callbacks."
+sidebar: { order: 3, label: "Viewport and gestures" }
 ---
 
 Line, area, bar, scatter, and candlestick charts support an initial viewport on `number`, `date`, or `datetime` x axes. Category axes do not support viewports.

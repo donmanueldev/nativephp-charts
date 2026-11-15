@@ -17,6 +17,9 @@ import kotlin.math.min
  * returned geometry rather than independently repeating these transforms.
  */
 internal object NativePHPChartsLayoutEngine {
+    /** Most explicit-interval ticks drawn; PHP only requires `interval > 0`. */
+    private const val MAXIMUM_INTERVAL_TICKS = 100
+
     /**
      * Measures plot insets, domains, marks, ticks, annotations, and the hit index.
      *
@@ -639,7 +642,9 @@ internal object NativePHPChartsLayoutEngine {
         val count = kotlin.math.floor((domain.maximum - first) / interval).toInt() + 1
         if (count <= 0) return emptyList()
 
-        return (0 until min(count, 1_000)).map { first + (it * interval) }
+        // Thin an over-dense interval instead of truncating it, so ticks still span the domain.
+        val stride = ((count.toLong() + MAXIMUM_INTERVAL_TICKS - 1) / MAXIMUM_INTERVAL_TICKS).toInt()
+        return (0 until count step stride).map { first + (it * interval) }
     }
 
     private fun xFor(value: Double, domain: NativePHPChartsDomain, plot: Rect): Float {
@@ -676,6 +681,14 @@ internal object NativePHPChartsLayoutEngine {
         return (0 until count).map { index -> (index * (size - 1).toFloat() / (count - 1)).toInt() }.distinct()
     }
 }
+
+/**
+ * Clamps [value] into [minimum]..[maximum]. When rounding or an item wider than
+ * its container makes the range empty or inverted, the item is centred instead
+ * of letting `coerceIn` throw during a draw pass.
+ */
+internal fun nativePHPChartsClampOrCenter(value: Float, minimum: Float, maximum: Float): Float =
+    if (minimum <= maximum) value.coerceIn(minimum, maximum) else (minimum + maximum) / 2f
 
 private fun nativePHPChartsEnsureSortedNumericPoints(
     points: List<Pair<Double, NativePHPChartsPoint>>,

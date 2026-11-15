@@ -1,7 +1,7 @@
 ---
-title: Pie chart
-description: Show a small part-to-whole snapshot.
-sidebar: { order: 5 }
+title: Pie chart for NativePHP Mobile
+description: "Show a small part-to-whole breakdown with a native pie chart in NativePHP Mobile: ordered segments, preset colors, segment styling, and tap selection."
+sidebar: { order: 5, label: "Pie chart" }
 ---
 
 import { Code } from "@astrojs/starlight/components";
@@ -23,7 +23,7 @@ Each segment requires a stable `id`, non-empty `label`, non-negative `value`, an
 
 ## Native preview
 
-<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/pie.png" alt="Pie chart rendered by NativePHP Charts on Android" width="1344" height="1400" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/pie-selected.png" alt="Pie chart after selecting a segment on Android" width="1344" height="1400" /><figcaption>Android · Segment selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/pie.png" alt="Pie chart running on iOS" width="1178" height="1230" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/pie-selected.png" alt="Pie chart after selecting a segment on iOS" width="1178" height="1230" /><figcaption>iOS · Segment selection</figcaption></figure></div>
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/pie.webp" alt="Pie chart rendered by NativePHP Charts on Android" width="900" height="937" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/pie-selected.webp" alt="Pie chart after selecting a segment on Android" width="900" height="937" /><figcaption>Android · Segment selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/pie.webp" alt="Pie chart running on iOS" width="900" height="940" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/pie-selected.webp" alt="Pie chart after selecting a segment on iOS" width="900" height="940" /><figcaption>iOS · Segment selection</figcaption></figure></div>
 
 Selection emits the segment ID, label, value, and index. Prefer bar charts when exact comparison matters or when the legend becomes long.
 

@@ -19,6 +19,8 @@ struct NativePHPChartsSelectionOverlay: View {
     let onViewportCommit: (ClosedRange<Double>, NativePHPChartsViewportReason) -> Void
 
     @State private var viewportGesture: NativePHPChartsViewportInteraction.State?
+    /// Last measured tooltip size; zero until the first layout pass measures it.
+    @State private var tooltipSize: CGSize = .zero
 
     var body: some View {
         GeometryReader { geometry in
@@ -112,7 +114,7 @@ struct NativePHPChartsSelectionOverlay: View {
     }
 
     private func closestPoint(to location: CGPoint, in plotFrame: CGRect) -> NativePHPChartsPoint? {
-        let bodyWidth = resolvedCandlestickBodyWidth(proxy: proxy, plotWidth: plotFrame.width)
+        let bodyWidth = resolvedCandlestickBodyWidth()
         return NativePHPChartsSelection.closestPoint(
             to: location,
             proxy: proxy,
@@ -129,13 +131,12 @@ struct NativePHPChartsSelectionOverlay: View {
         )
     }
 
-    private func resolvedCandlestickBodyWidth(proxy: ChartProxy, plotWidth: CGFloat) -> CGFloat? {
+    private func resolvedCandlestickBodyWidth() -> CGFloat? {
         guard kind == .candlestick, let series = snapshot.data.series.first else { return nil }
         let style = candlestickStyle(for: series)
-        let width = NativePHPChartsCandlestickBodyWidth.fixed(
+        return NativePHPChartsCandlestickBodyWidth.fixed(
             style.width ?? NativePHPChartsCandlestickBodyWidth.defaultWidth
-        )
-        return candlestickBodyWidth(width, proxy: proxy, plotWidth: plotWidth)
+        ).points
     }
 
     private func selectionDistance(
@@ -181,28 +182,6 @@ struct NativePHPChartsSelectionOverlay: View {
         )
     }
 
-    private func candlestickBodyWidth(
-        _ width: NativePHPChartsCandlestickBodyWidth,
-        proxy: ChartProxy,
-        plotWidth: CGFloat
-    ) -> CGFloat {
-        switch width {
-        case let .fixed(value):
-            return value
-        case let .ratio(ratio):
-            let spacing: CGFloat
-            if let gap = snapshot.data.minimumXGap,
-               let lower = proxy.position(forX: gap.lower),
-               let upper = proxy.position(forX: gap.upper)
-            {
-                spacing = abs(upper - lower)
-            } else {
-                spacing = plotWidth
-            }
-            return max(spacing * ratio, 1)
-        }
-    }
-
     private func candlestickStyle(for series: NativePHPChartsSeries) -> NativePHPChartsStyle.Bar {
         NativePHPChartsStyle.Bar(
             radius: series.style?.bar.radius ?? snapshot.configuration.style.bar.radius,
@@ -216,13 +195,15 @@ struct NativePHPChartsSelectionOverlay: View {
                 guard plotFrame.contains(gesture.startLocation) else { return }
 
                 guard var state = viewportGesture ?? initialViewportGesture() else { return }
+                // Horizontal bars mirror categories so screen-down equals increasing logical x;
+                // see `NativePHPChartsHorizontalBarAxis`. Neither orientation reverses the drag.
                 let physicalTranslation = isHorizontalBar
                     ? gesture.translation.height
                     : gesture.translation.width
                 state.updatePan(
                     translation: NativePHPChartsViewportInteraction.logicalTranslation(
                         Double(physicalTranslation),
-                        reversed: isHorizontalBar
+                        reversed: false
                     )
                 )
                 updateViewportGesture(&state, in: plotFrame)
@@ -288,7 +269,7 @@ struct NativePHPChartsSelectionOverlay: View {
             : (location.x - plotFrame.minX) / plotFrame.width
         return NativePHPChartsViewportInteraction.logicalFraction(
             Double(coordinate),
-            reversed: isHorizontalBar
+            reversed: false
         )
     }
 
@@ -306,20 +287,30 @@ struct NativePHPChartsSelectionOverlay: View {
                 horizontalBar: isHorizontalBar
             )
             if snapshot.configuration.selection.tooltip == "shared" {
+                let maximumWidth = min(max(plotFrame.width - 16, 44), 240)
                 NativePHPChartsSharedTooltip(
                     points: snapshot.data.points(atPlotX: point.plotX),
                     snapshot: snapshot,
-                    maximumWidth: min(max(plotFrame.width - 16, 44), 240)
+                    maximumWidth: maximumWidth
                 )
-                .position(x: tooltipX(for: position.x, in: plotFrame), y: tooltipY(for: position.y, in: plotFrame))
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { tooltipSize = $0 }
+                .position(
+                    x: tooltipX(for: position.x, in: plotFrame, maximumWidth: maximumWidth),
+                    y: tooltipY(for: position.y, in: plotFrame)
+                )
             } else if snapshot.configuration.selection.tooltip == "single" {
+                let maximumWidth = min(max(plotFrame.width - 16, 44), 220)
                 NativePHPChartsTooltip(
                     point: point,
                     formatter: snapshot.formatter,
                     color: selectionColor(for: series),
-                    maximumWidth: min(max(plotFrame.width - 16, 44), 220)
+                    maximumWidth: maximumWidth
                 )
-                .position(x: tooltipX(for: position.x, in: plotFrame), y: tooltipY(for: position.y, in: plotFrame))
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { tooltipSize = $0 }
+                .position(
+                    x: tooltipX(for: position.x, in: plotFrame, maximumWidth: maximumWidth),
+                    y: tooltipY(for: position.y, in: plotFrame)
+                )
             }
         }
     }
@@ -344,8 +335,8 @@ struct NativePHPChartsSelectionOverlay: View {
 
     /// Returns the physical Swift Charts coordinates of the selected mark's visible anchor.
     ///
-    /// Horizontal bars are rendered at `-category` to keep labels in source order from top to
-    /// bottom, so their selection anchor must mirror that sign convention.
+    /// Horizontal bars are mirrored through `NativePHPChartsHorizontalBarAxis` to keep labels in
+    /// source order from top to bottom, so their selection anchor uses the same mapping.
     private func plottedPosition(for point: NativePHPChartsPoint) -> NativePHPChartsPlottedPosition {
         if kind == .bar {
             let geometry = snapshot.domain.barGeometry(
@@ -354,11 +345,9 @@ struct NativePHPChartsSelectionOverlay: View {
                 mode: snapshot.configuration.barMode,
                 orientation: snapshot.configuration.barOrientation
             )
-            let anchor = geometry.anchor
-
             return geometry.orientation == .horizontal
-                ? NativePHPChartsPlottedPosition(x: anchor.x, y: -anchor.y)
-                : anchor
+                ? NativePHPChartsHorizontalBarAxis.physicalAnchor(geometry)
+                : geometry.anchor
         }
 
         if kind == .candlestick,
@@ -407,13 +396,38 @@ struct NativePHPChartsSelectionOverlay: View {
         )
     }
 
-    private func tooltipX(for x: CGFloat, in plotFrame: CGRect) -> CGFloat {
-        let halfWidth = min(110, max((plotFrame.width - 16) / 2, 0))
-        return min(max(x, plotFrame.minX + halfWidth), plotFrame.maxX - halfWidth)
+    /// Keeps the tooltip inside the plot using its measured width, or its maximum before measuring.
+    private func tooltipX(for x: CGFloat, in plotFrame: CGRect, maximumWidth: CGFloat) -> CGFloat {
+        NativePHPChartsTooltipPlacement.x(
+            anchor: x,
+            plotFrame: plotFrame,
+            tooltipWidth: tooltipSize.width > 0 ? min(tooltipSize.width, maximumWidth) : maximumWidth
+        )
     }
 
     private func tooltipY(for y: CGFloat, in plotFrame: CGRect) -> CGFloat {
-        min(max(plotFrame.minY + 30, y - 38), plotFrame.maxY - 30)
+        NativePHPChartsTooltipPlacement.y(
+            anchor: y,
+            plotFrame: plotFrame,
+            tooltipHeight: tooltipSize.height > 0 ? tooltipSize.height : nil
+        )
+    }
+}
+
+/// Pure tooltip clamping so a tooltip never extends past the plot frame.
+enum NativePHPChartsTooltipPlacement {
+    static func x(anchor: CGFloat, plotFrame: CGRect, tooltipWidth: CGFloat) -> CGFloat {
+        let halfWidth = min(tooltipWidth / 2, max(plotFrame.width / 2, 0))
+        return min(max(anchor, plotFrame.minX + halfWidth), plotFrame.maxX - halfWidth)
+    }
+
+    /// Places the tooltip above its anchor. An unmeasured tooltip uses the single-line height
+    /// (28 points), which reproduces the previous fixed offsets exactly.
+    static func y(anchor: CGFloat, plotFrame: CGRect, tooltipHeight: CGFloat?) -> CGFloat {
+        let halfHeight = (tooltipHeight ?? 28) / 2
+        let lower = plotFrame.minY + halfHeight + 16
+        let upper = max(plotFrame.maxY - halfHeight - 16, lower)
+        return min(max(lower, anchor - halfHeight - 24), upper)
     }
 }
 
@@ -460,10 +474,20 @@ private struct NativePHPChartsSharedTooltip: View {
             }
             ForEach(points) { point in
                 if let series = snapshot.data.series(id: point.seriesID) {
-                    HStack(spacing: 6) {
-                        Circle().fill(series.color).frame(width: 7, height: 7)
-                        Text("\(series.name) · \(NativePHPChartsCandlestickPresentation.value(for: point, formatter: snapshot.formatter))")
-                            .lineLimit(1)
+                    if let ohlc = NativePHPChartsCandlestickPresentation.components(for: point, formatter: snapshot.formatter) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Circle().fill(series.color).frame(width: 7, height: 7)
+                                Text(series.name).lineLimit(1)
+                            }
+                            NativePHPChartsCandlestickValuesGrid(components: ohlc)
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            Circle().fill(series.color).frame(width: 7, height: 7)
+                            Text("\(series.name) · \(snapshot.formatter.y(point.value))")
+                                .lineLimit(1)
+                        }
                     }
                 }
             }

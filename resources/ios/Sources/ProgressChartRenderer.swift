@@ -60,18 +60,32 @@ struct NativePHPChartsProgressWireInput: Equatable, Sendable {
         onSelect = node.props.getInt("on_select", default: 0)
     }
 
-    static func testing(contractVersion: Int = 1, metricsJSON: String) -> Self {
-        Self(contractVersion: contractVersion, metricsJSON: metricsJSON)
+    static func testing(
+        contractVersion: Int = 1,
+        metricsJSON: String,
+        locale: String = "",
+        maximumFractionDigits: Int = -1,
+        preset: String = "default"
+    ) -> Self {
+        Self(
+            contractVersion: contractVersion,
+            metricsJSON: metricsJSON,
+            locale: locale,
+            maximumFractionDigits: maximumFractionDigits,
+            preset: preset
+        )
     }
 
-    private init(contractVersion: Int, metricsJSON: String) {
+    private init(contractVersion: Int, metricsJSON: String, locale: String, maximumFractionDigits: Int, preset: String) {
         self.contractVersion = contractVersion; self.metricsJSON = metricsJSON
-        centerLabel = ""; styleJSON = "{}"; legendJSON = "{}"; themeMode = "system"; preset = "default"; themeJSON = "{}"; locale = ""; minimumFractionDigits = -1; maximumFractionDigits = -1
+        centerLabel = ""; styleJSON = "{}"; legendJSON = "{}"; themeMode = "system"; self.preset = preset; themeJSON = "{}"; self.locale = locale; minimumFractionDigits = -1; self.maximumFractionDigits = maximumFractionDigits
         errorLabel = "Chart unavailable"; emptyLabel = "No data"; accessibilityLabel = "Progress chart"
         animated = true; onSelect = 0
     }
 }
 
+/// `@unchecked Sendable` because `NumberFormatter` is a class; it is configured once here and
+/// only read afterwards, which Foundation documents as thread-safe.
 struct NativePHPChartsProgressSnapshot: @unchecked Sendable {
     let availability: NativePHPChartsAvailability
     let metrics: [NativePHPChartsProgressMetric]
@@ -80,12 +94,22 @@ struct NativePHPChartsProgressSnapshot: @unchecked Sendable {
     let animationID: Int
     let style: NativePHPChartsProgressStyle
     let legend: NativePHPChartsLegendConfiguration
+    /// The preset fallback palette, shared with every other chart type.
+    let palette: [String]
+    private let percentFormatter: NumberFormatter
 
     init(input: NativePHPChartsProgressWireInput) {
         self.input = input
         theme = NativePHPChartsTheme.decode(input.themeJSON)
         style = NativePHPChartsProgressStyle.decode(input.styleJSON)
         legend = NativePHPChartsLegendConfiguration.decode(input.legendJSON)
+        palette = NativePHPChartsRuntime.palette(preset: input.preset)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.locale = input.locale.isEmpty ? .current : Locale(identifier: input.locale)
+        if input.minimumFractionDigits >= 0 { formatter.minimumFractionDigits = input.minimumFractionDigits }
+        if input.maximumFractionDigits >= 0 { formatter.maximumFractionDigits = input.maximumFractionDigits }
+        percentFormatter = formatter
         let decoded = input.metricsJSON.data(using: .utf8).flatMap {
             try? JSONDecoder().decode([NativePHPChartsProgressMetric].self, from: $0)
         }
@@ -103,6 +127,11 @@ struct NativePHPChartsProgressSnapshot: @unchecked Sendable {
     }
 
     @concurrent static func load(input: NativePHPChartsProgressWireInput) async -> Self { Self(input: input) }
+
+    /// Formats a 0...1 progress value with the chart's `locale` and fraction-digit props.
+    func formatted(_ value: Double) -> String {
+        percentFormatter.string(from: NSNumber(value: value)) ?? value.formatted(.percent)
+    }
 
     private static func validate(_ metrics: [NativePHPChartsProgressMetric]) -> Bool {
         Set(metrics.map(\.id)).count == metrics.count && metrics.allSatisfy {
@@ -131,7 +160,7 @@ struct NativePHPChartsProgressStyle: Decodable, Sendable {
 }
 
 enum NativePHPChartsProgressSelection {
-    static func payload(metric: NativePHPChartsProgressMetric) -> NativePHPChartsSelectionPayload {
+    static func payload(metric: NativePHPChartsProgressMetric, localizedValue: String) -> NativePHPChartsSelectionPayload {
         NativePHPChartsSelectionPayload(
             chartType: "progress",
             seriesID: metric.id,
@@ -142,31 +171,63 @@ enum NativePHPChartsProgressSelection {
             x: .string(metric.label),
             label: metric.label,
             value: metric.value,
-            localizedValue: metric.value.formatted(.percent)
+            localizedValue: localizedValue
         )
     }
 }
 
+/// Ring geometry for the progress chart.
+///
+/// Rings keep their configured width and gap while they fit inside the available radius, so
+/// charts with a few rings look unchanged. When many rings would overflow the center, width
+/// and spacing shrink proportionally so every ring stays visible and tappable.
+struct NativePHPChartsProgressRingLayout: Equatable {
+    let ringWidth: CGFloat
+    let ringStep: CGFloat
+    let outerRadius: CGFloat
+
+    init(count: Int, width: CGFloat, gap: CGFloat, size: CGSize) {
+        let radius = max(min(size.width, size.height) / 2, 0)
+        let step = width + gap
+        // Distance from the outer edge of the first ring to the inner edge of the last one.
+        let extent = CGFloat(max(count - 1, 0)) * step + width
+        let available = radius * 0.9
+        let scale = extent > available && extent > 0 ? available / extent : 1
+        ringWidth = width * scale
+        ringStep = step * scale
+        outerRadius = radius - ringWidth / 2
+    }
+
+    func radius(ringAt index: Int) -> CGFloat {
+        outerRadius - CGFloat(index) * ringStep
+    }
+
+    /// Radius of the empty hole inside the innermost ring.
+    func innerRadius(count: Int) -> CGFloat {
+        radius(ringAt: max(count - 1, 0)) - ringWidth / 2
+    }
+
+    /// Inset that places a full-size circle's stroke centerline on ring `index`.
+    func inset(ringAt index: Int) -> CGFloat {
+        CGFloat(index) * ringStep
+    }
+}
+
+/// Loads progress snapshots off the main actor; a neutral placeholder covers only the first load.
 struct NativePHPChartsProgressChartRenderer: View {
     let node: NativeUINode
-    @State private var snapshot: NativePHPChartsProgressSnapshot
+    @State private var snapshot: NativePHPChartsProgressSnapshot?
     @State private var selectedID: String?
-    @State private var revealProgress = 0.0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var colorScheme
-
-    init(node: NativeUINode) {
-        self.node = node
-        _snapshot = State(initialValue: .init(input: .testing(metricsJSON: "[]")))
-    }
 
     private var wireInput: NativePHPChartsProgressWireInput { .init(node: node) }
 
     var body: some View {
         Group {
-            if snapshot.availability != .available { unavailableState }
-            else if snapshot.metrics.isEmpty { emptyState }
-            else { content }
+            if let snapshot {
+                NativePHPChartsProgressChartView(nodeID: node.id, snapshot: snapshot, selectedID: $selectedID)
+            } else {
+                NativePHPChartsLoadingPlaceholder()
+            }
         }
         .task(id: wireInput) {
             let updated = await NativePHPChartsProgressSnapshot.load(input: wireInput)
@@ -175,30 +236,49 @@ struct NativePHPChartsProgressChartRenderer: View {
             selectedID = updated.metrics.contains { $0.id == selectedID } ? selectedID : nil
         }
     }
+}
+
+private struct NativePHPChartsProgressChartView: View {
+    let nodeID: Int
+    let snapshot: NativePHPChartsProgressSnapshot
+    @Binding var selectedID: String?
+    @State private var revealProgress = 0.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        if snapshot.availability != .available { unavailableState }
+        else if snapshot.metrics.isEmpty { emptyState }
+        else { content }
+    }
 
     private var content: some View {
         VStack(spacing: 12) {
             GeometryReader { geometry in
+                let layout = ringLayout(in: geometry.size)
                 ZStack {
                     ForEach(Array(snapshot.metrics.enumerated()), id: \.element.id) { index, metric in
-                        let inset = CGFloat(index) * ringStep
-                        Circle().stroke(trackColor, lineWidth: ringWidth).padding(inset)
+                        let inset = layout.inset(ringAt: index)
+                        Circle().stroke(trackColor, lineWidth: layout.ringWidth).padding(inset)
                         Circle()
                             .trim(from: 0, to: metric.value * revealProgress)
-                            .stroke(color(for: metric, index: index), style: StrokeStyle(lineWidth: ringWidth, lineCap: lineCap))
+                            .stroke(color(for: metric, index: index), style: StrokeStyle(lineWidth: layout.ringWidth, lineCap: lineCap))
                             .rotationEffect(.degrees(-90)).padding(inset)
                             .opacity(selectedID == nil || selectedID == metric.id ? 1 : 0.48)
                     }
-                    if snapshot.input.centerLabel.isEmpty == false {
-                        Text(snapshot.input.centerLabel).font(.headline).multilineTextAlignment(.center)
+                    // The label is hidden once the innermost ring leaves too little room to read it.
+                    if snapshot.input.centerLabel.isEmpty == false, layout.innerRadius(count: snapshot.metrics.count) >= 40 {
+                        Text(snapshot.input.centerLabel).font(.headline).multilineTextAlignment(.center).lineLimit(2)
                     }
                 }
                 .contentShape(Rectangle())
-                .gesture(SpatialTapGesture().onEnded { select(metric(at: $0.location, size: geometry.size)) })
+                .gesture(SpatialTapGesture().onEnded { select(metric(at: $0.location, size: geometry.size, layout: layout)) })
             }
             .aspectRatio(1, contentMode: .fit)
             if snapshot.legend.visible ?? (snapshot.metrics.count > 1) { legend }
         }
+        .foregroundStyle(foregroundColor)
+        .background(color(variant?.background, fallback: .clear))
         .animation(animation, value: revealProgress)
         .task(id: snapshot.animationID) {
             revealProgress = reduceMotion || snapshot.input.animated == false ? 1 : 0
@@ -216,11 +296,26 @@ struct NativePHPChartsProgressChartRenderer: View {
         }
     }
 
+    /// Long legends scroll inside a fixed height so the rings keep most of the chart.
+    @ViewBuilder
     private var legend: some View {
+        if snapshot.metrics.count > 6 {
+            ScrollView { legendRows }.frame(height: 132)
+        } else {
+            legendRows
+        }
+    }
+
+    private var legendRows: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(snapshot.metrics.enumerated()), id: \.element.id) { index, metric in
-                HStack { Circle().fill(color(for: metric, index: index)).frame(width: 8, height: 8); Text(metric.label); Spacer(); Text(metric.value, format: .percent.precision(.fractionLength(0))) }
-                    .font(.caption)
+                HStack {
+                    Circle().fill(color(for: metric, index: index)).frame(width: 8, height: 8)
+                    Text(metric.label).lineLimit(1)
+                    Spacer()
+                    Text(formatted(metric.value))
+                }
+                .font(.caption)
             }
         }
     }
@@ -228,9 +323,16 @@ struct NativePHPChartsProgressChartRenderer: View {
     private var variant: NativePHPChartsTheme.Variant? {
         snapshot.theme?.variant(mode: snapshot.input.themeMode, colorSchemeIsDark: colorScheme == .dark)
     }
+    private var foregroundColor: Color { color(variant?.foreground, fallback: .primary) }
     private var trackColor: Color { color(snapshot.style.ring?.trackColor ?? variant?.track, fallback: .secondary.opacity(0.18)) }
-    private var ringWidth: CGFloat { snapshot.style.ring?.width ?? 12 }
-    private var ringStep: CGFloat { ringWidth + (snapshot.style.ring?.gap ?? 8) }
+    private func ringLayout(in size: CGSize) -> NativePHPChartsProgressRingLayout {
+        NativePHPChartsProgressRingLayout(
+            count: snapshot.metrics.count,
+            width: snapshot.style.ring?.width ?? 12,
+            gap: snapshot.style.ring?.gap ?? 8,
+            size: size
+        )
+    }
     private var lineCap: CGLineCap {
         switch snapshot.style.ring?.cap { case "butt": .butt; case "square": .square; default: .round }
     }
@@ -238,40 +340,39 @@ struct NativePHPChartsProgressChartRenderer: View {
 
     private func color(for metric: NativePHPChartsProgressMetric, index: Int) -> Color {
         let palette = variant?.palette ?? []
-        let preset = snapshot.input.preset == "contrast" ? ["#0057B8", "#D1495B", "#00876C", "#7A5195"] : ["#6366F1", "#06B6D4", "#22C55E", "#F59E0B"]
-        return color(metric.color ?? palette[safe: index] ?? preset[index % preset.count], fallback: .indigo)
+        let preset = snapshot.palette
+        return color(metric.color ?? palette[safe: index] ?? preset[safe: index % max(preset.count, 1)], fallback: .indigo)
     }
 
     private func color(_ value: String?, fallback: Color) -> Color {
         value.map { Color(argb: ColorParser.parse($0, default: 0xFF6366F1)) } ?? fallback
     }
 
-    private func metric(at point: CGPoint, size: CGSize) -> NativePHPChartsProgressMetric? {
+    private func metric(
+        at point: CGPoint,
+        size: CGSize,
+        layout: NativePHPChartsProgressRingLayout
+    ) -> NativePHPChartsProgressMetric? {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
         let distance = hypot(point.x - center.x, point.y - center.y)
-        let outerRadius = min(size.width, size.height) / 2 - ringWidth / 2
         return snapshot.metrics.enumerated().min { lhs, rhs in
-            abs((outerRadius - CGFloat(lhs.offset) * ringStep) - distance) < abs((outerRadius - CGFloat(rhs.offset) * ringStep) - distance)
-        }.flatMap { abs((outerRadius - CGFloat($0.offset) * ringStep) - distance) <= 22 ? $0.element : nil }
+            abs(layout.radius(ringAt: lhs.offset) - distance) < abs(layout.radius(ringAt: rhs.offset) - distance)
+        }.flatMap { abs(layout.radius(ringAt: $0.offset) - distance) <= 22 ? $0.element : nil }
     }
 
     private func select(_ metric: NativePHPChartsProgressMetric?) {
         guard selectedID != metric?.id else { return }
         selectedID = metric?.id
         guard let metric, snapshot.input.onSelect > 0,
-              let json = NativePHPChartsProgressSelection.payload(metric: metric).json()
+              let json = NativePHPChartsProgressSelection.payload(
+                  metric: metric,
+                  localizedValue: formatted(metric.value)
+              ).json()
         else { return }
-        NativeElementBridge.sendTextChangeEvent(snapshot.input.onSelect, nodeId: node.id, text: json)
+        NativeElementBridge.sendTextChangeEvent(snapshot.input.onSelect, nodeId: nodeID, text: json)
     }
 
-    private var formatter: NumberFormatter {
-        let formatter = NumberFormatter(); formatter.numberStyle = .percent
-        formatter.locale = snapshot.input.locale.isEmpty ? .current : Locale(identifier: snapshot.input.locale)
-        if snapshot.input.minimumFractionDigits >= 0 { formatter.minimumFractionDigits = snapshot.input.minimumFractionDigits }
-        if snapshot.input.maximumFractionDigits >= 0 { formatter.maximumFractionDigits = snapshot.input.maximumFractionDigits }
-        return formatter
-    }
-    private func formatted(_ value: Double) -> String { formatter.string(from: NSNumber(value: value)) ?? value.formatted(.percent) }
+    private func formatted(_ value: Double) -> String { snapshot.formatted(value) }
     private var accessibilitySummary: String { snapshot.metrics.map { "\($0.label): \(formatted($0.value))" }.joined(separator: ". ") }
     private var accessibilityActions: [NativePHPChartsAccessibilityAction<NativePHPChartsProgressMetric>] {
         let index = snapshot.metrics.firstIndex { $0.id == selectedID }
@@ -285,8 +386,4 @@ struct NativePHPChartsProgressChartRenderer: View {
 
     private var emptyState: some View { ContentUnavailableView(snapshot.input.emptyLabel, systemImage: "chart.pie") }
     private var unavailableState: some View { ContentUnavailableView(snapshot.input.errorLabel, systemImage: "exclamationmark.triangle") }
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
 }

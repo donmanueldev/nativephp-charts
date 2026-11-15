@@ -34,6 +34,9 @@ internal fun NativePHPChartsRadialRender(
     if (decoded !is NativePHPChartsAsyncState.Ready) {
         if (decoded is NativePHPChartsAsyncState.Unavailable) {
             NativePHPChartsUnavailable(modifier, wireInput.accessibilityLabel, wireInput.errorLabel)
+        } else {
+            // Keep the host-sized node in layout while the snapshot decodes off the main thread.
+            Box(modifier.fillMaxSize())
         }
         return
     }
