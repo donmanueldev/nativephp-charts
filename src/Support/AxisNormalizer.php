@@ -2,7 +2,6 @@
 
 namespace Donmanueldev\NativephpCharts\Support;
 
-use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 
@@ -20,6 +19,9 @@ final class AxisNormalizer
      *
      * Date/time formatting and timezone keys are always present in the result. A
      * category axis rejects explicit domain values because it has no continuous scale.
+     * An explicit `null` clears an optional key (visibility, label count, title, and
+     * domain keys) instead of retaining its previous value. When `type` changes, domain
+     * keys carried over from `$defaults` are dropped because they belong to the old type.
      * Input accepts `dateFormat`, `timeZone`, and `labelCount` aliases; output uses
      * `date_format`, `timezone`, and `label_count`.
      *
@@ -62,6 +64,10 @@ final class AxisNormalizer
             throw new InvalidArgumentException("The {$chartName} x axis timezone must be a valid IANA timezone.");
         }
 
+        if ($type !== ($defaults['type'] ?? $type)) {
+            $defaults = array_diff_key($defaults, array_flip(['minimum', 'maximum', 'baseline', 'interval']));
+        }
+
         $normalized = ['type' => $type, 'date_format' => $dateFormat, 'timezone' => $timezone];
         self::appendVisibilityAndLabelCount($normalized, $axis, $defaults, $chartName, 'x axis');
         self::appendTitle($normalized, $axis, $defaults, $chartName, 'x axis');
@@ -77,7 +83,8 @@ final class AxisNormalizer
      * final wire snapshot must validate again so currency and fraction-digit rules are
      * checked against the complete state.
      * Input accepts the public camelCase aliases and legacy `format`; output always
-     * uses canonical snake_case keys.
+     * uses canonical snake_case keys. An explicit `null` clears an optional key
+     * (visibility, label count, title, domain keys, and `begin_at_zero`).
      *
      * @param  array<string, mixed>  $axis
      * @param  array<string, mixed>  $defaults  Previously normalized values to retain when omitted.
@@ -158,7 +165,7 @@ final class AxisNormalizer
         self::appendTitle($normalized, $axis, $defaults, $chartName, 'y axis');
         self::appendNumericDomain($normalized, $axis, $defaults, $chartName, 'y axis');
 
-        $beginAtZero = $axis['begin_at_zero'] ?? $axis['beginAtZero'] ?? $defaults['begin_at_zero'] ?? null;
+        $beginAtZero = self::optionalValue($axis, $defaults, ['begin_at_zero', 'beginAtZero']);
         if ($beginAtZero !== null) {
             $normalized['begin_at_zero'] = self::strictBoolean($beginAtZero, $chartName, 'y axis beginAtZero');
         }
@@ -174,12 +181,12 @@ final class AxisNormalizer
         string $chartName,
         string $axisName,
     ): void {
-        $visible = $axis['visible'] ?? $defaults['visible'] ?? null;
+        $visible = self::optionalValue($axis, $defaults, ['visible']);
         if ($visible !== null) {
             $normalized['visible'] = self::strictBoolean($visible, $chartName, "{$axisName} visible");
         }
 
-        $labelCount = $axis['label_count'] ?? $axis['labelCount'] ?? $defaults['label_count'] ?? null;
+        $labelCount = self::optionalValue($axis, $defaults, ['label_count', 'labelCount']);
         if ($labelCount !== null) {
             if (! is_int($labelCount) || $labelCount < 2 || $labelCount > 12) {
                 throw new InvalidArgumentException("The {$chartName} {$axisName} label count must be between 2 and 12.");
@@ -197,7 +204,7 @@ final class AxisNormalizer
         string $chartName,
         string $axisName,
     ): void {
-        $title = $axis['title'] ?? $defaults['title'] ?? null;
+        $title = self::optionalValue($axis, $defaults, ['title']);
         if ($title === null) {
             return;
         }
@@ -222,7 +229,7 @@ final class AxisNormalizer
         string $chartName,
     ): void {
         $domainKeys = ['minimum', 'maximum', 'baseline', 'interval'];
-        $hasDomain = array_any($domainKeys, fn (string $key): bool => array_key_exists($key, $axis) || array_key_exists($key, $defaults));
+        $hasDomain = array_any($domainKeys, fn (string $key): bool => self::optionalValue($axis, $defaults, [$key]) !== null);
 
         if (! $hasDomain) {
             return;
@@ -233,13 +240,9 @@ final class AxisNormalizer
         }
 
         foreach (['minimum', 'maximum', 'baseline'] as $key) {
-            if (array_key_exists($key, $axis) || array_key_exists($key, $defaults)) {
-                $normalized[$key] = ChartDataNormalizer::normalizeTypedX(
-                    $axis[$key] ?? $defaults[$key],
-                    $type,
-                    $chartName,
-                    "x axis {$key}",
-                );
+            $value = self::optionalValue($axis, $defaults, [$key]);
+            if ($value !== null) {
+                $normalized[$key] = ChartDataNormalizer::normalizeTypedX($value, $type, $chartName, "x axis {$key}");
             }
         }
 
@@ -256,8 +259,8 @@ final class AxisNormalizer
         string $axisName,
     ): void {
         foreach (['minimum', 'maximum', 'baseline'] as $key) {
-            if (array_key_exists($key, $axis) || array_key_exists($key, $defaults)) {
-                $value = $axis[$key] ?? $defaults[$key];
+            $value = self::optionalValue($axis, $defaults, [$key]);
+            if ($value !== null) {
                 if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value)) {
                     throw new InvalidArgumentException("The {$chartName} {$axisName} {$key} must be a finite integer or float.");
                 }
@@ -279,11 +282,11 @@ final class AxisNormalizer
         string $chartName,
         string $axisName,
     ): void {
-        if (! array_key_exists('interval', $axis) && ! array_key_exists('interval', $defaults)) {
+        $interval = self::optionalValue($axis, $defaults, ['interval']);
+        if ($interval === null) {
             return;
         }
 
-        $interval = $axis['interval'] ?? $defaults['interval'];
         if ((! is_int($interval) && ! is_float($interval)) || ! is_finite((float) $interval) || $interval <= 0) {
             throw new InvalidArgumentException("The {$chartName} {$axisName} interval must be greater than zero.");
         }
@@ -302,7 +305,7 @@ final class AxisNormalizer
         if (
             array_key_exists('minimum', $normalized)
             && array_key_exists('maximum', $normalized)
-            && self::compareDomainValues($normalized['minimum'], $normalized['maximum'], $type) >= 0
+            && TypedXValue::compare($normalized['minimum'], $normalized['maximum'], $type) >= 0
         ) {
             throw new InvalidArgumentException("The {$chartName} {$axisName} minimum must be less than maximum.");
         }
@@ -312,28 +315,41 @@ final class AxisNormalizer
         }
 
         $belowMinimum = array_key_exists('minimum', $normalized)
-            && self::compareDomainValues($normalized['baseline'], $normalized['minimum'], $type) < 0;
+            && TypedXValue::compare($normalized['baseline'], $normalized['minimum'], $type) < 0;
         $aboveMaximum = array_key_exists('maximum', $normalized)
-            && self::compareDomainValues($normalized['baseline'], $normalized['maximum'], $type) > 0;
+            && TypedXValue::compare($normalized['baseline'], $normalized['maximum'], $type) > 0;
 
         if ($belowMinimum || $aboveMaximum) {
             throw new InvalidArgumentException("The {$chartName} {$axisName} baseline must be within the explicit domain.");
         }
     }
 
-    /** Compare canonical domain values without losing datetime sub-second precision. */
-    private static function compareDomainValues(float|int|string $left, float|int|string $right, string $type): int
+    /**
+     * Resolve an optional key where an explicit `null` means "cleared".
+     *
+     * The first non-null alias in `$axis` wins. When the key is present in `$axis` only
+     * as `null`, the option is cleared even if `$defaults` holds an earlier value.
+     *
+     * @param  array<string, mixed>  $axis
+     * @param  array<string, mixed>  $defaults
+     * @param  non-empty-list<string>  $keys  Canonical key first, followed by accepted aliases.
+     */
+    private static function optionalValue(array $axis, array $defaults, array $keys): mixed
     {
-        if ($type === 'number') {
-            return (float) $left <=> (float) $right;
+        $wasProvided = false;
+        foreach ($keys as $key) {
+            if (! array_key_exists($key, $axis)) {
+                continue;
+            }
+
+            if ($axis[$key] !== null) {
+                return $axis[$key];
+            }
+
+            $wasProvided = true;
         }
 
-        if ($type === 'date') {
-            return $left <=> $right;
-        }
-
-        return (new DateTimeImmutable((string) $left))->format('U.u')
-            <=> (new DateTimeImmutable((string) $right))->format('U.u');
+        return $wasProvided ? null : ($defaults[$keys[0]] ?? null);
     }
 
     private static function strictBoolean(mixed $value, string $chartName, string $property): bool

@@ -3,38 +3,30 @@ import SwiftUI
 /// Converts EDGE node revisions into atomic pie/donut snapshots and composes plot plus legend.
 ///
 /// A selected id survives presentation-only updates but is cleared when its segment disappears.
+/// Until the first snapshot loads a neutral placeholder is shown; later reloads keep the last
+/// snapshot visible.
 struct NativePHPChartsRadialRenderer: View {
     private struct LoadKey: Equatable { let input: NativePHPChartsRadialWireInput; let isDark: Bool }
     let node: NativeUINode
     let kind: NativePHPChartsRadialKind
 
-    @State private var snapshot: NativePHPChartsRadialSnapshot
+    @State private var snapshot: NativePHPChartsRadialSnapshot?
     @State private var selectedSegmentID: String?
     @Environment(\.colorScheme) private var colorScheme
 
     init(node: NativeUINode, kind: NativePHPChartsRadialKind) {
         self.node = node
         self.kind = kind
-        _snapshot = State(
-            initialValue: NativePHPChartsRadialSnapshot(
-                input: .testing(segmentsJSON: "[]"),
-                kind: kind
-            )
-        )
     }
 
     var body: some View {
         Group {
-            if snapshot.availability != .available {
-                unavailableState
-            } else if snapshot.data.isEmpty {
-                emptyState
+            if let snapshot {
+                loaded(snapshot)
             } else {
-                content
+                NativePHPChartsLoadingPlaceholder()
             }
         }
-        .background(themeColor(snapshot.configuration.theme?.background, fallback: .clear))
-        .foregroundStyle(themeColor(snapshot.configuration.theme?.foreground, fallback: .primary))
         .task(id: loadKey) {
             let updated = await NativePHPChartsRadialSnapshot.load(input: wireInput, kind: kind, colorSchemeIsDark: colorScheme == .dark)
             guard Task.isCancelled == false else { return }
@@ -53,8 +45,22 @@ struct NativePHPChartsRadialRenderer: View {
         value.map { Color(argb: ColorParser.parse($0, default: 0xFF6366F1)) } ?? fallback
     }
 
+    private func loaded(_ snapshot: NativePHPChartsRadialSnapshot) -> some View {
+        Group {
+            if snapshot.availability != .available {
+                unavailableState(snapshot)
+            } else if snapshot.data.isEmpty {
+                emptyState(snapshot)
+            } else {
+                content(snapshot)
+            }
+        }
+        .background(themeColor(snapshot.configuration.theme?.background, fallback: .clear))
+        .foregroundStyle(themeColor(snapshot.configuration.theme?.foreground, fallback: .primary))
+    }
+
     @ViewBuilder
-    private var content: some View {
+    private func content(_ snapshot: NativePHPChartsRadialSnapshot) -> some View {
         let plot = NativePHPChartsRadialPlot(
             nodeID: node.id,
             kind: kind,
@@ -62,7 +68,9 @@ struct NativePHPChartsRadialRenderer: View {
             selectedSegmentID: $selectedSegmentID
         )
 
-        if !legendVisible {
+        let legend = legend(snapshot)
+
+        if !legendVisible(snapshot) {
             plot
         } else {
             switch snapshot.configuration.legend.position {
@@ -78,11 +86,11 @@ struct NativePHPChartsRadialRenderer: View {
         }
     }
 
-    private var legendVisible: Bool {
+    private func legendVisible(_ snapshot: NativePHPChartsRadialSnapshot) -> Bool {
         snapshot.configuration.legend.visible ?? (snapshot.data.segments.count > 1)
     }
 
-    private var legend: some View {
+    private func legend(_ snapshot: NativePHPChartsRadialSnapshot) -> some View {
         NativePHPChartsRadialLegend(
             data: snapshot.data,
             formatter: snapshot.formatter,
@@ -90,7 +98,7 @@ struct NativePHPChartsRadialRenderer: View {
         )
     }
 
-    private var emptyState: some View {
+    private func emptyState(_ snapshot: NativePHPChartsRadialSnapshot) -> some View {
         ContentUnavailableView {
             Label(snapshot.configuration.emptyLabel, systemImage: emptyIcon)
         }
@@ -99,7 +107,7 @@ struct NativePHPChartsRadialRenderer: View {
         .accessibilityValue(snapshot.configuration.emptyLabel)
     }
 
-    private var unavailableState: some View {
+    private func unavailableState(_ snapshot: NativePHPChartsRadialSnapshot) -> some View {
         ContentUnavailableView { Label(wireInput.errorLabel, systemImage: "exclamationmark.triangle") }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(snapshot.configuration.accessibilityLabel)

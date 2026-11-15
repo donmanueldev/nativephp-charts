@@ -1,0 +1,76 @@
+# NativePHP Charts
+
+> Composer package (donmanueldev/nativephp-charts) that adds ten native chart types to NativePHP Mobile apps. Charts are declared in Blade or built with a fluent PHP API. iOS renders them with Swift Charts and SwiftUI Canvas; Android renders them with Jetpack Compose Canvas. There is no WebView, JavaScript chart library, or network service. It is an independent community plugin, not an official NativePHP package. MIT license.
+
+## Requirements
+
+- PHP ^8.4
+- NativePHP Mobile ^4.0
+- Android API 26 or newer
+- iOS 18.2 or newer
+- NativePHP Desktop and WebView rendering are not supported.
+
+## Install
+
+```bash
+composer require donmanueldev/nativephp-charts
+php artisan vendor:publish --tag=nativephp-plugins-provider --no-interaction
+php artisan native:plugin:register donmanueldev/nativephp-charts --no-interaction
+php artisan native:plugin:list
+php artisan native:plugin:validate
+```
+
+Rebuild the iOS or Android app after installing or updating, because the renderers compile into the native shell.
+
+## Chart elements
+
+- `<native:line-chart>`: ordered `series` of points
+- `<native:area-chart>`: ordered `series`; `area-mode` overlay or stacked
+- `<native:bar-chart>`: ordered `series`; `mode` grouped or stacked, `orientation` vertical or horizontal
+- `<native:scatter-chart>`: ordered `series` with numeric, date, or datetime x values
+- `<native:candlestick-chart>`: zero or one series of open, high, low, close points
+- `<native:pie-chart>`: ordered `segments`
+- `<native:donut-chart>`: ordered `segments`; `inner-radius-ratio` 0.2 to 0.85
+- `<native:radar-chart>`: `axes` (3 to 24) and `series` with one value per axis
+- `<native:progress-chart>`: up to 24 `metrics` with values from 0 to 1
+- `<native:contribution-heatmap>`: daily `values` keyed by ISO date
+
+Selection callbacks bind with `_select="method"` and are decoded with `Donmanueldev\NativephpCharts\PointSelection::fromJson()`.
+
+## Docs
+
+- [Overview](https://donmanueldev.github.io/nativephp-charts/getting-started/overview/): what the package does and how to pick a chart
+- [Installation](https://donmanueldev.github.io/nativephp-charts/getting-started/installation/): install, register, and render a first chart
+- [API reference](https://donmanueldev.github.io/nativephp-charts/reference/api/): every Blade attribute, data shape, style section, and validation rule
+- [Blade and PHP equivalence](https://donmanueldev.github.io/nativephp-charts/reference/blade-php/): Blade attributes mapped to fluent PHP methods
+
+## Charts
+
+- [Line chart](https://donmanueldev.github.io/nativephp-charts/charts/line/)
+- [Area chart](https://donmanueldev.github.io/nativephp-charts/charts/area/)
+- [Bar chart](https://donmanueldev.github.io/nativephp-charts/charts/bar/)
+- [Scatter chart](https://donmanueldev.github.io/nativephp-charts/charts/scatter/)
+- [Pie chart](https://donmanueldev.github.io/nativephp-charts/charts/pie/)
+- [Donut chart](https://donmanueldev.github.io/nativephp-charts/charts/donut/)
+- [Radar chart](https://donmanueldev.github.io/nativephp-charts/charts/radar/)
+- [Candlestick chart](https://donmanueldev.github.io/nativephp-charts/charts/candlestick/)
+- [Progress chart](https://donmanueldev.github.io/nativephp-charts/charts/progress/)
+- [Contribution heatmap](https://donmanueldev.github.io/nativephp-charts/charts/contribution-heatmap/)
+
+## Guides
+
+- [Themes and presets](https://donmanueldev.github.io/nativephp-charts/guides/themes/)
+- [Callbacks and interactions](https://donmanueldev.github.io/nativephp-charts/guides/callbacks-interactions/)
+- [Copy-paste examples](https://donmanueldev.github.io/nativephp-charts/guides/copy-paste/)
+- [Application recipes](https://donmanueldev.github.io/nativephp-charts/guides/recipes/)
+- [Viewport and gestures](https://donmanueldev.github.io/nativephp-charts/guides/viewport-gestures/)
+- [Accessibility](https://donmanueldev.github.io/nativephp-charts/guides/accessibility/)
+- [Performance and validation](https://donmanueldev.github.io/nativephp-charts/guides/performance-evidence/)
+- [Troubleshooting](https://donmanueldev.github.io/nativephp-charts/guides/troubleshooting/)
+- [Migration and versioning](https://donmanueldev.github.io/nativephp-charts/guides/migration/)
+
+## Optional
+
+- [Apps using NativePHP Charts](https://donmanueldev.github.io/nativephp-charts/apps/)
+- [Source code](https://github.com/donmanueldev/nativephp-charts)
+- [Packagist](https://packagist.org/packages/donmanueldev/nativephp-charts)

@@ -5,7 +5,6 @@ import com.nativephp.mobile.ui.nativerender.NativeUINode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 internal data class NativePHPChartsProgressMetric(
     val id: String,
@@ -32,6 +31,8 @@ internal data class NativePHPChartsProgressConfiguration(
     val minimumFractionDigits: Int,
     val maximumFractionDigits: Int,
     val legendVisible: Boolean,
+    /** Theme foreground for labels; [Color.Unspecified] keeps the ambient content colour. */
+    val foregroundColor: Color = Color.Unspecified,
 ) {
     val animationKey: Int = metrics.hashCode()
 }
@@ -133,6 +134,7 @@ internal fun decodeNativePHPChartsProgress(
             minimumFractionDigits = input.minimumFractionDigits,
             maximumFractionDigits = input.maximumFractionDigits,
             legendVisible = when (legend?.opt("visible")) { is Boolean -> legend.optBoolean("visible"); else -> metrics.size > 1 },
+            foregroundColor = theme.foreground?.let { chartColor(it, Color.Gray) } ?: Color.Unspecified,
         ),
     )
 }
@@ -231,7 +233,7 @@ internal fun decodeNativePHPChartsContribution(
     if (input.days !in 7..371 || input.weekStartsOn !in 0..6) {
         return NativePHPChartsDecodeResult.Failure("invalid_heatmap_range")
     }
-    val resolvedEndDate = input.endDate.ifBlank { LocalDate.now(ZoneOffset.UTC).toString() }
+    val resolvedEndDate = input.endDate.ifBlank { LocalDate.now().toString() }
     val endDate = runCatching { LocalDate.parse(resolvedEndDate) }.getOrNull()
         ?: return NativePHPChartsDecodeResult.Failure("invalid_heatmap_end_date")
     val root = runCatching { JSONArray(input.valuesJson) }.getOrNull()

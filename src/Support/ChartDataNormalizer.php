@@ -15,7 +15,12 @@ use InvalidArgumentException;
  */
 final class ChartDataNormalizer
 {
-    private const int MAX_EXACT_INTEGER = 9_007_199_254_740_991;
+    /**
+     * Largest integer that JSON-backed Swift and Kotlin decoders represent exactly (2^53 - 1).
+     *
+     * @internal Shared by the package normalizers.
+     */
+    public const int MAX_EXACT_INTEGER = 9_007_199_254_740_991;
 
     /**
      * Normalize ordered public series into renderer-ready maps.
@@ -47,6 +52,10 @@ final class ChartDataNormalizer
     ): array {
         if (! array_is_list($series)) {
             throw new InvalidArgumentException("The {$chartName} series must be an ordered list.");
+        }
+
+        if ($chartType === 'candlestick' && count($series) > 1) {
+            throw new InvalidArgumentException('The candlestick chart accepts zero or one ordered series.');
         }
 
         $normalized = [];

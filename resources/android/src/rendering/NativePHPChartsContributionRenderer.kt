@@ -7,8 +7,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +41,6 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.ceil
-import kotlin.math.max
 
 internal data class NativePHPChartsContributionCell(
     val date: LocalDate,
@@ -98,7 +99,10 @@ internal fun NativePHPChartsContributionRender(node: NativeUINode, modifier: Mod
         decodeNativePHPChartsContribution(it.first, it.second)
     }
     when (decoded) {
-        NativePHPChartsAsyncState.Loading -> return
+        NativePHPChartsAsyncState.Loading -> {
+            Box(modifier)
+            return
+        }
         is NativePHPChartsAsyncState.Unavailable -> {
             NativePHPChartsUnavailable(modifier, input.accessibilityLabel, input.errorLabel)
             return
@@ -123,15 +127,18 @@ private fun NativePHPChartsContributionPlot(
     val context = LocalContext.current
     val shouldAnimate = configuration.animated && remember(context) { nativePHPChartsAnimationsEnabled(context) }
     val progress = remember { Animatable(if (shouldAnimate) 0f else 1f) }
-    val interactionReady = progress.value >= 0.999f
+    val interactionReady by remember { derivedStateOf { progress.value >= 0.999f } }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var selectedId by remember { mutableStateOf<String?>(null) }
     val layout = remember(configuration, canvasSize, density.density) {
         nativePHPChartsContributionLayout(configuration, canvasSize, density.density)
     }
     val selected = configuration.visibleValues.firstOrNull { it.id == selectedId }
-    val formatter = remember(configuration.locale, configuration.minimumFractionDigits, configuration.maximumFractionDigits) {
-        NumberFormat.getNumberInstance(configuration.locale.takeIf(String::isNotBlank)?.let(Locale::forLanguageTag) ?: Locale.getDefault()).apply {
+    val chartLocale = remember(configuration.locale) {
+        configuration.locale.takeIf(String::isNotBlank)?.let(Locale::forLanguageTag) ?: Locale.getDefault()
+    }
+    val formatter = remember(chartLocale, configuration.minimumFractionDigits, configuration.maximumFractionDigits) {
+        NumberFormat.getNumberInstance(chartLocale).apply {
             if (configuration.minimumFractionDigits >= 0) minimumFractionDigits = configuration.minimumFractionDigits
             if (configuration.maximumFractionDigits >= 0) maximumFractionDigits = configuration.maximumFractionDigits
         }
@@ -165,7 +172,7 @@ private fun NativePHPChartsContributionPlot(
         return true
     }
 
-    val ordered = configuration.visibleValues.sortedBy { it.date }
+    val ordered = remember(configuration.visibleValues) { configuration.visibleValues.sortedBy { it.date } }
     val selectedIndex = ordered.indexOfFirst { it.id == selectedId }
     val previous = ordered.getOrNull(selectedIndex - 1)
     val next = ordered.getOrNull(if (selectedIndex < 0) 0 else selectedIndex + 1)
@@ -176,7 +183,7 @@ private fun NativePHPChartsContributionPlot(
             if (ordered.size > 18) append(". (+${ordered.size - 18})")
         }
     }
-    val maximum = max(configuration.visibleValues.maxOfOrNull { it.value } ?: 0.0, 1.0)
+    val maximum = remember(configuration.visibleValues) { configuration.visibleValues.maxOfOrNull { it.value } ?: 0.0 }
 
     Canvas(
         modifier.background(configuration.backgroundColor)
@@ -202,19 +209,22 @@ private fun NativePHPChartsContributionPlot(
         val visibleColumns = ceil(layout.columns * progress.value).toInt()
         layout.cells.filter { it.column < visibleColumns }.forEach { cell ->
             val value = cell.value
-            val color = if (value == null || value.value <= 0.0) {
+            val color = if (value == null || value.value <= 0.0 || maximum <= 0.0) {
                 configuration.emptyColor
             } else {
+                // Scales against the real visible maximum, matching iOS: only the maximum reaches the last color.
                 val fraction = (value.value / maximum).coerceIn(0.0, 1.0)
-                val index = ceil(fraction * configuration.colors.size).toInt().coerceIn(1, configuration.colors.size) - 1
-                configuration.colors[index]
+                val lastIndex = configuration.colors.size - 1
+                configuration.colors[(fraction * lastIndex).toInt().coerceIn(0, lastIndex)]
             }
             drawRoundRect(color, cell.rect.topLeft, cell.rect.size, androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()), style = Fill)
-            if (value?.id == selectedId) {
+            if (value != null && value.id == selectedId) {
+                // Inset by half the stroke so edge cells keep their whole outline.
+                val outline = cell.rect.deflate(1.dp.toPx())
                 drawRoundRect(
                     color = androidx.compose.ui.graphics.Color.White,
-                    topLeft = cell.rect.topLeft,
-                    size = cell.rect.size,
+                    topLeft = outline.topLeft,
+                    size = outline.size,
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
                     style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
                 )
@@ -226,15 +236,18 @@ private fun NativePHPChartsContributionPlot(
                 val date = configuration.startDate.plusDays(((row - (((configuration.startDate.dayOfWeek.value % 7) - configuration.weekStartsOn + 7) % 7) + 7) % 7).toLong())
                 val cell = layout.cells.firstOrNull { it.row == row } ?: return@forEach
                 drawContext.canvas.nativeCanvas.drawText(
-                    date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                    date.dayOfWeek.getDisplayName(TextStyle.NARROW, chartLocale),
                     2.dp.toPx(), cell.rect.center.y - labelPaint.fontMetrics.ascent / 2, labelPaint,
                 )
             }
         }
         if (configuration.showMonthLabels) {
-            layout.cells.filter { it.row == 0 }.distinctBy { it.date.month }.forEach { cell ->
+            val monthStarts = layout.cells.filter { it.row == 0 }.distinctBy { it.date.month }
+            // A partial first month is labelled only when its label cannot run into the next month's, matching iOS.
+            val crowdedLeadingMonth = monthStarts.size > 1 && monthStarts[1].column - monthStarts[0].column < 2
+            monthStarts.drop(if (crowdedLeadingMonth) 1 else 0).forEach { cell ->
                 drawContext.canvas.nativeCanvas.drawText(
-                    cell.date.month.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                    cell.date.month.getDisplayName(TextStyle.SHORT, chartLocale),
                     cell.rect.left, 12.dp.toPx(), labelPaint,
                 )
             }

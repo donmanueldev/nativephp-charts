@@ -1,0 +1,82 @@
+name: Feature request
+description: Suggest a new chart type, option, or improvement for NativePHP Charts
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Check the [documentation](https://donmanueldev.github.io/nativephp-charts/) and existing issues first; the option you need may already exist.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to show or do in your app, and what stops you today?
+      placeholder: My budget screen needs to show... but the current charts cannot...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you would like. If you have an API in mind, include the Blade attributes or fluent PHP methods you would expect.
+      render: blade
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, or other ways to solve the problem.
+
+  - type: dropdown
+    id: chart
+    attributes:
+      label: Related chart component
+      options:
+        - LineChart
+        - AreaChart
+        - BarChart
+        - ScatterChart
+        - PieChart
+        - DonutChart
+        - RadarChart
+        - CandlestickChart
+        - ProgressChart
+        - ContributionHeatmap
+        - New chart type
+        - All charts
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Features should work on both platforms. Tell us if the need is specific to one.
+      options:
+        - Both platforms
+        - Android
+        - iOS
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, mockups, or links to similar charts in native apps.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I searched existing issues and the documentation for this request.
+          required: true
+        - label: I would be willing to help test this feature on a device or simulator.
+          required: false

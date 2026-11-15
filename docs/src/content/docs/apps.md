@@ -1,6 +1,6 @@
 ---
 title: Apps using NativePHP Charts
-description: Apps built with NativePHP Mobile that use NativePHP Charts.
+description: "See real iOS and Android apps built with NativePHP Mobile that render native charts with NativePHP Charts, and how to add the same charts to your app."
 ---
 
 ## Despertá

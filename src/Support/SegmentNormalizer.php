@@ -13,8 +13,6 @@ use InvalidArgumentException;
  */
 final class SegmentNormalizer
 {
-    private const int MAX_EXACT_INTEGER = 9_007_199_254_740_991;
-
     /**
      * Each input segment requires `id`, `label`, and `value`; `color` is optional
      * and otherwise resolved from the semantic theme palette.
@@ -52,7 +50,7 @@ final class SegmentNormalizer
                     "The {$chartName} segment value at index {$index} must be a finite number greater than or equal to zero."
                 );
             }
-            if (is_int($value) && $value > self::MAX_EXACT_INTEGER) {
+            if (is_int($value) && $value > ChartDataNormalizer::MAX_EXACT_INTEGER) {
                 throw new InvalidArgumentException(
                     "The {$chartName} segment value at index {$index} must be within the exact cross-platform integer range."
                 );

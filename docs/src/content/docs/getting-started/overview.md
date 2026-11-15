@@ -1,8 +1,7 @@
 ---
-title: Overview
-description: Add native charts to NativePHP Mobile screens with Blade and PHP.
-sidebar:
-  order: 1
+title: NativePHP Charts overview
+description: "What NativePHP Charts does: ten native chart types for NativePHP Mobile, drawn with Swift Charts and Jetpack Compose and configured from Blade or PHP."
+sidebar: { order: 1 }
 ---
 
 NativePHP Charts adds ten chart types to NativePHP Mobile. Declare charts in Blade, pass data from PHP, and handle selections in your `NativeComponent`. Rendering uses Swift Charts and SwiftUI on iOS, and Jetpack Compose Canvas on Android.

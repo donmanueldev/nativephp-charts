@@ -24,9 +24,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -190,12 +192,12 @@ internal fun nativePHPChartsRadarTooltipLayout(
     val maximumCenterX = canvas.width - safeMargin - (width / 2f)
     val safeAnchorX = anchor.x.takeIf { it.isFinite() } ?: canvas.width / 2f
     val safeAnchorY = anchor.y.takeIf { it.isFinite() } ?: canvas.height / 2f
-    val centerX = safeAnchorX.coerceIn(minimumCenterX, maximumCenterX)
+    val centerX = nativePHPChartsClampOrCenter(safeAnchorX, minimumCenterX, maximumCenterX)
     val minimumTop = safeMargin
     val maximumTop = canvas.height - safeMargin - height
     val safeVerticalOffset = (verticalOffset.takeIf { it.isFinite() } ?: 0f).coerceAtLeast(0f)
     val desiredTop = safeAnchorY - safeVerticalOffset
-    val top = desiredTop.coerceIn(minimumTop, maximumTop)
+    val top = nativePHPChartsClampOrCenter(desiredTop, minimumTop, maximumTop)
 
     return NativePHPChartsRadarTooltipLayout(
         left = centerX - (width / 2f),
@@ -273,6 +275,9 @@ internal fun NativePHPChartsRadarRender(node: NativeUINode, modifier: Modifier) 
     if (decoded !is NativePHPChartsAsyncState.Ready) {
         if (decoded is NativePHPChartsAsyncState.Unavailable) {
             NativePHPChartsUnavailable(modifier, wireInput.accessibilityLabel, wireInput.errorLabel)
+        } else {
+            // Keep the host-sized node in layout while the snapshot decodes off the main thread.
+            Box(modifier.fillMaxSize())
         }
         return
     }
@@ -345,7 +350,7 @@ private fun NativePHPChartsRadarPlot(
     var selectedId by remember { mutableStateOf<String?>(null) }
     val selected = configuration.selections.firstOrNull { it.id == selectedId }
     val progress = remember { Animatable(if (shouldAnimate) 0f else 1f) }
-    val interactionReady = progress.value >= 0.999f
+    val interactionReady by remember { derivedStateOf { progress.value >= 0.999f } }
 
     LaunchedEffect(configuration.animationKey, shouldAnimate) {
         if (shouldAnimate) {
@@ -359,16 +364,22 @@ private fun NativePHPChartsRadarPlot(
         if (selectedId != null && selected == null) selectedId = null
     }
 
+    // The pointer handler outlives recompositions, so it reads the latest props through these.
+    val currentNode by rememberUpdatedState(node)
+    val currentConfiguration by rememberUpdatedState(configuration)
+    val currentFormatting by rememberUpdatedState(formatting)
+
     fun select(selection: NativePHPChartsRadarSelection): Boolean {
         selectedId = selection.id
-        if (configuration.onSelect > 0) {
+        val onSelect = currentConfiguration.onSelect
+        if (onSelect > 0) {
             val payload = JSONObject(
                 nativePHPChartsRadarSelectionPayload(
                     selection = selection,
-                    localizedValue = formatting.value(selection.value.value),
+                    localizedValue = currentFormatting.value(selection.value.value),
                 ),
             ).toString()
-            NativeUIBridge.sendTextChangeEvent(configuration.onSelect, node.id, payload)
+            NativeUIBridge.sendTextChangeEvent(onSelect, currentNode.id, payload)
         }
         return true
     }

@@ -3,7 +3,7 @@ import SwiftUI
 enum NativePHPChartsRadarAccessibility {
     static func summary(
         selections: [NativePHPChartsRadarSelection],
-        formatter: NativePHPChartsRadarFormatter,
+        formatter: NativePHPChartsRadialFormatter,
         selected: NativePHPChartsRadarSelection?
     ) -> String {
         let descriptions = selections.prefix(18).map {
@@ -36,7 +36,7 @@ enum NativePHPChartsRadarAccessibility {
 enum NativePHPChartsRadarSelectionPayload {
     static func json(
         selection: NativePHPChartsRadarSelection,
-        formatter: NativePHPChartsRadarFormatter
+        formatter: NativePHPChartsRadialFormatter
     ) -> String? {
         NativePHPChartsSelectionPayload(
             chartType: "radar",
@@ -99,23 +99,19 @@ struct NativePHPChartsRadarChartRenderer: View {
     private struct LoadKey: Equatable { let input: NativePHPChartsRadarWireInput; let isDark: Bool }
     let node: NativeUINode
 
-    @State private var snapshot: NativePHPChartsRadarSnapshot
+    /// `nil` until the first load finishes; later reloads keep the last snapshot visible.
+    @State private var snapshot: NativePHPChartsRadarSnapshot?
     @State private var selectedID: String?
     @Environment(\.colorScheme) private var colorScheme
 
-    init(node: NativeUINode) {
-        self.node = node
-        _snapshot = State(initialValue: NativePHPChartsRadarSnapshot(input: NativePHPChartsRadarWireInput()))
-    }
-
     var body: some View {
         Group {
-            if snapshot.availability != .available { unavailableState }
-            else if snapshot.isEmpty { emptyState }
-            else { content }
+            if let snapshot {
+                loaded(snapshot)
+            } else {
+                NativePHPChartsLoadingPlaceholder()
+            }
         }
-        .background(snapshot.style.color(snapshot.theme?.background, fallback: .clear))
-        .foregroundStyle(snapshot.style.color(snapshot.theme?.foreground, fallback: .primary))
         .task(id: loadKey) {
             let updated = await NativePHPChartsRadarSnapshot.load(input: wireInput, colorSchemeIsDark: colorScheme == .dark)
             guard Task.isCancelled == false else { return }
@@ -127,9 +123,20 @@ struct NativePHPChartsRadarChartRenderer: View {
     private var wireInput: NativePHPChartsRadarWireInput { NativePHPChartsRadarWireInput(node: node) }
     private var loadKey: LoadKey { LoadKey(input: wireInput, isDark: colorScheme == .dark) }
 
+    private func loaded(_ snapshot: NativePHPChartsRadarSnapshot) -> some View {
+        Group {
+            if snapshot.availability != .available { unavailableState(snapshot) }
+            else if snapshot.isEmpty { emptyState(snapshot) }
+            else { content(snapshot) }
+        }
+        .background(snapshot.style.color(snapshot.theme?.background, fallback: .clear))
+        .foregroundStyle(snapshot.style.color(snapshot.theme?.foreground, fallback: .primary))
+    }
+
     @ViewBuilder
-    private var content: some View {
+    private func content(_ snapshot: NativePHPChartsRadarSnapshot) -> some View {
         let plot = NativePHPChartsRadarPlot(nodeID: node.id, snapshot: snapshot, selectedID: $selectedID)
+        let legend = legend(snapshot)
         if !snapshot.legendVisible {
             plot
         } else {
@@ -142,18 +149,18 @@ struct NativePHPChartsRadarChartRenderer: View {
         }
     }
 
-    private var legend: some View {
+    private func legend(_ snapshot: NativePHPChartsRadarSnapshot) -> some View {
         NativePHPChartsRadarLegend(series: snapshot.series, configuration: snapshot.legend, style: snapshot.style)
     }
 
-    private var emptyState: some View {
+    private func emptyState(_ snapshot: NativePHPChartsRadarSnapshot) -> some View {
         ContentUnavailableView { Label(snapshot.emptyLabel, systemImage: "chart.line.uptrend.xyaxis") }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(snapshot.accessibilityLabel)
             .accessibilityValue(snapshot.emptyLabel)
     }
 
-    private var unavailableState: some View {
+    private func unavailableState(_ snapshot: NativePHPChartsRadarSnapshot) -> some View {
         ContentUnavailableView { Label(wireInput.errorLabel, systemImage: "exclamationmark.triangle") }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(snapshot.accessibilityLabel)
@@ -440,8 +447,4 @@ private struct NativePHPChartsRadarLegend: View {
         switch configuration.alignment { case "end", "trailing": .trailing; case "center": .center; default: .leading }
     }
     private var isVertical: Bool { configuration.position == "leading" || configuration.position == "trailing" }
-}
-
-private extension Collection {
-    subscript(safe index: Index) -> Element? { indices.contains(index) ? self[index] : nil }
 }

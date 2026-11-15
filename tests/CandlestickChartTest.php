@@ -144,3 +144,30 @@ it('registers the candlestick native component on both platforms', function () {
         'self_closing' => true,
     ]);
 });
+
+it('rejects more than one candlestick series from fluent and Blade paths', function (Closure $configure) {
+    $candles = fn (string $id): array => [
+        'id' => $id,
+        'name' => strtoupper($id),
+        'color' => '#2563EB',
+        'points' => [[
+            'id' => "{$id}-1",
+            'label' => '29 Aug',
+            'x' => '2026-08-29',
+            'open' => 1,
+            'high' => 2,
+            'low' => 0.5,
+            'close' => 1.5,
+        ]],
+    ];
+
+    expect(fn () => $configure(CandlestickChart::make(), [$candles('first'), $candles('second')]))
+        ->toThrow(InvalidArgumentException::class, 'The candlestick chart accepts zero or one ordered series.');
+})->with([
+    'fluent series' => [fn (CandlestickChart $chart, array $series) => $chart->xAxis(['type' => 'date'])->series($series)],
+    'Blade series only' => [fn (CandlestickChart $chart, array $series) => $chart->applyAttributes(['series' => $series])],
+    'Blade series with x axis' => [fn (CandlestickChart $chart, array $series) => $chart->applyAttributes([
+        'x-axis' => ['type' => 'date'],
+        'series' => $series,
+    ])],
+]);

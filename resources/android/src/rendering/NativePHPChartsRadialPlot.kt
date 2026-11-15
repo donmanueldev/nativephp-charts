@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,7 +51,7 @@ internal fun NativePHPChartsRadialPlot(
     }
     val selected = layout.data.firstOrNull { it.segment.id == selectedId }
     val progress = remember { Animatable(if (shouldAnimate) 0f else 1f) }
-    val interactionReady = progress.value >= 0.999f
+    val interactionReady by remember { derivedStateOf { progress.value >= 0.999f } }
     LaunchedEffect(configuration.animationKey, shouldAnimate) {
         if (shouldAnimate) {
             progress.snapTo(0f)

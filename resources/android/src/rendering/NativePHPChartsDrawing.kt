@@ -30,6 +30,29 @@ internal data class NativePHPChartsDrawingResources(
     val pointColors: Map<String, Color>,
 )
 
+/**
+ * Resolves a series line colour: series override, then the global style for a
+ * single series, then the series colour. Shared by the plot and the legend.
+ */
+internal fun nativePHPChartsSeriesLineColor(
+    configuration: NativePHPChartsConfiguration,
+    series: NativePHPChartsSeries,
+): Color = chartColor(
+    series.style?.lineColor
+        ?: configuration.style.lineColor.takeIf { configuration.series.size == 1 },
+    series.color,
+)
+
+/** Resolves a series point colour with the same precedence, falling back to its line colour. */
+internal fun nativePHPChartsSeriesPointColor(
+    configuration: NativePHPChartsConfiguration,
+    series: NativePHPChartsSeries,
+): Color = chartColor(
+    series.style?.pointColor
+        ?: configuration.style.pointColor.takeIf { configuration.series.size == 1 },
+    nativePHPChartsSeriesLineColor(configuration, series),
+)
+
 internal data class NativePHPChartsSeriesPaths(
     val data: List<NativePHPChartsDatum>,
     val line: Path,
@@ -569,7 +592,7 @@ internal fun DrawScope.drawNativePHPChartsTooltip(
     val fontMetrics = paint.fontMetrics
     val lineHeight = fontMetrics.descent - fontMetrics.ascent
     val height = (lineHeight * displayLines.size) + (verticalPadding * 2)
-    val centerX = datum.center.x.coerceIn(layout.plot.left + width / 2, layout.plot.right - width / 2)
+    val centerX = nativePHPChartsClampOrCenter(datum.center.x, layout.plot.left + width / 2, layout.plot.right - width / 2)
     val bottom = (datum.center.y - 12.dp.toPx()).coerceAtLeast(layout.plot.top + height)
     drawRoundRect(Color.Black.copy(alpha = 0.84f), Offset(centerX - width / 2, bottom - height), androidx.compose.ui.geometry.Size(width, height), CornerRadius(height / 2))
     displayLines.forEachIndexed { index, text ->

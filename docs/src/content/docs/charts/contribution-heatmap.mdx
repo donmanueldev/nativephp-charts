@@ -1,7 +1,7 @@
 ---
-title: Contribution heatmap
-description: Show daily activity intensity across a bounded calendar window.
-sidebar: { order: 10 }
+title: Contribution heatmap for NativePHP Mobile
+description: "Display daily activity as a native calendar contribution heatmap in NativePHP Mobile, with a 7 to 371 day window, custom color scale, and day selection."
+sidebar: { order: 10, label: "Contribution heatmap" }
 ---
 
 import { Code } from "@astrojs/starlight/components";
@@ -23,13 +23,13 @@ Each value contains a stable `id`, ISO `date`, non-negative `value`, and optiona
 
 ## Native preview
 
-<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/contribution-heatmap.png" alt="Contribution heatmap rendered by NativePHP Charts on Android" width="1344" height="700" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/contribution-heatmap-selected.png" alt="Contribution heatmap after selecting a day on Android" width="1344" height="700" /><figcaption>Android · Day selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/contribution-heatmap.png" alt="Contribution heatmap running on iOS" width="1178" height="580" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/contribution-heatmap-selected.png" alt="Contribution heatmap after selecting a day on iOS" width="1178" height="580" /><figcaption>iOS · Day selection</figcaption></figure></div>
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/contribution-heatmap.webp" alt="Contribution heatmap rendered by NativePHP Charts on Android" width="900" height="469" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/contribution-heatmap-selected.webp" alt="Contribution heatmap after selecting a day on Android" width="900" height="469" /><figcaption>Android · Day selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/contribution-heatmap.webp" alt="Contribution heatmap running on iOS" width="900" height="443" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/contribution-heatmap-selected.webp" alt="Contribution heatmap after selecting a day on iOS" width="900" height="443" /><figcaption>iOS · Day selection</figcaption></figure></div>
 
 The native accessibility representation exposes each populated visible day as one selectable item. Duplicate dates, negative values, or invalid ISO dates reject the snapshot; valid dates outside the configured window remain outside the visible grid.
 
 ## Variants
 
-Choose a 7–371 day window, Sunday or Monday week start, and independent month and weekday labels.
+Choose a 7–371 day window, any week start day (`week-starts-on` `0` for Sunday through `6` for Saturday; Monday by default), and independent month and weekday labels.
 
 ## Customization
 
@@ -83,6 +83,8 @@ Every populated day is a native selectable item. Provide labels that include eno
 ## API
 
 Required `values` contain `id`, ISO `date`, non-negative `value`, and optional `label`. Specialized props are `end-date`, `days`, `week-starts-on`, `colors`, `empty-color`, `show-month-labels`, and `show-weekday-labels`.
+
+Days with a value of `0` use `empty-color`, like days without data. Other values pick a scale color in proportion to the largest visible value, so only the maximum reaches the last color.
 
 ## Troubleshooting
 

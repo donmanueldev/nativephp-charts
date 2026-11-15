@@ -9,7 +9,6 @@ internal data class NativePHPChartsTheme(
     val muted: String? = null,
     val grid: String? = null,
     val track: String? = null,
-    val error: String? = null,
     val palette: List<String> = emptyList(),
 ) {
     fun color(index: Int, fallback: Color): Color =
@@ -39,7 +38,6 @@ internal fun nativePHPChartsTheme(json: String, mode: String, systemDark: Boolea
         muted = value.optionalThemeColor("muted"),
         grid = value.optionalThemeColor("grid"),
         track = value.optionalThemeColor("track"),
-        error = value.optionalThemeColor("error"),
         palette = palette,
     )
 }

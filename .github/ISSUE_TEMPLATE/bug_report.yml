@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve NativePHP Charts. Do not report security vulnerabilities here; follow the private reporting instructions in the README instead.
+        Thanks for helping improve NativePHP Charts. Do not report security vulnerabilities here; follow the private reporting instructions in SECURITY.md instead.
 
   - type: textarea
     id: description
@@ -146,5 +146,5 @@ body:
           required: true
         - label: I removed secrets, tokens, and private data from logs and examples.
           required: true
-        - label: This report is not a security vulnerability; security reports must follow the README instructions.
+        - label: This report is not a security vulnerability; security reports must follow SECURITY.md.
           required: true

@@ -4,33 +4,30 @@ import SwiftUI
 ///
 /// Selection identity survives unrelated property updates when the point still exists. It is
 /// cleared when a new payload removes the selected point, preventing stale tooltips and events.
+/// Until the first snapshot loads a neutral placeholder is shown; later reloads keep the last
+/// snapshot visible.
 struct NativePHPChartsRenderer: View {
     private struct LoadKey: Equatable { let input: NativePHPChartsWireInput; let isDark: Bool }
     let node: NativeUINode
     let kind: NativePHPChartsKind
 
-    @State private var snapshot: NativePHPChartsSnapshot
+    @State private var snapshot: NativePHPChartsSnapshot?
     @State private var selectedPointID: String?
     @Environment(\.colorScheme) private var colorScheme
 
     init(node: NativeUINode, kind: NativePHPChartsKind) {
         self.node = node
         self.kind = kind
-        _snapshot = State(initialValue: NativePHPChartsSnapshot(input: .testing(seriesJSON: "[]"), kind: kind))
     }
 
     var body: some View {
         Group {
-            if snapshot.availability != .available {
-                unavailableState
-            } else if snapshot.data.isEmpty {
-                emptyState
+            if let snapshot {
+                loaded(snapshot)
             } else {
-                content
+                NativePHPChartsLoadingPlaceholder()
             }
         }
-        .background(snapshot.configuration.style.color(snapshot.configuration.theme?.background, fallback: .clear))
-        .foregroundStyle(snapshot.configuration.style.color(snapshot.configuration.theme?.foreground, fallback: .primary))
         .task(id: loadKey) {
             guard let updated = await NativePHPChartsSnapshot.load(input: wireInput, kind: kind, colorSchemeIsDark: colorScheme == .dark),
                   Task.isCancelled == false
@@ -46,8 +43,22 @@ struct NativePHPChartsRenderer: View {
 
     private var loadKey: LoadKey { LoadKey(input: wireInput, isDark: colorScheme == .dark) }
 
+    private func loaded(_ snapshot: NativePHPChartsSnapshot) -> some View {
+        Group {
+            if snapshot.availability != .available {
+                unavailableState(snapshot)
+            } else if snapshot.data.isEmpty {
+                emptyState(snapshot)
+            } else {
+                content(snapshot)
+            }
+        }
+        .background(snapshot.configuration.style.color(snapshot.configuration.theme?.background, fallback: .clear))
+        .foregroundStyle(snapshot.configuration.style.color(snapshot.configuration.theme?.foreground, fallback: .primary))
+    }
+
     @ViewBuilder
-    private var content: some View {
+    private func content(_ snapshot: NativePHPChartsSnapshot) -> some View {
         let plot = NativePHPChartsPlot(
             nodeID: node.id,
             kind: kind,
@@ -55,7 +66,9 @@ struct NativePHPChartsRenderer: View {
             selectedPointID: $selectedPointID
         )
 
-        if !legendVisible {
+        let legend = legend(snapshot)
+
+        if !legendVisible(snapshot) {
             plot
         } else {
             switch snapshot.configuration.legend.position {
@@ -71,11 +84,11 @@ struct NativePHPChartsRenderer: View {
         }
     }
 
-    private var legendVisible: Bool {
+    private func legendVisible(_ snapshot: NativePHPChartsSnapshot) -> Bool {
         snapshot.configuration.legend.visible ?? (snapshot.data.series.count > 1)
     }
 
-    private var legend: some View {
+    private func legend(_ snapshot: NativePHPChartsSnapshot) -> some View {
         NativePHPChartsLegend(
             data: snapshot.data,
             configuration: snapshot.configuration.legend,
@@ -84,7 +97,7 @@ struct NativePHPChartsRenderer: View {
         )
     }
 
-    private var emptyState: some View {
+    private func emptyState(_ snapshot: NativePHPChartsSnapshot) -> some View {
         ContentUnavailableView {
             Label(snapshot.configuration.emptyLabel, systemImage: emptyIcon)
         }
@@ -93,7 +106,7 @@ struct NativePHPChartsRenderer: View {
         .accessibilityValue(snapshot.configuration.emptyLabel)
     }
 
-    private var unavailableState: some View {
+    private func unavailableState(_ snapshot: NativePHPChartsSnapshot) -> some View {
         ContentUnavailableView {
             Label(wireInput.errorLabel, systemImage: "exclamationmark.triangle")
         }

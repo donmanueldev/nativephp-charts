@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,11 +72,7 @@ internal fun NativePHPChartsPlot(
     val drawingResources = remember(localDensity, typeface, configuration) {
         val axisColor = chartColor(configuration.style.axisColor, Color.Gray.copy(alpha = 0.6f))
         val lineColors = configuration.series.associate { series ->
-            series.id to chartColor(
-                series.style?.lineColor
-                    ?: configuration.style.lineColor.takeIf { configuration.series.size == 1 },
-                series.color,
-            )
+            series.id to nativePHPChartsSeriesLineColor(configuration, series)
         }
         NativePHPChartsDrawingResources(
             axisLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -92,12 +89,7 @@ internal fun NativePHPChartsPlot(
             gridColor = chartColor(configuration.style.gridColor, Color.Gray.copy(alpha = 0.18f)),
             lineColors = lineColors,
             pointColors = configuration.series.associate { series ->
-                val lineColor = lineColors.getValue(series.id)
-                series.id to chartColor(
-                    series.style?.pointColor
-                        ?: configuration.style.pointColor.takeIf { configuration.series.size == 1 },
-                    lineColor,
-                )
+                series.id to nativePHPChartsSeriesPointColor(configuration, series)
             },
         )
     }
@@ -105,7 +97,7 @@ internal fun NativePHPChartsPlot(
     var selectedIdentity by remember { mutableStateOf<NativePHPChartsSelectionIdentity?>(null) }
     val animationKey = remember(configuration) { configuration.animationKey }
     val progress = remember { Animatable(if (shouldAnimate) 0f else 1f) }
-    val interactionReady = progress.value >= 0.999f
+    val interactionReady by remember { derivedStateOf { progress.value >= 0.999f } }
     val pointCount = remember(configuration.series) { configuration.series.sumOf { it.points.size } }
     val drawObserver = LocalNativePHPChartsDrawObserver.current
     val traceSuffix = "${configuration.kind.name.lowercase()}.$pointCount"
@@ -197,6 +189,10 @@ internal fun NativePHPChartsPlot(
     }.orEmpty()
     val currentLayout by rememberUpdatedState(layout)
     val currentViewport by rememberUpdatedState(viewportDomain)
+    val currentNode by rememberUpdatedState(node)
+    val currentConfiguration by rememberUpdatedState(configuration)
+    val currentFormatting by rememberUpdatedState(formatting)
+    val currentConfiguredViewport by rememberUpdatedState(configuredViewport)
     LaunchedEffect(layout.data, selectedIdentity) {
         if (selectedIdentity != null && selected == null) {
             selectedIdentity = null
@@ -205,7 +201,7 @@ internal fun NativePHPChartsPlot(
 
     fun select(datum: NativePHPChartsDatum) {
         selectedIdentity = datum.selectionIdentity
-        NativePHPChartsSelection.dispatch(node, configuration, formatting, datum)
+        NativePHPChartsSelection.dispatch(currentNode, currentConfiguration, currentFormatting, datum)
     }
 
     fun preview(datum: NativePHPChartsDatum) {
@@ -266,27 +262,28 @@ internal fun NativePHPChartsPlot(
                 val fullDomain = baseLayout.xDomain
                 if (!configuration.viewport.enabled || fullDomain == null) return@pointerInput
 
-                var initialDomain = currentViewport ?: configuredViewport ?: fullDomain
+                var initialDomain = currentViewport ?: currentConfiguredViewport ?: fullDomain
                 var gestureDomain = initialDomain
                 var gestureReason: NativePHPChartsViewportReason? = null
                 detectNativePHPChartsViewportGestures(
                     canStart = { location -> currentLayout.plot.contains(location) },
                     onStart = {
-                        initialDomain = currentViewport ?: configuredViewport ?: fullDomain
+                        initialDomain = currentViewport ?: currentConfiguredViewport ?: fullDomain
                         gestureDomain = initialDomain
                         gestureReason = null
                     },
                     onGesture = { centroid, pan, zoom ->
                         val current = gestureDomain
-                        val horizontalBar = configuration.kind == NativePHPChartsKind.Bar &&
-                            configuration.barOrientation == "horizontal"
+                        val gestureConfiguration = currentConfiguration
+                        val horizontalBar = gestureConfiguration.kind == NativePHPChartsKind.Bar &&
+                            gestureConfiguration.barOrientation == "horizontal"
                         val plot = currentLayout.plot
                         val length = if (horizontalBar) plot.height else plot.width
                         if (length <= 0f) return@detectNativePHPChartsViewportGestures
 
-                        val zoomed = configuration.viewport.zoom && zoom != 1f
+                        val zoomed = gestureConfiguration.viewport.zoom && zoom != 1f
                         val panDelta = if (horizontalBar) pan.y else pan.x
-                        val panned = configuration.viewport.pan && panDelta != 0f
+                        val panned = gestureConfiguration.viewport.pan && panDelta != 0f
                         val interactionReason = NativePHPChartsViewportReason.from(panned, zoomed)
                             ?: return@detectNativePHPChartsViewportGestures
                         gestureReason = NativePHPChartsViewportReason.combine(gestureReason, interactionReason)
@@ -295,7 +292,7 @@ internal fun NativePHPChartsPlot(
                         var center = (current.minimum + current.maximum) / 2.0
                         if (zoomed) {
                             val minimumSpan = min(
-                                configuration.viewport.minimumSpan ?: max(fullDomain.span / 1000.0, 0.000_001),
+                                gestureConfiguration.viewport.minimumSpan ?: max(fullDomain.span / 1000.0, 0.000_001),
                                 fullDomain.span,
                             )
                             val nextSpan = (span / zoom).coerceIn(minimumSpan, fullDomain.span)
@@ -336,9 +333,9 @@ internal fun NativePHPChartsPlot(
                         val reason = gestureReason
                         if (completed && reason != null && gestureDomain != initialDomain) {
                             NativePHPChartsViewportSelection.dispatch(
-                                node,
-                                configuration,
-                                formatting,
+                                currentNode,
+                                currentConfiguration,
+                                currentFormatting,
                                 gestureDomain,
                                 reason,
                             )

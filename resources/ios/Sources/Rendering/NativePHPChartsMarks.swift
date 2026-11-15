@@ -1,17 +1,21 @@
 import Charts
 import SwiftUI
 
+/// Candle body width in points. PHP normalizes `style.bar.width` to a positive point value,
+/// so a fixed width is the only representable case.
 enum NativePHPChartsCandlestickBodyWidth: Equatable {
     static let defaultWidth: CGFloat = 12
 
     case fixed(CGFloat)
-    case ratio(CGFloat)
+
+    var points: CGFloat {
+        switch self {
+        case let .fixed(width): width
+        }
+    }
 
     var markDimension: MarkDimension {
-        switch self {
-        case let .fixed(width): .fixed(width)
-        case let .ratio(ratio): .ratio(ratio)
-        }
+        .fixed(points)
     }
 }
 
@@ -80,7 +84,7 @@ struct NativePHPChartsAnnotations: ChartContent {
                             annotationLabel(annotation)
                         }
                 } else {
-                    RuleMark(y: .value(annotation.label ?? annotation.id, value))
+                    RuleMark(y: .value(annotation.label ?? annotation.id, physicalY(value, axis: annotation.axis)))
                         .foregroundStyle(color(annotation))
                         .lineStyle(StrokeStyle(lineWidth: annotation.width ?? 1))
                         .annotation(position: .top, alignment: .trailing) {
@@ -99,8 +103,8 @@ struct NativePHPChartsAnnotations: ChartContent {
                     .foregroundStyle(color(annotation).opacity(annotation.opacity ?? 0.12))
                 } else {
                     RectangleMark(
-                        yStart: .value("Band start", from),
-                        yEnd: .value("Band end", to)
+                        yStart: .value("Band start", physicalY(from, axis: annotation.axis)),
+                        yEnd: .value("Band end", physicalY(to, axis: annotation.axis))
                     )
                     .foregroundStyle(color(annotation).opacity(annotation.opacity ?? 0.12))
                 }
@@ -114,6 +118,12 @@ struct NativePHPChartsAnnotations: ChartContent {
             return snapshot.data.categoryPlotX(value)
         }
         return snapshot.configuration.xAxis.plotValue(value, formatter: snapshot.formatter)
+    }
+
+    /// Logical x (category) values sit on the mirrored physical y axis of horizontal bars.
+    private func physicalY(_ value: Double, axis: String) -> Double {
+        guard axis == "x", snapshot.configuration.barOrientation == .horizontal else { return value }
+        return NativePHPChartsHorizontalBarAxis.physicalY(category: value)
     }
 
     private var physicalXAxis: String {
@@ -136,8 +146,8 @@ struct NativePHPChartsAnnotations: ChartContent {
 
 /// Translates normalized logical geometry into Swift Charts marks.
 ///
-/// Horizontal bars intentionally render categories as negative physical-y values to preserve
-/// source order from top to bottom. Viewport filtering applies only to connected paths and
+/// Horizontal bars render categories through `NativePHPChartsHorizontalBarAxis` (negative
+/// physical y) to preserve source order from top to bottom. Viewport filtering applies only to connected paths and
 /// retains boundary-crossing endpoints in `NativePHPChartsDataSet.visiblePoints`.
 struct NativePHPChartsMarks: ChartContent {
     let kind: NativePHPChartsKind
@@ -292,7 +302,7 @@ struct NativePHPChartsMarks: ChartContent {
             BarMark(
                 xStart: .value("Start", animated(geometry.valueBounds.lowerBound)),
                 xEnd: .value(series.name, animated(geometry.valueBounds.upperBound)),
-                y: .value("Y", -geometry.category),
+                y: .value("Y", NativePHPChartsHorizontalBarAxis.physicalY(category: geometry.category)),
                 height: barStyle(for: series).width.map(MarkDimension.fixed) ?? .automatic
             )
             .foregroundStyle(resolvedColor(for: series))
@@ -338,7 +348,7 @@ struct NativePHPChartsMarks: ChartContent {
             RuleMark(
                 xStart: .value("Error minimum", animated(minimum)),
                 xEnd: .value("Error maximum", animated(maximum)),
-                y: .value("Y", renderX(for: point))
+                y: .value("Y", NativePHPChartsHorizontalBarAxis.physicalY(category: renderX(for: point)))
             )
             .foregroundStyle(resolvedColor(for: series))
             .lineStyle(StrokeStyle(lineWidth: 1.25, lineCap: .round))

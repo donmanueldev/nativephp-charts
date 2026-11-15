@@ -5,7 +5,8 @@ import Foundation
 /// PHP normally validates and normalizes every JSON field. The native boundary still
 /// supplies defaults because a partially upgraded generated shell can omit newer
 /// properties. Large Cartesian series may arrive by `file-v1`; a missing or unreadable
-/// file deliberately resolves to an empty series instead of rendering stale data.
+/// file resolves to the `.unavailable` error state instead of rendering stale data.
+/// `sampling_json` is intentionally not read: PHP applies sampling before encoding series.
 struct NativePHPChartsWireInput: Equatable, Sendable {
     let contractVersion: Int
     let seriesJSON: String
@@ -18,7 +19,6 @@ struct NativePHPChartsWireInput: Equatable, Sendable {
     let annotationsJSON: String
     let interactionJSON: String
     let viewportJSON: String
-    let samplingJSON: String
     let locale: String
     let valueFormat: String
     let currencyCode: String
@@ -53,7 +53,6 @@ struct NativePHPChartsWireInput: Equatable, Sendable {
         annotationsJSON = node.props.getString("annotations_json", default: "[]")
         interactionJSON = node.props.getString("interaction_json", default: "{}")
         viewportJSON = node.props.getString("viewport_json", default: "{}")
-        samplingJSON = node.props.getString("sampling_json", default: "{}")
         locale = node.props.getString("locale", default: "")
         valueFormat = node.props.getString("value_format", default: "number")
         currencyCode = node.props.getString("currency_code", default: "")
@@ -76,29 +75,44 @@ struct NativePHPChartsWireInput: Equatable, Sendable {
         barOrientation = node.props.getString("bar_orientation", default: "vertical")
     }
 
-    static func testing(contractVersion: Int = 1, seriesJSON: String) -> Self {
+    static func testing(
+        contractVersion: Int = 1,
+        seriesJSON: String,
+        barOrientation: String = "vertical",
+        animated: Bool = true,
+        seriesJSONFile: String? = nil
+    ) -> Self {
         Self(
             contractVersion: contractVersion,
             seriesJSON: seriesJSON,
-            seriesTransport: "inline-v1",
-            seriesJSONFile: nil
+            seriesTransport: seriesJSONFile == nil ? "inline-v1" : "file-v1",
+            seriesJSONFile: seriesJSONFile,
+            barOrientation: barOrientation,
+            animated: animated
         )
     }
 
-    private init(contractVersion: Int, seriesJSON: String, seriesTransport: String, seriesJSONFile: String?) {
+    private init(
+        contractVersion: Int,
+        seriesJSON: String,
+        seriesTransport: String,
+        seriesJSONFile: String?,
+        barOrientation: String,
+        animated: Bool
+    ) {
         self.contractVersion = contractVersion
         self.seriesJSON = seriesJSON
         self.seriesTransport = seriesTransport
         self.seriesJSONFile = seriesJSONFile
         styleJSON = "{}"; xAxisJSON = "{}"; yAxisJSON = "{}"; legendJSON = "{}"
-        annotationsJSON = "[]"; interactionJSON = "{}"; viewportJSON = "{}"; samplingJSON = "{}"
+        annotationsJSON = "[]"; interactionJSON = "{}"; viewportJSON = "{}"
         locale = ""; valueFormat = "number"; currencyCode = ""
         minimumFractionDigits = -1; maximumFractionDigits = -1
-        showGrid = true; showPoints = true; beginAtZero = true; animated = true
+        showGrid = true; showPoints = true; beginAtZero = true; self.animated = animated
         emptyLabel = "No data"; errorLabel = "Chart unavailable"; accessibilityLabel = "Chart"
         themeMode = "system"; preset = "default"; themeJSON = "{}"
         onSelect = 0; onViewportChange = 0
-        areaMode = "overlay"; barMode = "grouped"; barOrientation = "vertical"
+        areaMode = "overlay"; barMode = "grouped"; self.barOrientation = barOrientation
     }
 
 }
@@ -482,18 +496,20 @@ struct NativePHPChartsSnapshot {
         kind: NativePHPChartsKind,
         resolvedSeriesJSON: String? = nil,
         decodedSeries: [NativePHPChartsWireSeries]? = nil,
+        failure: NativePHPChartsAvailability? = nil,
         colorSchemeIsDark: Bool = false
     ) {
         let configuration = NativePHPChartsConfiguration.decode(input, kind: kind, colorSchemeIsDark: colorSchemeIsDark)
         let formatter = NativePHPChartsFormatter(input: input, configuration: configuration)
         let json = resolvedSeriesJSON ?? input.seriesJSON
-        let payloadValid = decodedSeries.map {
-            NativePHPChartsDataSet.validate(series: $0, xAxis: configuration.xAxis, formatter: formatter, kind: kind)
-        } ?? NativePHPChartsDataSet.validate(seriesJSON: json, xAxis: configuration.xAxis, formatter: formatter, kind: kind)
         let availability: NativePHPChartsAvailability
-        if input.contractVersion != NativePHPChartsRuntime.supportedContractVersion {
+        if let failure {
+            availability = failure
+        } else if input.contractVersion != NativePHPChartsRuntime.supportedContractVersion {
             availability = .unsupportedContract
-        } else if payloadValid == false {
+        } else if (decodedSeries.map {
+            NativePHPChartsDataSet.validate(series: $0, xAxis: configuration.xAxis, formatter: formatter, kind: kind)
+        } ?? NativePHPChartsDataSet.validate(seriesJSON: json, xAxis: configuration.xAxis, formatter: formatter, kind: kind)) == false {
             availability = .invalidPayload
         } else {
             availability = .available
@@ -531,8 +547,7 @@ struct NativePHPChartsSnapshot {
         } catch is CancellationError {
             return nil
         } catch {
-            NativePHPChartsRuntime.diagnose(.unavailable, chartType: kind.rawValue)
-            return NativePHPChartsSnapshot(input: input, kind: kind, resolvedSeriesJSON: "{", colorSchemeIsDark: colorSchemeIsDark)
+            return NativePHPChartsSnapshot(input: input, kind: kind, failure: .unavailable, colorSchemeIsDark: colorSchemeIsDark)
         }
     }
 }

@@ -69,6 +69,10 @@ actor NativePHPChartsPayloadCache {
 }
 
 /// Bounded cache for the expensive JSON-to-wire-model stage of large Cartesian snapshots.
+///
+/// Hashing and decoding run outside the actor so one large payload never serializes other
+/// charts' loads behind it; the actor only guards lookup and insertion. Two concurrent loads
+/// of the same payload may both decode it, and the later insert simply replaces the entry.
 actor NativePHPChartsDecodedSeriesCache {
     static let shared = NativePHPChartsDecodedSeriesCache()
     private let maximumEntries = 32
@@ -78,23 +82,37 @@ actor NativePHPChartsDecodedSeriesCache {
     private var order: [String] = []
     private var totalPoints = 0
 
-    func series(for json: String) -> [NativePHPChartsWireSeries]? {
+    @concurrent
+    nonisolated func series(for json: String) async -> [NativePHPChartsWireSeries]? {
         let data = Data(json.utf8)
         let key = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        if let cached = values[key] {
-            order.removeAll { $0 == key }; order.append(key)
+        if let cached = await cached(for: key) {
             return cached
         }
         guard let decoded = try? JSONDecoder().decode([NativePHPChartsWireSeries].self, from: data) else { return nil }
+        await insert(decoded, for: key)
+        return decoded
+    }
+
+    private func cached(for key: String) -> [NativePHPChartsWireSeries]? {
+        guard let cached = values[key] else { return nil }
+        order.removeAll { $0 == key }; order.append(key)
+        return cached
+    }
+
+    private func insert(_ decoded: [NativePHPChartsWireSeries], for key: String) {
         let cost = decoded.reduce(0) { $0 + $1.points.count }
-        guard cost <= maximumPoints else { return decoded }
+        guard cost <= maximumPoints else { return }
+        if let previous = costs[key] {
+            totalPoints -= previous
+            order.removeAll { $0 == key }
+        }
         values[key] = decoded; costs[key] = cost; totalPoints += cost; order.append(key)
         while order.count > maximumEntries || totalPoints > maximumPoints {
             guard let oldest = order.first else { break }
             order.removeFirst(); values.removeValue(forKey: oldest)
             totalPoints -= costs.removeValue(forKey: oldest) ?? 0
         }
-        return decoded
     }
 }
 

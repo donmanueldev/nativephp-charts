@@ -76,6 +76,10 @@ abstract class CartesianChart extends ChartElement
 
     protected bool $seriesRequiresFinalNormalization = false;
 
+    protected bool $annotationsRequireFinalNormalization = false;
+
+    protected bool $viewportRequiresFinalNormalization = false;
+
     /** @var array<string, string>|null */
     private ?array $cartesianWireSnapshot = null;
 
@@ -101,9 +105,9 @@ abstract class CartesianChart extends ChartElement
         $this->applyBooleanAttributes($attrs, ['begin-at-zero', 'beginAtZero'], 'beginAtZero');
         $this->applyCommonAttributes($attrs);
         $this->applyArrayAttributes($attrs, ['y-axis', 'yAxis'], 'yAxis');
-        $this->applyArrayAttributes($attrs, ['annotations'], 'annotations');
+        $this->applyArrayAttributes($attrs, ['annotations'], 'strictAnnotations');
         $this->applyArrayAttributes($attrs, ['interaction'], 'interaction');
-        $this->applyArrayAttributes($attrs, ['viewport'], 'viewport');
+        $this->applyArrayAttributes($attrs, ['viewport'], 'strictViewport');
         $this->applyArrayAttributes($attrs, ['sampling'], 'sampling');
         $this->applyStringAttributes($attrs, ['_viewport_change', 'on-viewport-change', 'onViewportChange'], 'onViewportChange');
         $this->applyChartAttributes($attrs);
@@ -134,31 +138,7 @@ abstract class CartesianChart extends ChartElement
     /** @param array<string, mixed> $axis */
     public function xAxis(array $axis): static
     {
-        $normalizedAxis = AxisNormalizer::x($axis, $this->chartName(), $this->xAxis);
-        $normalizedSeries = ChartDataNormalizer::normalize(
-            $this->rawSeries,
-            $normalizedAxis['type'],
-            $this->chartName(),
-            $this->chartType(),
-        );
-        $normalizedAnnotations = AnnotationNormalizer::normalize(
-            $this->rawAnnotations,
-            $normalizedAxis['type'],
-            $this->chartName(),
-        );
-        $normalizedViewport = ViewportNormalizer::normalize(
-            $this->rawViewport,
-            $normalizedAxis['type'],
-            $this->chartName(),
-        );
-
-        $this->xAxis = $normalizedAxis;
-        $this->xAxisWasConfigured = true;
-        $this->series = $normalizedSeries;
-        $this->annotations = $normalizedAnnotations;
-        $this->viewport = $normalizedViewport;
-        $this->seriesRequiresFinalNormalization = false;
-        $this->invalidateCartesianWireSnapshot();
+        $this->replaceCartesianData($axis, $this->rawSeries);
 
         return $this;
     }
@@ -176,20 +156,15 @@ abstract class CartesianChart extends ChartElement
         return $this;
     }
 
-    /** @param array<int, mixed> $annotations */
+    /**
+     * Configure annotations. Before the x axis is configured, x-axis values are checked
+     * against the final x type when `xAxis()` is called or the wire payload is built.
+     *
+     * @param  array<int, mixed>  $annotations
+     */
     public function annotations(array $annotations): static
     {
-        $normalizedAnnotations = AnnotationNormalizer::normalize(
-            $annotations,
-            $this->xAxis['type'],
-            $this->chartName(),
-        );
-
-        $this->rawAnnotations = $annotations;
-        $this->annotations = $normalizedAnnotations;
-        $this->invalidateCartesianWireSnapshot();
-
-        return $this;
+        return $this->replaceAnnotations($annotations, deferTypedX: ! $this->xAxisWasConfigured);
     }
 
     /** @param array<string, mixed> $interaction */
@@ -201,16 +176,15 @@ abstract class CartesianChart extends ChartElement
         return $this;
     }
 
-    /** @param array<string, mixed> $viewport */
+    /**
+     * Configure the initial viewport. Before the x axis is configured, its x-type rules
+     * are checked against the final x type when `xAxis()` is called or the wire payload is built.
+     *
+     * @param  array<string, mixed>  $viewport
+     */
     public function viewport(array $viewport): static
     {
-        $normalizedViewport = ViewportNormalizer::normalize($viewport, $this->xAxis['type'], $this->chartName());
-
-        $this->rawViewport = $viewport;
-        $this->viewport = $normalizedViewport;
-        $this->invalidateCartesianWireSnapshot();
-
-        return $this;
+        return $this->replaceViewport($viewport, deferTypedX: ! $this->xAxisWasConfigured);
     }
 
     /** @param array<string, mixed> $sampling */
@@ -224,7 +198,7 @@ abstract class CartesianChart extends ChartElement
 
     public function onViewportChange(string $method): static
     {
-        $this->viewportChangeMethod = CallbackExpression::normalize($method, $this->chartName());
+        $this->viewportChangeMethod = CallbackExpression::normalize($method, $this->chartName(), 'viewport change callback');
 
         return $this;
     }
@@ -308,6 +282,60 @@ abstract class CartesianChart extends ChartElement
     }
 
     /**
+     * Blade attributes are validated against the x type known at attribute time.
+     *
+     * @param  array<int, mixed>  $annotations
+     */
+    protected function strictAnnotations(array $annotations): static
+    {
+        return $this->replaceAnnotations($annotations, deferTypedX: false);
+    }
+
+    /**
+     * Blade attributes are validated against the x type known at attribute time.
+     *
+     * @param  array<string, mixed>  $viewport
+     */
+    protected function strictViewport(array $viewport): static
+    {
+        return $this->replaceViewport($viewport, deferTypedX: false);
+    }
+
+    /** @param array<int, mixed> $annotations */
+    private function replaceAnnotations(array $annotations, bool $deferTypedX): static
+    {
+        $normalizedAnnotations = AnnotationNormalizer::normalize(
+            $annotations,
+            $this->xAxis['type'],
+            $this->chartName(),
+            $deferTypedX,
+        );
+
+        $this->rawAnnotations = $annotations;
+        $this->annotations = $normalizedAnnotations;
+        $this->annotationsRequireFinalNormalization = $deferTypedX;
+        $this->invalidateCartesianWireSnapshot();
+
+        return $this;
+    }
+
+    /** @param array<string, mixed> $viewport */
+    private function replaceViewport(array $viewport, bool $deferTypedX): static
+    {
+        $normalizedViewport = ViewportNormalizer::normalize($viewport, $this->xAxis['type'], $this->chartName(), $deferTypedX);
+
+        $this->rawViewport = $viewport;
+        $this->viewport = $normalizedViewport;
+        $this->viewportRequiresFinalNormalization = $deferTypedX;
+        $this->invalidateCartesianWireSnapshot();
+
+        return $this;
+    }
+
+    /**
+     * Normalize a new x axis together with the series, annotations, and viewport that
+     * depend on its type, committing all of them only when every one is valid.
+     *
      * @param  array<string, mixed>  $axis
      * @param  array<int, mixed>  $series
      */
@@ -338,6 +366,8 @@ abstract class CartesianChart extends ChartElement
         $this->annotations = $normalizedAnnotations;
         $this->viewport = $normalizedViewport;
         $this->seriesRequiresFinalNormalization = false;
+        $this->annotationsRequireFinalNormalization = false;
+        $this->viewportRequiresFinalNormalization = false;
         $this->invalidateCartesianWireSnapshot();
     }
 
@@ -369,6 +399,16 @@ abstract class CartesianChart extends ChartElement
                 $this->chartType(),
             );
             $this->seriesRequiresFinalNormalization = false;
+        }
+
+        if ($this->annotationsRequireFinalNormalization) {
+            $this->annotations = AnnotationNormalizer::normalize($this->rawAnnotations, $this->xAxis['type'], $this->chartName());
+            $this->annotationsRequireFinalNormalization = false;
+        }
+
+        if ($this->viewportRequiresFinalNormalization) {
+            $this->viewport = ViewportNormalizer::normalize($this->rawViewport, $this->xAxis['type'], $this->chartName());
+            $this->viewportRequiresFinalNormalization = false;
         }
 
         if ($this->sampling['mode'] === 'lttb' && ! in_array($this->chartType(), ['line', 'area', 'scatter'], true)) {

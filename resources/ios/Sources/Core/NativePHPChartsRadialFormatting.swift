@@ -1,19 +1,44 @@
 import Foundation
 
+/// Locale-aware value formatter shared by the pie, donut, and radar renderers.
 final class NativePHPChartsRadialFormatter {
     private let numberFormatter: NumberFormatter
 
-    init(input: NativePHPChartsRadialWireInput) {
-        let locale = input.locale.isEmpty ? Locale.current : Locale(identifier: input.locale)
-        let configuration = NativePHPChartsNumberFormat(
-            style: input.valueFormat,
-            currencyCode: input.currencyCode.isEmpty ? nil : input.currencyCode,
-            minimumFractionDigits: input.minimumFractionDigits >= 0 ? input.minimumFractionDigits : nil,
-            maximumFractionDigits: input.maximumFractionDigits >= 0 ? input.maximumFractionDigits : nil
-        )
+    init(
+        locale: String,
+        valueFormat: String,
+        currencyCode: String,
+        minimumFractionDigits: Int,
+        maximumFractionDigits: Int
+    ) {
         numberFormatter = NativePHPChartsFormatter.makeNumberFormatter(
-            locale: locale,
-            configuration: configuration
+            locale: locale.isEmpty ? .current : Locale(identifier: locale),
+            configuration: NativePHPChartsNumberFormat(
+                style: valueFormat,
+                currencyCode: currencyCode.isEmpty ? nil : currencyCode,
+                minimumFractionDigits: minimumFractionDigits >= 0 ? minimumFractionDigits : nil,
+                maximumFractionDigits: maximumFractionDigits >= 0 ? maximumFractionDigits : nil
+            )
+        )
+    }
+
+    convenience init(input: NativePHPChartsRadialWireInput) {
+        self.init(
+            locale: input.locale,
+            valueFormat: input.valueFormat,
+            currencyCode: input.currencyCode,
+            minimumFractionDigits: input.minimumFractionDigits,
+            maximumFractionDigits: input.maximumFractionDigits
+        )
+    }
+
+    convenience init(input: NativePHPChartsRadarWireInput) {
+        self.init(
+            locale: input.locale,
+            valueFormat: input.valueFormat,
+            currencyCode: input.currencyCode,
+            minimumFractionDigits: input.minimumFractionDigits,
+            maximumFractionDigits: input.maximumFractionDigits
         )
     }
 

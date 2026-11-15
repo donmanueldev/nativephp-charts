@@ -71,14 +71,8 @@ private fun NativePHPChartsLegendItem(
     }
     Row(modifier = Modifier.widthIn(max = 160.dp).padding(horizontal = 6.dp, vertical = 3.dp)) {
         val markerColor = when (configuration.kind) {
-            NativePHPChartsKind.Scatter -> chartColor(
-                configuration.style.pointColor.takeIf { configuration.series.size == 1 },
-                series.color,
-            )
-            NativePHPChartsKind.Line, NativePHPChartsKind.Area -> chartColor(
-                configuration.style.lineColor.takeIf { configuration.series.size == 1 },
-                series.color,
-            )
+            NativePHPChartsKind.Scatter -> nativePHPChartsSeriesPointColor(configuration, series)
+            NativePHPChartsKind.Line, NativePHPChartsKind.Area -> nativePHPChartsSeriesLineColor(configuration, series)
             NativePHPChartsKind.Bar, NativePHPChartsKind.Candlestick -> series.color
         }
         Box(modifier = Modifier.padding(top = 4.dp, end = 6.dp).size(legend.markerSize.dp).background(markerColor, CircleShape))

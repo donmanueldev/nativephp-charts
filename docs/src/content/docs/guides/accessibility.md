@@ -1,7 +1,7 @@
 ---
-title: Accessibility
-description: Build charts that remain understandable with assistive technology and reduced motion.
-sidebar: { order: 4 }
+title: Chart accessibility with VoiceOver and TalkBack
+description: "Make NativePHP charts usable with VoiceOver and TalkBack: accessibility labels, error labels, reduced motion, larger text, and meaningful point labels."
+sidebar: { order: 4, label: "Accessibility" }
 ---
 
 Charts expose native accessibility elements to VoiceOver and TalkBack. Provide context with `a11y-label` and an actionable failure with `error-label`.

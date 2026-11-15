@@ -2,8 +2,8 @@
 
 namespace Donmanueldev\NativephpCharts;
 
-use DateTimeImmutable;
 use Donmanueldev\NativephpCharts\Support\ChartDataNormalizer;
+use Donmanueldev\NativephpCharts\Support\TypedXValue;
 use InvalidArgumentException;
 use JsonException;
 
@@ -85,7 +85,7 @@ final readonly class ViewportChange
 
         $minimum = self::boundary($payload, 'minimum', $xType);
         $maximum = self::boundary($payload, 'maximum', $xType);
-        if (self::comparable($minimum, $xType) >= self::comparable($maximum, $xType)) {
+        if (TypedXValue::compare($minimum, $maximum, $xType) >= 0) {
             throw new InvalidArgumentException('The viewport change minimum must be less than maximum.');
         }
 
@@ -131,16 +131,6 @@ final readonly class ViewportChange
             'viewport change',
             $key,
         );
-    }
-
-    /** Compare canonical bounds without discarding datetime microseconds. */
-    private static function comparable(int|float|string $value, string $xType): float|string
-    {
-        return match ($xType) {
-            'number' => (float) $value,
-            'date' => $value,
-            'datetime' => (float) (new DateTimeImmutable($value))->format('U.u'),
-        };
     }
 
     /** @param array<string, mixed> $payload */

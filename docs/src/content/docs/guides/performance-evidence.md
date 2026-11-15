@@ -1,7 +1,7 @@
 ---
-title: Performance and validation
-description: Size datasets, profile native rendering, and validate interactions in your app.
-sidebar: { order: 5 }
+title: Chart performance and validation
+description: "Size datasets for NativePHP charts, reduce dense series with LTTB sampling, profile native rendering, and validate on iOS and Android before release."
+sidebar: { order: 5, label: "Performance and validation" }
 ---
 
 Chart performance depends on the device, number of points, labels, animation, and enabled gestures. Measure the chart inside your app's actual screen and scrolling layout.

@@ -787,3 +787,134 @@ it('rejects invalid explicit cartesian domains', function (Closure $configure, s
     'empty x title' => [fn (LineChart $chart) => $chart->xAxis(['title' => '  ']), 'title must be a non-empty string'],
     'non-finite y maximum' => [fn (LineChart $chart) => $chart->yAxis(['maximum' => INF]), 'maximum must be a finite integer or float'],
 ]);
+
+it('treats explicit null axis options as cleared instead of raising warnings', function () {
+    $props = LineChart::make()
+        ->xAxis(['type' => 'number', 'minimum' => 0, 'maximum' => 10, 'interval' => 2, 'title' => 'Day'])
+        ->xAxis(['minimum' => null, 'interval' => null, 'title' => null])
+        ->yAxis(['minimum' => 0, 'maximum' => 100, 'labelCount' => 4])
+        ->yAxis(['minimum' => null, 'baseline' => null, 'labelCount' => null])
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect(json_decode($props['x_axis_json'], true, flags: JSON_THROW_ON_ERROR))->toBe([
+        'type' => 'number',
+        'date_format' => 'medium',
+        'timezone' => '',
+        'maximum' => 10,
+    ])->and(json_decode($props['y_axis_json'], true, flags: JSON_THROW_ON_ERROR))->toBe([
+        'value_format' => 'number',
+        'currency_code' => '',
+        'minimum_fraction_digits' => -1,
+        'maximum_fraction_digits' => -1,
+        'maximum' => 100,
+    ]);
+});
+
+it('drops a carried-over x domain when a later fluent call changes the x axis type', function () {
+    $props = LineChart::make()
+        ->xAxis(['type' => 'number', 'minimum' => 0, 'maximum' => 10, 'interval' => 1, 'title' => 'Index'])
+        ->xAxis(['type' => 'category'])
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect(json_decode($props['x_axis_json'], true, flags: JSON_THROW_ON_ERROR))->toBe([
+        'type' => 'category',
+        'date_format' => 'medium',
+        'timezone' => '',
+        'title' => 'Index',
+    ])->and(fn () => LineChart::make()->xAxis(['type' => 'category', 'minimum' => 0]))
+        ->toThrow(InvalidArgumentException::class, 'category x axis does not support an explicit domain');
+});
+
+it('validates a date viewport span in UTC calendar days regardless of the default timezone', function () {
+    $timezone = date_default_timezone_get();
+    date_default_timezone_set('America/New_York');
+
+    try {
+        $viewport = json_decode(LineChart::make()
+            ->xAxis(['type' => 'date'])
+            ->viewport(['enabled' => true, 'minimum' => '2026-03-01', 'maximum' => '2026-03-09', 'minimumSpan' => 8 * 86_400])
+            ->toArray(new CallbackRegistry)['props']['viewport_json'], true, flags: JSON_THROW_ON_ERROR);
+
+        expect($viewport['minimum_span'])->toEqual(8 * 86_400)
+            ->and(fn () => LineChart::make()
+                ->xAxis(['type' => 'date'])
+                ->viewport(['enabled' => true, 'minimum' => '2026-03-01', 'maximum' => '2026-03-09', 'minimumSpan' => 8 * 86_400 + 1]))
+            ->toThrow(InvalidArgumentException::class, 'minimum span must not exceed the viewport range');
+    } finally {
+        date_default_timezone_set($timezone);
+    }
+});
+
+it('accepts fluent viewport and annotations configured before the x axis type', function () {
+    $props = LineChart::make()
+        ->viewport(['enabled' => true, 'minimum' => 0, 'maximum' => 10])
+        ->annotations([['id' => 'launch', 'type' => 'line', 'axis' => 'x', 'value' => 3]])
+        ->xAxis(['type' => 'number'])
+        ->series([[
+            'id' => 'signal', 'name' => 'Signal', 'color' => '#2563EB',
+            'points' => [['id' => 'a', 'label' => 'A', 'x' => 1, 'value' => 2]],
+        ]])
+        ->toArray(new CallbackRegistry)['props'];
+
+    expect(json_decode($props['viewport_json'], true, flags: JSON_THROW_ON_ERROR))->toBe([
+        'enabled' => true, 'pan' => true, 'zoom' => true, 'minimum' => 0, 'maximum' => 10,
+    ])->and(json_decode($props['annotations_json'], true, flags: JSON_THROW_ON_ERROR)[0])->toMatchArray([
+        'id' => 'launch', 'value' => 3,
+    ]);
+});
+
+it('still rejects deferred viewport and annotations that are invalid for the final x axis', function (Closure $configure, string $message) {
+    expect(fn () => $configure(LineChart::make())->toArray(new CallbackRegistry))
+        ->toThrow(InvalidArgumentException::class, $message);
+})->with([
+    'numeric annotation on category axis' => [
+        fn (LineChart $chart) => $chart->annotations([['id' => 'launch', 'type' => 'line', 'axis' => 'x', 'value' => 3]]),
+        "annotation 'launch' category value must be a non-empty string",
+    ],
+    'date annotation on number axis' => [
+        fn (LineChart $chart) => $chart->annotations([['id' => 'launch', 'type' => 'line', 'axis' => 'x', 'value' => '2026-01-01']])->xAxis(['type' => 'number']),
+        'must be a finite integer or float',
+    ],
+    'viewport on date axis' => [
+        fn (LineChart $chart) => $chart->viewport(['enabled' => true, 'minimum' => 0, 'maximum' => 10])->xAxis(['type' => 'date']),
+        'must use YYYY-MM-DD',
+    ],
+    'reversed deferred viewport' => [
+        fn (LineChart $chart) => $chart->viewport(['enabled' => true, 'minimum' => 10, 'maximum' => 0])->xAxis(['type' => 'number']),
+        'viewport minimum must be less than maximum',
+    ],
+]);
+
+it('keeps Blade viewport validation immediate when no x axis is given', function () {
+    expect(fn () => LineChart::make()->applyAttributes([
+        'viewport' => ['enabled' => true, 'minimum' => 0, 'maximum' => 10],
+    ]))->toThrow(InvalidArgumentException::class, 'category x axis does not support a viewport');
+});
+
+it('applies the Blade accessibility hint without changing the chart label', function () {
+    $chart = LineChart::make();
+    $chart->applyAttributes(['a11y-label' => 'Revenue chart', 'a11y-hint' => 'Swipe to explore each month']);
+
+    $props = $chart->toArray(new CallbackRegistry)['props'];
+
+    expect($props['a11y_label'])->toBe('Revenue chart')
+        ->and($props['a11y_hint'])->toBe('Swipe to explore each month');
+});
+
+it('accepts parentheses inside callback string literals', function () {
+    $registry = new CallbackRegistry;
+    $props = LineChart::make()
+        ->onSelect("selected('a(b)', \"c)\")")
+        ->toArray($registry)['props'];
+
+    expect($registry->resolve($props['on_select']))->toBe(['method' => 'selected', 'args' => ['a(b)', 'c)']]);
+});
+
+it('rejects malformed and non-finite callback expressions', function (Closure $configure, string $message) {
+    expect(fn () => $configure(LineChart::make()))->toThrow(InvalidArgumentException::class, $message);
+})->with([
+    'non-finite number' => [fn (LineChart $chart) => $chart->onSelect('selected(1e999)'), 'arguments must be finite'],
+    'extra call' => [fn (LineChart $chart) => $chart->onSelect('selected(1)(2)'), 'selection callback expression is malformed'],
+    'unbalanced' => [fn (LineChart $chart) => $chart->onSelect("selected('a'"), 'selection callback expression is malformed'],
+    'viewport callback context' => [fn (LineChart $chart) => $chart->onViewportChange('viewport-changed'), 'viewport change callback method name is invalid'],
+]);

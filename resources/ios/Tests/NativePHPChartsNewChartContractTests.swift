@@ -61,7 +61,9 @@ struct NativePHPChartsNewChartContractTests {
         [{"id":"delivery","label":"Delivery","value":0.75}]
         """))
         let metric = try #require(snapshot.metrics.first)
-        let json = try #require(NativePHPChartsProgressSelection.payload(metric: metric).json())
+        let json = try #require(
+            NativePHPChartsProgressSelection.payload(metric: metric, localizedValue: snapshot.formatted(metric.value)).json()
+        )
         let object = try #require(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
 
         #expect(object["series_id"] as? String == "delivery")

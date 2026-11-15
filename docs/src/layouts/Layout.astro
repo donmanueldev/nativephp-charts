@@ -1,5 +1,40 @@
 ---
+interface Props {
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+  structuredData?: boolean;
+}
+
+const {
+  title = "NativePHP Charts: native charts for NativePHP Mobile on iOS and Android",
+  description = "Add native line, bar, pie, radar, candlestick and five more chart types to NativePHP Mobile apps with Blade or PHP. Swift Charts on iOS, Jetpack Compose on Android.",
+  noindex = false,
+  structuredData = false,
+} = Astro.props;
+
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const site = Astro.site ?? new URL("https://donmanueldev.github.io");
+const canonical = new URL(Astro.url.pathname, site).href;
+const homeUrl = new URL(`${base}/`, site).href;
+const ogImage = new URL(`${base}/og.png`, site).href;
+const ogImageAlt = "NativePHP Charts: native charts for NativePHP Mobile, rendered with Swift Charts on iOS and Jetpack Compose on Android.";
+const repository = "https://github.com/donmanueldev/nativephp-charts";
+
+const jsonLd = structuredData
+  ? JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareSourceCode",
+      name: "NativePHP Charts",
+      description,
+      codeRepository: repository,
+      url: homeUrl,
+      license: "https://opensource.org/licenses/MIT",
+      programmingLanguage: ["PHP", "Swift", "Kotlin"],
+      runtimePlatform: ["iOS", "Android"],
+      author: { "@type": "Person", name: "Manuel Duarte" },
+    })
+  : null;
 ---
 
 <!doctype html>
@@ -7,16 +42,33 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
     <link rel="icon" type="image/svg+xml" href={`${base}/brand/favicon.svg`} />
     <link rel="icon" type="image/png" sizes="32x32" href={`${base}/brand/nativephp-charts-32.png`} />
     <link rel="apple-touch-icon" href={`${base}/brand/apple-touch-icon.png`} />
+    <link rel="sitemap" href={`${base}/sitemap-index.xml`} />
     <meta name="generator" content={Astro.generator} />
-    <meta
-      name="description"
-      content="Documentation and examples for native iOS and Android charts in NativePHP Mobile."
-    />
     <meta name="theme-color" content="#080808" />
-    <title>NativePHP Charts — documentation and examples</title>
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="NativePHP Charts" />
+    <meta property="og:locale" content="en" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
+
+    {jsonLd && <script is:inline type="application/ld+json" set:html={jsonLd} />}
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>

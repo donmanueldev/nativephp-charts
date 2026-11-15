@@ -9,10 +9,10 @@ import org.json.JSONObject
 /**
  * Converts the renderer-neutral Cartesian wire contract into Compose models.
  *
- * The PHP layer performs authoritative validation. This native boundary remains
- * fail-soft for stale or independently produced payloads: malformed roots become
- * empty/default objects, non-finite points are discarded, and values with
- * explicit public bounds are clamped before geometry or drawing code.
+ * The PHP layer performs authoritative validation. Malformed style/axis/legend
+ * object roots fall back to defaults and values with explicit public bounds are
+ * clamped, but an unsupported contract version, a malformed series array, or any
+ * malformed or non-finite point fails the whole snapshot (unavailable state).
  */
 internal object NativePHPChartsDecoder {
     /**
@@ -183,7 +183,6 @@ internal object NativePHPChartsDecoder {
             candlestickWickWidth = candlestick.float("wick_width", 1.5f),
             axisVisible = axis.booleanOrNull("visible"),
             axisColor = axis?.optString("color")?.takeIf(String::isNotBlank) ?: theme.muted,
-            axisLabelCount = axis.intOrNull("label_count"),
             axisFont = axis?.optString("font")?.takeIf(String::isNotBlank),
             axisFontSize = axis.float("font_size", 10f),
             axisLabelColor = axis?.optString("label_color")?.takeIf(String::isNotBlank) ?: theme.foreground,
@@ -322,9 +321,6 @@ private fun JSONObject?.float(name: String, fallback: Float): Float =
 
 private fun JSONObject?.booleanOrNull(name: String): Boolean? =
     if (this?.has(name) == true) optBoolean(name) else null
-
-private fun JSONObject?.intOrNull(name: String): Int? =
-    if (this?.has(name) == true) optInt(name) else null
 
 private fun JSONObject.optionalString(name: String): String? =
     if (has(name)) optString(name).takeIf(String::isNotBlank) else null

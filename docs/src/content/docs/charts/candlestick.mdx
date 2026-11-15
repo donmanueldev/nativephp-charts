@@ -1,7 +1,7 @@
 ---
-title: Candlestick chart
-description: Render one ordered OHLC series without hiding price extremes.
-sidebar: { order: 8 }
+title: Candlestick chart for NativePHP Mobile
+description: "Plot open, high, low, and close prices with a native candlestick chart in NativePHP Mobile, with rising and falling colors, date axes, and viewport zoom."
+sidebar: { order: 8, label: "Candlestick chart" }
 ---
 
 import { Code } from "@astrojs/starlight/components";
@@ -23,7 +23,7 @@ Each series contains a stable `id`, a `name`, and points with `id`, `label`, typ
 
 ## Native preview
 
-<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/candlestick.png" alt="Candlestick chart rendered by NativePHP Charts on Android" width="1344" height="2760" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/candlestick-selected.png" alt="Candlestick chart with a selected session tooltip on Android" width="1344" height="2760" /><figcaption>Android · Candle selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/candlestick.png" alt="Candlestick chart with a focused OHLC domain on iOS" width="1178" height="1304" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/candlestick-selected.png" alt="Candlestick chart after selecting a candle on iOS" width="1178" height="1304" /><figcaption>iOS · Candle selection</figcaption></figure></div>
+<div class="chart-proof"><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/candlestick.webp" alt="Candlestick chart rendered by NativePHP Charts on Android" width="900" height="1848" /><figcaption>Android</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/android/candlestick-selected.webp" alt="Candlestick chart with a selected session tooltip on Android" width="900" height="1848" /><figcaption>Android · Candle selection</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/candlestick.webp" alt="Candlestick chart with a focused OHLC domain on iOS" width="900" height="996" /><figcaption>iOS</figcaption></figure><figure><img loading="lazy" decoding="async" src="/nativephp-charts/evidence/ios/candlestick-selected.webp" alt="Candlestick chart after selecting a candle on iOS" width="900" height="996" /><figcaption>iOS · Candle selection</figcaption></figure></div>
 
 LTTB sampling is intentionally rejected because it can hide OHLC extremes. Selection reports close as the primary value while preserving the OHLC fields in the chart contract.
 

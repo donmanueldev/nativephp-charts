@@ -9,3 +9,5 @@ resources/ios/.build/
 *.iml
 .vscode/
 .playwright-mcp
+.claude/
+.remember/

@@ -54,3 +54,46 @@ it('does not prune an expired cache while it remains within the retained limit',
         rmdir($directory);
     }
 });
+
+it('refuses to store a payload in an existing directory that is not writable', function () {
+    $directory = sys_get_temp_dir().'/nativephp-charts-readonly-'.bin2hex(random_bytes(6));
+    mkdir($directory, 0500, true);
+
+    try {
+        $write = new ReflectionMethod(WirePayloadStore::class, 'writeAtomically');
+
+        expect(fn () => $write->invoke(null, "{$directory}/series-test.json", '[]', 'line chart'))
+            ->toThrow(InvalidArgumentException::class, 'The line chart series payload could not be stored safely.')
+            ->and(glob($directory.'/*'))->toBe([]);
+    } finally {
+        chmod($directory, 0700);
+        foreach (glob($directory.'/*') ?: [] as $path) {
+            unlink($path);
+        }
+        rmdir($directory);
+    }
+})->skip(fn (): bool => function_exists('posix_geteuid') && posix_geteuid() === 0, 'root bypasses directory permissions');
+
+it('prunes temporary files abandoned by an interrupted write after the retention window', function () {
+    $directory = sys_get_temp_dir().'/nativephp-charts-retention-'.bin2hex(random_bytes(6));
+    mkdir($directory, 0700, true);
+
+    try {
+        file_put_contents("{$directory}/writing-stale", '[');
+        touch("{$directory}/writing-stale", time() - 700);
+        file_put_contents("{$directory}/writing-active", '[');
+        file_put_contents("{$directory}/series-current.json", '[]');
+
+        $method = new ReflectionMethod(WirePayloadStore::class, 'removeAbandonedWrites');
+        $method->invoke(null, $directory);
+
+        expect(file_exists("{$directory}/writing-stale"))->toBeFalse()
+            ->and(file_exists("{$directory}/writing-active"))->toBeTrue()
+            ->and(file_exists("{$directory}/series-current.json"))->toBeTrue();
+    } finally {
+        foreach (glob($directory.'/*') ?: [] as $path) {
+            unlink($path);
+        }
+        rmdir($directory);
+    }
+});

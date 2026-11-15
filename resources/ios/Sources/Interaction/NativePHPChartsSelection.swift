@@ -118,12 +118,13 @@ enum NativePHPChartsSelection {
                 candidateRange = nil
             }
         case .y:
+            // Only horizontal bars search along physical y; map back to logical categories.
             let lowerLocation = max(0, plotLocation.y - candidateRadius)
             let upperLocation = min(plotFrame.height, plotLocation.y + candidateRadius)
             if let lower: Double = proxy.value(atY: lowerLocation),
                let upper: Double = proxy.value(atY: upperLocation)
             {
-                candidateRange = min(lower, upper)...max(lower, upper)
+                candidateRange = NativePHPChartsHorizontalBarAxis.categories(physicalY: lower, upper)
             } else {
                 candidateRange = nil
             }
@@ -197,7 +198,9 @@ enum NativePHPChartsSelection {
             start = CGPoint(x: category, y: lower)
             end = CGPoint(x: category, y: upper)
         case .horizontal:
-            guard let category = proxy.position(forY: geometry.category),
+            guard let category = proxy.position(
+                      forY: NativePHPChartsHorizontalBarAxis.physicalY(category: geometry.category)
+                  ),
                   let lower = proxy.position(forX: geometry.valueBounds.lowerBound),
                   let upper = proxy.position(forX: geometry.valueBounds.upperBound)
             else {
@@ -270,10 +273,11 @@ enum NativePHPChartsSelection {
 }
 
 enum NativePHPChartsCandlestickPresentation {
-    static func values(
+    /// Abbreviation and formatted value pairs in O, H, L, C order, or `nil` for non-OHLC points.
+    static func components(
         for point: NativePHPChartsPoint,
         formatter: NativePHPChartsFormatter
-    ) -> String? {
+    ) -> [(abbreviation: String, value: String)]? {
         guard let open = point.open,
               let high = point.high,
               let low = point.low,
@@ -282,7 +286,21 @@ enum NativePHPChartsCandlestickPresentation {
             return nil
         }
 
-        return "O \(formatter.y(open)), H \(formatter.y(high)), L \(formatter.y(low)), C \(formatter.y(close))"
+        return [
+            ("O", formatter.y(open)),
+            ("H", formatter.y(high)),
+            ("L", formatter.y(low)),
+            ("C", formatter.y(close)),
+        ]
+    }
+
+    static func values(
+        for point: NativePHPChartsPoint,
+        formatter: NativePHPChartsFormatter
+    ) -> String? {
+        components(for: point, formatter: formatter)?
+            .map { "\($0.abbreviation) \($0.value)" }
+            .joined(separator: ", ")
     }
 
     static func value(
@@ -329,21 +347,66 @@ struct NativePHPChartsTooltip: View {
     let maximumWidth: CGFloat
 
     var body: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(color)
-                .frame(width: 7, height: 7)
-            Text("\(point.label) · \(NativePHPChartsCandlestickPresentation.value(for: point, formatter: formatter))")
-                .lineLimit(1)
-                .truncationMode(.tail)
+        if let ohlc = NativePHPChartsCandlestickPresentation.components(for: point, formatter: formatter) {
+            // OHLC never fits one 220-point line; a 2x2 grid keeps the close value visible.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 7, height: 7)
+                    Text(point.label)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                NativePHPChartsCandlestickValuesGrid(components: ohlc)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 7)
+            .frame(maxWidth: maximumWidth)
+            .background(.black.opacity(0.84), in: RoundedRectangle(cornerRadius: 9))
+            .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
+            .accessibilityElement(children: .combine)
+        } else {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 7, height: 7)
+                Text("\(point.label) · \(formatter.y(point.value))")
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .frame(maxWidth: maximumWidth)
+            .background(.black.opacity(0.84), in: Capsule())
+            .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
+            .accessibilityElement(children: .combine)
         }
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.white)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .frame(maxWidth: maximumWidth)
-        .background(.black.opacity(0.84), in: Capsule())
-        .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
-        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Compact two-by-two OHLC layout: open and high on the first row, low and close on the second.
+struct NativePHPChartsCandlestickValuesGrid: View {
+    let components: [(abbreviation: String, value: String)]
+
+    var body: some View {
+        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 2) {
+            ForEach(Array(stride(from: 0, to: components.count, by: 2)), id: \.self) { start in
+                GridRow {
+                    ForEach(start..<min(start + 2, components.count), id: \.self) { index in
+                        HStack(spacing: 3) {
+                            Text(components[index].abbreviation).opacity(0.7)
+                            Text(components[index].value)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
